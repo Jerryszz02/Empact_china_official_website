@@ -1,0 +1,52 @@
+{
+  "name": "empact-china-website",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=22.12.0 <23"
+  },
+  "scripts": {
+    "dev": "npm run dev -w @empact/site",
+    "dev:cms": "npm run dev -w @empact/cms",
+    "build": "npm run build -w @empact/site",
+    "build:cms": "npm run build -w @empact/cms",
+    "check": "tsc --noEmit && npm run check -w @empact/site && npm run check -w @empact/cms",
+    "test": "tsx --test tests/*.test.ts",
+    "verify": "npm run check && npm test && npm run build:preview && SITE_MODE=preview npm run check:output && npm run build:cms && npm run test:cms && npm run test:browser",
+    "build:preview": "SITE_MODE=preview npm run build -w @empact/site",
+    "serve": "tsx --env-file=.env scripts/public-server.ts",
+    "test:browser": "playwright test",
+    "check:output": "tsx scripts/check-output.ts",
+    "setup:local": "tsx scripts/setup-local.ts",
+    "serve:preview": "tsx scripts/serve-preview.ts",
+    "test:cms": "tsx tests/cms-live.ts",
+    "format": "prettier --write apps packages scripts tests *.json playwright.config.ts"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.63.0",
+    "@types/node": "22.19.15",
+    "@types/nodemailer": "8.0.1",
+    "prettier": "3.9.6",
+    "prettier-plugin-astro": "1.0.0",
+    "tsx": "4.20.6",
+    "typescript": "5.9.3"
+  },
+  "dependencies": {
+    "@types/sanitize-html": "2.16.1",
+    "cheerio": "1.2.0",
+    "nodemailer": "10.0.1",
+    "sanitize-html": "2.17.7",
+    "zod": "4.3.6"
+  },
+  "overrides": {
+    "dompurify": "3.4.15",
+    "@esbuild-kit/core-utils": {
+      "esbuild": "0.28.2"
+    },
+    "sharp": "0.35.4"
+  }
+}

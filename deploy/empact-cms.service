@@ -1,0 +1,26 @@
+[Unit]
+Description=Empact China private CMS
+After=network.target
+
+[Service]
+Type=simple
+User=empact
+Group=empact
+WorkingDirectory=/srv/empact/code/current/apps/cms
+EnvironmentFile=/etc/empact/website.env
+Environment=NODE_ENV=production
+Environment=NEXT_TELEMETRY_DISABLED=1
+ExecStart=/usr/bin/node ../../node_modules/next/dist/bin/next start --hostname 127.0.0.1 --port 3000
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=120
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/srv/empact/data /srv/empact/code
+MemoryMax=2G
+
+[Install]
+WantedBy=multi-user.target

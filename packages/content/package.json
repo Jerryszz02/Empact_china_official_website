@@ -1,0 +1,9 @@
+{
+  "name": "@empact/content",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./schema": "./src/schema.ts",
+    "./fixtures": "./src/fixtures.ts"
+  }
+}

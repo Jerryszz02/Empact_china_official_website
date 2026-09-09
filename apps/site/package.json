@@ -1,0 +1,17 @@
+{
+  "name": "@empact/site",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "ASTRO_TELEMETRY_DISABLED=1 SITE_MODE=preview astro dev --host 127.0.0.1",
+    "build": "ASTRO_TELEMETRY_DISABLED=1 astro build",
+    "build:preview": "ASTRO_TELEMETRY_DISABLED=1 SITE_MODE=preview astro build",
+    "check": "ASTRO_TELEMETRY_DISABLED=1 astro check"
+  },
+  "dependencies": {
+    "astro": "7.3.2",
+    "@astrojs/check": "0.9.4",
+    "@empact/content": "*",
+    "typescript": "5.9.3"
+  }
+}

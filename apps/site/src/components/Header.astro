@@ -1,0 +1,153 @@
+---
+import { businesses, pages, pathFor } from "@/lib/content";
+const youthBusinesses = businesses.filter((item) => item.segment === "youth");
+const corporateBusinesses = businesses.filter(
+  (item) => item.segment === "corporate",
+);
+const youthPage = pages.find((item) => item.slug === "youth");
+const corporatePage = pages.find((item) => item.slug === "corporate");
+---
+
+<header class="site-header">
+  <a class="wordmark" href="/" aria-label="Empact China 首页">
+    <span class="wordmark-mark" aria-hidden="true">
+      ◎
+    </span>
+    <span>
+      empact<span class="wordmark-cn">中国</span>
+    </span>
+  </a>
+  <button
+    class="menu-toggle"
+    type="button"
+    aria-expanded="false"
+    aria-controls="site-navigation"
+  >
+    <span>菜单</span>
+    <span class="menu-icon" aria-hidden="true">
+      ☰
+    </span>
+  </button>
+  <nav id="site-navigation" class="site-nav" aria-label="主导航">
+    <div class="nav-group">
+      <a class="nav-parent" href={youthPage ? pathFor(youthPage) : "/youth/"}>
+        青少年项目
+      </a>
+      {youthBusinesses.length > 0 && (
+        <button
+          class="nav-expand"
+          type="button"
+          aria-expanded="false"
+          aria-controls="nav-youth"
+        >
+          展开
+        </button>
+      )}
+      {youthBusinesses.length > 0 && (
+        <div id="nav-youth" class="nav-dropdown">
+          {youthBusinesses.map((item) => (
+            <a href={pathFor(item)}>{item.title}</a>
+          ))}
+        </div>
+      )}
+    </div>
+    <div class="nav-group">
+      <a
+        class="nav-parent"
+        href={corporatePage ? pathFor(corporatePage) : "/corporate/"}
+      >
+        企业服务
+      </a>
+      {corporateBusinesses.length > 0 && (
+        <button
+          class="nav-expand"
+          type="button"
+          aria-expanded="false"
+          aria-controls="nav-corporate"
+        >
+          展开
+        </button>
+      )}
+      {corporateBusinesses.length > 0 && (
+        <div id="nav-corporate" class="nav-dropdown">
+          {corporateBusinesses.map((item) => (
+            <a href={pathFor(item)}>{item.title}</a>
+          ))}
+        </div>
+      )}
+    </div>
+    <a href="/about/">关于我们</a>
+    <a class="nav-contact" href="/contact/">
+      联系 Empact <span aria-hidden="true">↗</span>
+    </a>
+  </nav>
+</header>
+<script>
+  const menu = document.querySelector<HTMLButtonElement>(".menu-toggle");
+  const nav = document.querySelector<HTMLElement>("#site-navigation");
+  const toggles = [
+    ...document.querySelectorAll<HTMLButtonElement>(".nav-expand"),
+  ];
+  function closeDropdowns() {
+    toggles.forEach((button) => {
+      button.setAttribute("aria-expanded", "false");
+      document
+        .getElementById(button.getAttribute("aria-controls")!)
+        ?.classList.remove("is-open");
+    });
+  }
+  function closeMenu() {
+    closeDropdowns();
+    menu?.setAttribute("aria-expanded", "false");
+    nav?.classList.remove("is-open");
+  }
+  menu?.addEventListener("click", () => {
+    const wasOpen = menu.getAttribute("aria-expanded") === "true";
+    closeMenu();
+    if (!wasOpen) {
+      menu.setAttribute("aria-expanded", "true");
+      nav?.classList.add("is-open");
+    }
+  });
+  toggles.forEach((button) =>
+    button.addEventListener("click", () => {
+      const wasOpen = button.getAttribute("aria-expanded") === "true";
+      closeDropdowns();
+      if (!wasOpen) {
+        button.setAttribute("aria-expanded", "true");
+        document
+          .getElementById(button.getAttribute("aria-controls")!)
+          ?.classList.add("is-open");
+      }
+    }),
+  );
+  document.addEventListener("keydown", (event) => {
+    if (event.key !== "Escape") return;
+    const openDropdown = toggles.find(
+      (button) => button.getAttribute("aria-expanded") === "true",
+    );
+    if (openDropdown) {
+      closeDropdowns();
+      openDropdown.focus();
+    } else if (menu?.getAttribute("aria-expanded") === "true") {
+      closeMenu();
+      menu.focus();
+    }
+  });
+  document.addEventListener("click", (event) => {
+    if (
+      event.target instanceof Node &&
+      !nav?.contains(event.target) &&
+      !menu?.contains(event.target)
+    )
+      closeMenu();
+  });
+  nav?.addEventListener("focusout", (event) => {
+    if (
+      event.relatedTarget instanceof Node &&
+      !nav.contains(event.relatedTarget) &&
+      !menu?.contains(event.relatedTarget)
+    )
+      closeMenu();
+  });
+</script>

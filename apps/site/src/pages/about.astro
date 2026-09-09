@@ -1,0 +1,26 @@
+---
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import { pageBySlug } from "@/lib/content";
+const entry = pageBySlug("about");
+---
+
+<BaseLayout
+  title={entry?.title ?? "关于我们"}
+  description={entry?.summary ?? "了解 Empact 中国。"}
+>
+  <section class="page-hero">
+    <span class="eyebrow">About Empact</span>
+    <h1>{entry?.title ?? "关于我们"}</h1>
+    <p class="page-summary">
+      {entry?.summary ?? "我们相信，连接可以让成长发生。"}
+    </p>
+  </section>
+  <section class="content-wrap">
+    <article
+      class="prose"
+      set:html={
+        entry?.bodyHtml ?? "<p>Empact 中国致力于连接青年成长与组织发展。</p>"
+      }
+    />
+  </section>
+</BaseLayout>

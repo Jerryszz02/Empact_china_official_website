@@ -1,0 +1,52 @@
+.publication-panel {
+  border: 1px solid #766b82;
+  padding: 24px;
+  margin: 24px 0;
+  border-radius: 8px;
+  max-width: 1100px;
+}
+.publication-panel button,
+.publication-panel select {
+  font: inherit;
+  padding: 8px 12px;
+  margin: 4px 4px 4px 0;
+  cursor: pointer;
+}
+.publication-panel button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+.publication-panel fieldset {
+  padding: 16px;
+}
+.publication-items {
+  display: grid;
+  max-height: 300px;
+  overflow: auto;
+  margin: 12px 0;
+  gap: 8px;
+}
+.publication-items label {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+.publication-panel input[type="checkbox"] {
+  margin-right: 8px;
+}
+.publication-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 16px 0;
+  flex-wrap: wrap;
+}
+.publication-panel a {
+  color: inherit;
+  text-decoration: underline;
+}
+.publication-panel [role="status"] {
+  border-left: 3px solid #087e80;
+  padding-left: 12px;
+  overflow-wrap: anywhere;
+}

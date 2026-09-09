@@ -1,0 +1,25 @@
+[Unit]
+Description=Empact China public website and inquiry receiver
+After=network.target
+
+[Service]
+Type=simple
+User=empact
+Group=empact
+WorkingDirectory=/srv/empact/code/current
+EnvironmentFile=/etc/empact/website.env
+Environment=NODE_ENV=production
+Environment=TRUST_PROXY=true
+ExecStart=/usr/bin/node --import tsx scripts/public-server.ts
+Restart=on-failure
+RestartSec=5
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadOnlyPaths=/srv/empact/data
+MemoryMax=512M
+
+[Install]
+WantedBy=multi-user.target

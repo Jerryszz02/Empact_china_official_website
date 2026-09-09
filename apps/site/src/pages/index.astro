@@ -1,0 +1,226 @@
+---
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import {
+  businesses,
+  pageBySlug,
+  pathFor,
+  projects,
+  news,
+  cases,
+  byId,
+} from "@/lib/content";
+const home = pageBySlug("home");
+const youth = pageBySlug("youth");
+const corporate = pageBySlug("corporate");
+const youthServices = businesses
+  .filter((item) => item.segment === "youth")
+  .slice(0, 5);
+const corporateServices = businesses
+  .filter((item) => item.segment === "corporate")
+  .slice(0, 5);
+const chatCircle = projects.find((item) => item.slug === "chatcircle");
+const featuredProjects = projects.filter(
+  (item) => item.featured && item.id !== chatCircle?.id,
+);
+const featuredCases = cases.filter(
+  (item) => item.featured && byId(item.parentId),
+);
+const updates = news
+  .filter((item) => item.featured)
+  .sort((a, b) => (b.publishedAt ?? "").localeCompare(a.publishedAt ?? ""))
+  .slice(0, 3);
+---
+
+<BaseLayout title={home?.title ?? "Empact 中国"} description={home?.summary}>
+  <section class="hero">
+    <div>
+      <span class="eyebrow">Empact China / Together, in motion</span>
+      <h1>{home?.title ?? "Empact 中国"}</h1>
+      <p class="hero-copy">{home?.summary}</p>
+      <div class="hero-actions">
+        <a class="button button-primary" href="/youth/">
+          探索青少年项目 <span aria-hidden="true">↗</span>
+        </a>
+        <a class="button" href="/corporate/">
+          了解企业服务 <span aria-hidden="true">↗</span>
+        </a>
+      </div>
+    </div>
+    <div
+      class="orbit-art"
+      aria-label="青年与企业在 Empact 中连接的示意图"
+      role="img"
+    >
+      <div class="orbit-line" aria-hidden="true"></div>
+      <div class="orbit-node youth">
+        青年
+        <br />
+        与家庭
+      </div>
+      <div class="orbit-node center">
+        Empact
+        <br />
+        连接
+      </div>
+      <div class="orbit-node corporate">
+        企业
+        <br />
+        与组织
+      </div>
+    </div>
+  </section>
+  <section class="pathways">
+    <div class="pathways-inner">
+      <div class="section-heading">
+        <div>
+          <span class="eyebrow">Two ways in</span>
+          <h2>
+            从你的
+            <br />
+            关注出发
+          </h2>
+        </div>
+        <div class="prose" set:html={home?.bodyHtml ?? ""} />
+      </div>
+      <div class="pathway-grid">
+        <div class="pathway">
+          <span class="eyebrow">For youth, families & schools</span>
+          <h3>{youth?.title ?? "青少年项目"}</h3>
+          <p>{youth?.summary}</p>
+          <a href="/youth/">
+            查看青少年项目 <span aria-hidden="true">→</span>
+          </a>
+        </div>
+        <div class="pathway">
+          <span class="eyebrow">For organisations</span>
+          <h3>{corporate?.title ?? "企业服务"}</h3>
+          <p>{corporate?.summary}</p>
+          <a href="/corporate/">
+            查看企业服务 <span aria-hidden="true">→</span>
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+  {youthServices.length > 0 && (
+    <section class="section editorial">
+      <div>
+        <span class="eyebrow">Youth / learning by doing</span>
+        <h2>探索与实践</h2>
+        <p>{youth?.summary}</p>
+      </div>
+      <div class="service-list">
+        {youthServices.map((item) => (
+          <div class="service-item">
+            <a href={pathFor(item)}>{item.title}</a>
+            <span aria-hidden="true">↗</span>
+          </div>
+        ))}
+      </div>
+    </section>
+  )}
+  {corporateServices.length > 0 && (
+    <section class="section">
+      <div class="section-heading">
+        <div>
+          <span class="eyebrow">Corporate / collaboration</span>
+          <h2>
+            一起回应
+            <br />
+            组织的需要
+          </h2>
+        </div>
+        <a href="/corporate/" class="button">
+          全部企业服务 ↗
+        </a>
+      </div>
+      <div class="service-list">
+        {corporateServices.map((item) => (
+          <div class="service-item">
+            <a href={pathFor(item)}>{item.title}</a>
+            <span>{item.summary}</span>
+          </div>
+        ))}
+      </div>
+    </section>
+  )}
+  {featuredProjects.length > 0 && (
+    <section class="section">
+      <div class="section-heading">
+        <h2>精选项目</h2>
+      </div>
+      <div class="service-list">
+        {featuredProjects.map((item) => (
+          <div class="service-item">
+            <a href={pathFor(item)}>{item.title}</a>
+            <span>{item.summary}</span>
+          </div>
+        ))}
+      </div>
+    </section>
+  )}
+  {featuredCases.length > 0 && (
+    <section class="section">
+      <div class="section-heading">
+        <h2>实践记录</h2>
+      </div>
+      <div class="service-list">
+        {featuredCases.map((item) => (
+          <div class="service-item">
+            <a href={`${pathFor(byId(item.parentId)!)}#cases`}>{item.title}</a>
+            <span>{item.summary}</span>
+          </div>
+        ))}
+      </div>
+    </section>
+  )}
+  {chatCircle && (
+    <section class="circle-band">
+      <div class="circle-band-inner">
+        <div>
+          <span class="eyebrow coral-label">ChatCircle</span>
+          <h2>{chatCircle.title}</h2>
+          <p>{chatCircle.summary}</p>
+        </div>
+        <a class="button" href={pathFor(chatCircle)}>
+          了解公益项目 <span aria-hidden="true">↗</span>
+        </a>
+      </div>
+    </section>
+  )}
+  {updates.length > 0 && (
+    <section class="section">
+      <div class="section-heading">
+        <div>
+          <span class="eyebrow">Updates</span>
+          <h2>最新动态</h2>
+        </div>
+      </div>
+      <div class="service-list">
+        {updates.map((item) => (
+          <div class="service-item">
+            <a href={pathFor(item)}>{item.title}</a>
+            <time datetime={item.publishedAt}>
+              {item.publishedAt?.slice(0, 10)}
+            </time>
+          </div>
+        ))}
+      </div>
+    </section>
+  )}
+  <section class="section">
+    <div class="section-heading">
+      <div>
+        <span class="eyebrow">Start a conversation</span>
+        <h2>
+          从一次
+          <br />
+          交流开始
+        </h2>
+      </div>
+      <a class="button button-primary" href="/contact/">
+        咨询与合作 <span aria-hidden="true">↗</span>
+      </a>
+    </div>
+  </section>
+</BaseLayout>
