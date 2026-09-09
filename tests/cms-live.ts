@@ -281,6 +281,12 @@ try {
   });
   assert.equal(first.result.state, "published");
   assert.equal(
+    (await request("/api/publication/state")).items.find(
+      (item: { id: string }) => item.id === String(news.doc.id),
+    ).modified,
+    false,
+  );
+  assert.equal(
     (
       await fetch(base + `/api/content/${news.doc.id}`, {
         method: "PATCH",
@@ -328,6 +334,12 @@ try {
   await request(`/api/content/${news.doc.id}`, "PATCH", {
     body: lexical("尚未选择发布的新正文。"),
   });
+  assert.equal(
+    (await request("/api/publication/state")).items.find(
+      (item: { id: string }) => item.id === String(news.doc.id),
+    ).modified,
+    true,
+  );
   assert.match(
     await (await fetch(publicURL + "/news/operations-news/")).text(),
     /新闻原版正文/,

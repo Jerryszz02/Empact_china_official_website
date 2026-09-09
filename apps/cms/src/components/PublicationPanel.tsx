@@ -7,6 +7,7 @@ type Item = {
   kind: string;
   approved: boolean;
   live: boolean;
+  modified: boolean;
   url: string;
 };
 type Receipt = {
@@ -137,7 +138,11 @@ export function PublicationPanel() {
               <span>
                 {item.title} · {names[item.kind]} ·{" "}
                 {item.approved ? "已审核" : "草稿"}
-                {item.live ? " · 官网已有版本" : ""}
+                {item.live
+                  ? item.modified
+                    ? " · 有未发布修改"
+                    : " · 与官网一致"
+                  : ""}
               </span>
               {item.live && item.url && (
                 <a
@@ -206,7 +211,10 @@ export function PublicationPanel() {
         恢复一个成功版本{" "}
         <select
           value={version}
-          onChange={(event) => setVersion(event.target.value)}
+          onChange={(event) => {
+            setVersion(event.target.value);
+            setConfirmed(false);
+          }}
           disabled={busy}
         >
           <option value="">请选择版本</option>

@@ -3,6 +3,7 @@ import config from "@payload-config";
 import { mkdir, writeFile, readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { randomUUID } from "node:crypto";
+import { isDeepStrictEqual } from "node:util";
 import {
   publishSnapshot,
   rollback,
@@ -33,24 +34,29 @@ export async function GET(request: Request) {
   if (!permitted)
     return Response.json({ error: "请先登录后台。" }, { status: 401, headers });
   const [content, receipts, live] = await Promise.all([
-    payload.find({
-      collection: "content",
-      depth: 0,
-      pagination: false,
-      overrideAccess: true,
-    }),
+    readDraftSnapshot(payload),
     listReceipts(),
     readLiveSnapshot(),
   ]);
   return Response.json(
     {
-      items: content.docs.map((doc) => ({
+      items: content.entries.map((doc) => ({
         id: String(doc.id),
         title: doc.title,
         kind: doc.kind,
         approved: doc.approved === true,
         live:
           live?.entries.some((entry) => entry.id === String(doc.id)) || false,
+        modified:
+          Boolean(live?.entries.some((entry) => entry.id === doc.id)) &&
+          (!isDeepStrictEqual(
+            JSON.parse(JSON.stringify(doc)),
+            live?.entries.find((entry) => entry.id === doc.id),
+          ) ||
+            !isDeepStrictEqual(
+              content.media.find((image) => image.id === doc.imageId),
+              live?.media.find((image) => image.id === doc.imageId),
+            )),
         url: entryPath({
           id: String(doc.id),
           kind: doc.kind,
