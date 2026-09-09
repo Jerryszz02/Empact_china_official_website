@@ -1,0 +1,28 @@
+# Merge ONLY these host blocks into the one existing gateway after caddy validate.
+# Keep the existing chatcircle.empact.cn block and listener owner intact.
+www.empact.cn {
+  redir https://empact.cn{uri} permanent
+}
+empact.cn {
+  encode zstd gzip
+  header {
+    Strict-Transport-Security "max-age=31536000"
+    X-Content-Type-Options nosniff
+    Referrer-Policy strict-origin-when-cross-origin
+  }
+  @contact path /api/contact
+  handle @contact {
+    reverse_proxy 127.0.0.1:4322 {
+      header_up X-Forwarded-For {remote_host}
+    }
+  }
+  @cms path /admin /admin/* /api /api/* /preview /preview/* /_next/*
+  handle @cms {
+    header X-Robots-Tag "noindex, nofollow, noarchive"
+    header Cache-Control "private, no-store"
+    reverse_proxy 127.0.0.1:3000
+  }
+  handle {
+    reverse_proxy 127.0.0.1:4322
+  }
+}

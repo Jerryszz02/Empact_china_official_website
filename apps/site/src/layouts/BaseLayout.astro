@@ -1,0 +1,118 @@
+---
+import { snapshot, entries, pathFor, isPreviewMode } from "@/lib/content";
+import Header from "@/components/Header.astro";
+import Footer from "@/components/Footer.astro";
+import "@/styles/global.css";
+
+interface Props {
+  title: string;
+  description?: string;
+  canonical?: string;
+  noIndex?: boolean;
+  type?: "website" | "article";
+}
+const {
+  title,
+  description = snapshot.company.description,
+  canonical,
+  noIndex = isPreviewMode(),
+  type = "website",
+} = Astro.props;
+const canonicalUrl = new URL(
+  canonical ?? Astro.url.pathname,
+  "https://empact.cn",
+).toString();
+const current = entries.find((entry) => pathFor(entry) === Astro.url.pathname);
+const ancestors = entries.filter(
+  (entry) =>
+    entry.kind === "page" &&
+    pathFor(entry) !== Astro.url.pathname &&
+    Astro.url.pathname.startsWith(pathFor(entry)),
+);
+const breadcrumb = [...ancestors, ...(current ? [current] : [])];
+const jsonLd =
+  isPreviewMode() || noIndex
+    ? []
+    : [
+        {
+          "@context": "https://schema.org",
+          "@type": "Organization",
+          name: snapshot.company.name,
+          legalName: snapshot.company.legalName,
+          url: "https://empact.cn",
+          email: snapshot.company.email,
+        },
+        {
+          "@context": "https://schema.org",
+          "@type": "WebSite",
+          name: snapshot.company.name,
+          url: "https://empact.cn",
+        },
+        {
+          "@context": "https://schema.org",
+          "@type": "BreadcrumbList",
+          itemListElement: breadcrumb.map((entry, index) => ({
+            "@type": "ListItem",
+            position: index + 1,
+            name: entry.title,
+            item: `https://empact.cn${pathFor(entry)}`,
+          })),
+        },
+        ...(type === "article"
+          ? [
+              {
+                "@context": "https://schema.org",
+                "@type": "Article",
+                headline: title,
+                description,
+                url: canonicalUrl,
+                datePublished: current?.publishedAt,
+                publisher: {
+                  "@type": "Organization",
+                  name: snapshot.company.name,
+                },
+              },
+            ]
+          : []),
+      ];
+---
+
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width" />
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonicalUrl} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:type" content={type} />
+    <meta property="og:url" content={canonicalUrl} />
+    <meta property="og:site_name" content={snapshot.company.name} />
+    {noIndex && <meta name="robots" content="noindex,nofollow" />}
+    <title>{title}｜{snapshot.company.name}</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    {jsonLd.map((item) => (
+      <script
+        type="application/ld+json"
+        is:inline
+        set:html={JSON.stringify(item).replace(/</g, "\\u003c")}
+      ></script>
+    ))}
+  </head>
+  <body>
+    <a class="skip-link" href="#main-content">
+      跳转到正文
+    </a>
+    {isPreviewMode() && (
+      <div class="preview-bar" role="status">
+        结构预览｜当前为本机草稿内容，不代表已发布信息
+      </div>
+    )}
+    <Header />
+    <main id="main-content">
+      <slot />
+    </main>
+    <Footer />
+  </body>
+</html>

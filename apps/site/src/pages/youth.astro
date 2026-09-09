@@ -1,0 +1,38 @@
+---
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import { businesses, pageBySlug, pathFor } from "@/lib/content";
+const entry = pageBySlug("youth");
+const services = businesses.filter((item) => item.segment === "youth");
+---
+
+<BaseLayout
+  title={entry?.title ?? "青少年与青年"}
+  description={entry?.summary ?? "面向青年、家长、学校及陪伴者的成长服务。"}
+>
+  <section class="page-hero">
+    <span class="eyebrow">For youth & families</span>
+    <h1>{entry?.title ?? "青少年与青年"}</h1>
+    <p class="page-summary">
+      {entry?.summary ?? "在探索、对话与行动中，找到自己的下一步。"}
+    </p>
+  </section>
+  <section class="content-wrap">
+    <article
+      class="prose"
+      set:html={
+        entry?.bodyHtml ??
+        "<p>我们与青年、家庭和学校一起，创造可以探索和行动的空间。</p>"
+      }
+    />
+    {services.length > 0 && (
+      <div class="service-list service-list-spaced">
+        {services.map((item) => (
+          <div class="service-item">
+            <a href={pathFor(item)}>{item.title}</a>
+            <span>{item.summary}</span>
+          </div>
+        ))}
+      </div>
+    )}
+  </section>
+</BaseLayout>

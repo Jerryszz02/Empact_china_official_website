@@ -1,0 +1,212 @@
+---
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import { effectiveProjectStatus } from "@empact/content/schema";
+import { entries, pathFor, mediaById, byId } from "@/lib/content";
+export function getStaticPaths() {
+  return entries
+    .filter((entry) => ["business", "project", "news"].includes(entry.kind))
+    .map((entry) => ({
+      params: {
+        kind:
+          entry.kind === "business"
+            ? (entry.segment ?? "youth")
+            : entry.kind === "project"
+              ? "projects"
+              : "news",
+        slug: entry.slug,
+      },
+      props: { entry },
+    }));
+}
+const { entry } = Astro.props;
+const now = new Date();
+const effectiveStatus =
+  entry.kind === "project" ? effectiveProjectStatus(entry, now) : undefined;
+const expired = entry.kind === "project" && effectiveStatus === "ended";
+const related = (entry.relatedIds ?? [])
+  .map((id) => entries.find((item) => item.id === id))
+  .filter(Boolean);
+const children = entries.filter((item) => item.parentId === entry.id);
+const embeddedCases = children.filter((item) => item.kind === "case");
+const embeddedCoverage = entries.filter(
+  (item) =>
+    item.kind === "coverage" &&
+    (item.parentId === entry.id ||
+      embeddedCases.some((record) => record.id === item.parentId)),
+);
+const crossCases = entries.filter(
+  (item) =>
+    item.kind === "case" &&
+    item.parentId !== entry.id &&
+    item.relatedIds?.includes(entry.id) &&
+    byId(item.parentId),
+);
+const relatedWork = [
+  ...new Map(
+    [
+      ...children.filter(
+        (item) => item.kind === "project" || item.kind === "news",
+      ),
+      ...related.filter(
+        (item) => item && (item.kind === "project" || item.kind === "news"),
+      ),
+    ]
+      .filter(Boolean)
+      .map((item) => [item!.id, item!]),
+  ).values(),
+];
+const media = mediaById(entry.imageId);
+---
+
+<BaseLayout
+  title={entry.title}
+  description={entry.summary}
+  type={entry.kind === "news" ? "article" : "website"}
+>
+  <section class="page-hero">
+    {media && (
+      <img
+        class="detail-image"
+        src={`/media/${media.filename}`}
+        alt={media.alt}
+        width={media.width}
+        height={media.height}
+        loading="eager"
+      />
+    )}
+    <span class="eyebrow">
+      {entry.kind === "business"
+        ? "Empact service"
+        : entry.kind === "project"
+          ? "Project"
+          : "News"}
+    </span>
+    <h1>{entry.title}</h1>
+    <p class="page-summary">{entry.summary}</p>
+    {entry.kind === "project" && (
+      <div class="detail-meta">
+        <span>
+          {effectiveStatus === "open"
+            ? "正在开放"
+            : effectiveStatus === "upcoming"
+              ? "即将开始"
+              : effectiveStatus === "ended"
+                ? "已结束"
+                : "欢迎咨询"}
+        </span>
+        {entry.deadline && <span>截止：{entry.deadline}</span>}
+        {entry.audience && <span>面向：{entry.audience}</span>}
+        {entry.location && <span>地点：{entry.location}</span>}
+        {entry.duration && <span>时长：{entry.duration}</span>}
+        {entry.operator && <span>主办：{entry.operator}</span>}
+      </div>
+    )}
+  </section>
+  <section class="content-wrap">
+    <article class="prose" set:html={entry.bodyHtml} />
+    {entry.kind === "project" &&
+      entry.registrationUrl &&
+      (effectiveStatus === "open" || effectiveStatus === "consultation") &&
+      !expired && (
+        <p>
+          <a class="button button-primary" href={entry.registrationUrl}>
+            了解参与方式 <span aria-hidden="true">↗</span>
+          </a>
+        </p>
+      )}
+    {embeddedCases.length > 0 && (
+      <section id="cases" class="embedded-section">
+        <h2>相关案例</h2>
+        {embeddedCases.map((item) => (
+          <article class="embedded-item">
+            <h3>{item.title}</h3>
+            <p>{item.summary}</p>
+            {mediaById(item.imageId) && (
+              <img
+                class="detail-image"
+                src={`/media/${mediaById(item.imageId)!.filename}`}
+                alt={mediaById(item.imageId)!.alt}
+                width={mediaById(item.imageId)!.width}
+                height={mediaById(item.imageId)!.height}
+                loading="lazy"
+              />
+            )}
+            <div class="prose" set:html={item.bodyHtml} />
+          </article>
+        ))}
+      </section>
+    )}
+    {embeddedCoverage.length > 0 && (
+      <section id="coverage" class="embedded-section">
+        <h2>报道与合作记录</h2>
+        {embeddedCoverage.map((item) => (
+          <article class="embedded-item">
+            <h3>{item.title}</h3>
+            <p>{item.summary}</p>
+            <p class="detail-meta">
+              {item.sourceName && <span>{item.sourceName}</span>}
+              {item.sourceType && (
+                <span>
+                  {{
+                    media: "独立媒体报道",
+                    partner: "合作方记录",
+                    official: "官方公开信息",
+                    company: "公司自述",
+                    sponsored: "合作稿",
+                  }[item.sourceType] ?? item.sourceType}
+                </span>
+              )}
+              {item.eventDate && <span>{item.eventDate}</span>}
+              {item.sourceUrl && <a href={item.sourceUrl}>查看原文 ↗</a>}
+            </p>
+          </article>
+        ))}
+      </section>
+    )}
+    {entry.faqs && entry.faqs.length > 0 && (
+      <div class="faq">
+        <h2>常见问题</h2>
+        {entry.faqs.map((faq) => (
+          <details>
+            <summary>{faq.question}</summary>
+            <p>{faq.answer}</p>
+          </details>
+        ))}
+      </div>
+    )}
+    {relatedWork.length > 0 && (
+      <div class="service-list service-list-spaced">
+        <h2>相关内容</h2>
+        {relatedWork.map(
+          (item) =>
+            item && (
+              <div class="service-item">
+                <a href={pathFor(item)}>{item.title}</a>
+                <span>{item.summary}</span>
+              </div>
+            ),
+        )}
+      </div>
+    )}
+    {crossCases.length > 0 && (
+      <section class="embedded-section">
+        <h2>相关实践</h2>
+        {crossCases.map((item) => (
+          <p>
+            <a href={`${pathFor(byId(item.parentId)!)}#cases`}>{item.title}</a>{" "}
+            · {item.summary}
+          </p>
+        ))}
+      </section>
+    )}
+    <section class="embedded-section">
+      <h2>咨询与合作</h2>
+      <a
+        class="button button-primary"
+        href={`/contact/?business=${encodeURIComponent(entry.kind === "business" ? entry.id : entry.parentId || "")}`}
+      >
+        {entry.segment === "youth" ? "个人、家庭或学校咨询" : "提交咨询需求"}
+      </a>
+    </section>
+  </section>
+</BaseLayout>

@@ -1,0 +1,9 @@
+node_modules
+.next
+.astro
+dist
+.data
+apps/cms/src/payload-types.ts
+apps/cms/src/app/(payload)/admin/importMap.js
+apps/cms/src/migrations
+package-lock.json

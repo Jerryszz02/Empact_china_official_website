@@ -1,0 +1,21 @@
+[Unit]
+Description=Rebuild expired Empact project registration states
+After=empact-public.service empact-cms.service
+
+[Service]
+Type=oneshot
+User=empact
+Group=empact
+WorkingDirectory=/srv/empact/code/current/apps/cms
+EnvironmentFile=/etc/empact/website.env
+Environment=NODE_ENV=production
+Environment=NEXT_TELEMETRY_DISABLED=1
+Environment=ASTRO_TELEMETRY_DISABLED=1
+ExecStart=/usr/bin/node --import tsx src/cli/rebuild-current.ts
+TimeoutStartSec=240
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/srv/empact/data /srv/empact/code

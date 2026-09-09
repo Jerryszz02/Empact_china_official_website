@@ -1,0 +1,134 @@
+---
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import { snapshot, businesses, pageBySlug } from "@/lib/content";
+const enabled =
+  snapshot.company.contactEnabled &&
+  snapshot.company.approved &&
+  snapshot.company.privacyApproved &&
+  snapshot.mode === "production";
+const fallback = snapshot.company.approved ? snapshot.company.email : "";
+const entry = pageBySlug("contact");
+---
+
+<BaseLayout title={entry?.title ?? "联系 Empact"} description={entry?.summary}>
+  <section class="page-hero">
+    <span class="eyebrow">Start a conversation</span>
+    <h1>{entry?.title ?? "联系我们"}</h1>
+    <p class="page-summary">{entry?.summary}</p>
+  </section>
+  <section class="contact-layout">
+    <div>
+      <h2>联系 Empact</h2>
+      <div class="prose" set:html={entry?.bodyHtml ?? ""} />
+      {fallback && (
+        <p>
+          <a href={`mailto:${fallback}`}>{fallback}</a>
+        </p>
+      )}
+    </div>
+    <form
+      class="contact-form"
+      method="post"
+      action="/api/contact"
+      data-contact-form
+    >
+      <label for="business">你想咨询什么</label>
+      <select id="business" name="business">
+        <option value="">请选择</option>
+        {businesses.map((item) => (
+          <option value={item.id}>{item.title}</option>
+        ))}
+        <option value="other">其他</option>
+      </select>
+      <label for="contact">联系方式</label>
+      <input
+        id="contact"
+        name="contact"
+        required
+        maxlength="160"
+        placeholder="邮箱、电话或微信号"
+      />
+      <label for="message">想聊的内容</label>
+      <textarea
+        id="message"
+        name="message"
+        required
+        minlength="10"
+        maxlength="3000"
+        placeholder="请简单描述你的问题"
+      ></textarea>
+      <label class="consent">
+        <input type="checkbox" name="consent" required />{" "}
+        <span>
+          我同意 Empact 按照<a href="/privacy/">隐私政策</a>处理这次咨询。
+        </span>
+      </label>
+      <input
+        type="text"
+        name="website"
+        tabindex="-1"
+        autocomplete="off"
+        class="honeypot"
+        aria-hidden="true"
+      />
+      <input type="hidden" name="idempotencyKey" value="" />
+      <p class="form-status" data-form-status role="status" aria-live="polite">
+        {enabled
+          ? ""
+          : fallback
+            ? `线上咨询暂不可用，请通过 ${fallback} 联系我们。`
+            : "在线咨询尚未开放。联系方式确认后将在这里公布。"}
+      </p>
+      <button class="button button-primary" type="submit" disabled={!enabled}>
+        发送咨询 <span aria-hidden="true">↗</span>
+      </button>
+    </form>
+  </section>
+  <script>
+    const form = document.querySelector<HTMLFormElement>("[data-contact-form]");
+    const status = document.querySelector<HTMLElement>("[data-form-status]");
+    const business = new URLSearchParams(location.search).get("business");
+    const select = form?.querySelector<HTMLSelectElement>(
+      'select[name="business"]',
+    );
+    if (business && select) select.value = business;
+    form
+      ?.querySelector<HTMLInputElement>('input[name="idempotencyKey"]')
+      ?.setAttribute("value", crypto.randomUUID());
+    form?.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      if (!status) return;
+      status.textContent = "正在发送…";
+      const fields = new FormData(form);
+      const payload = {
+        business: String(fields.get("business") || ""),
+        contact: String(fields.get("contact") || ""),
+        message: String(fields.get("message") || ""),
+        consent:
+          form.querySelector<HTMLInputElement>('input[name="consent"]')
+            ?.checked === true,
+        website: String(fields.get("website") || ""),
+        idempotencyKey: String(fields.get("idempotencyKey") || ""),
+      };
+      try {
+        const response = await fetch("/api/contact", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        const data = await response.json();
+        if (!response.ok)
+          throw new Error(data.message || "暂时无法发送，请稍后再试。");
+        status.textContent = data.message || "咨询已受理。";
+        status.className = "form-status success";
+        form
+          .querySelector<HTMLButtonElement>("button")
+          ?.setAttribute("disabled", "true");
+      } catch (error) {
+        status.textContent =
+          error instanceof Error ? error.message : "暂时无法发送，请稍后再试。";
+        status.className = "form-status error";
+      }
+    });
+  </script>
+</BaseLayout>

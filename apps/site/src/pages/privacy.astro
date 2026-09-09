@@ -1,0 +1,23 @@
+---
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import { pageBySlug } from "@/lib/content";
+const entry = pageBySlug("privacy");
+---
+
+<BaseLayout
+  title={entry?.title ?? "隐私政策"}
+  description={entry?.summary ?? "Empact 中国隐私政策。"}
+>
+  <section class="page-hero">
+    <span class="eyebrow">Privacy</span>
+    <h1>{entry?.title ?? "隐私政策"}</h1>
+  </section>
+  <section class="content-wrap">
+    <article
+      class="prose"
+      set:html={
+        entry?.bodyHtml ?? "<p>隐私政策内容将在正式发布前由公司审核后公布。</p>"
+      }
+    />
+  </section>
+</BaseLayout>
