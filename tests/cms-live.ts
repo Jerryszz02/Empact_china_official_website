@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtemp, mkdir, readFile, rm } from "node:fs/promises";
+import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { tmpdir } from "node:os";
 import { randomBytes } from "node:crypto";
@@ -140,6 +140,16 @@ try {
       );
     return body;
   };
+  const responseFor = async (path: string, data: unknown) =>
+    fetch(base + path, {
+      method: "POST",
+      headers: {
+        Cookie: cookies,
+        Origin: base,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(data),
+    });
   const lexical = (text: string) => ({
     root: {
       type: "root",
@@ -184,6 +194,17 @@ try {
     });
     ids.push(String(result.doc.id));
   }
+  const approvalDocId = ids[0];
+  await request(`/api/content/${approvalDocId}`, "PATCH", {
+    title: "审批回退测试修改",
+    approved: true,
+  });
+  assert.equal(
+    (await request(`/api/content/${approvalDocId}`)).approved,
+    false,
+  );
+  await request(`/api/content/${approvalDocId}`, "PATCH", { approved: true });
+  assert.equal((await request(`/api/content/${approvalDocId}`)).approved, true);
   const state = await request("/api/publication/state");
   const business = state.items.find(
     (item: { kind: string }) => item.kind === "business",
@@ -270,6 +291,51 @@ try {
   assert.equal(previewResponse.status, 200);
   assert.match(await previewResponse.text(), /结构预览/);
   assert.equal((await fetch(base + preview.previewUrl)).status, 401);
+  assert.equal(
+    (
+      await responseFor("/api/publication/publish", {
+        ids,
+        includeCompany: true,
+        confirmed: true,
+      })
+    ).status,
+    400,
+  );
+  assert.equal(
+    (
+      await responseFor("/api/publication/publish", {
+        ids: ids.slice(0, -1),
+        includeCompany: true,
+        confirmed: true,
+        previewId: preview.previewUrl.split("/")[2],
+      })
+    ).status,
+    400,
+  );
+  const expiredPreview = await request("/api/publication/preview", "POST", {
+    ids,
+    includeCompany: true,
+  });
+  await writeFile(
+    join(
+      runtime,
+      "previews",
+      expiredPreview.previewUrl.split("/")[2],
+      "expires.json",
+    ),
+    JSON.stringify({ expiresAt: Date.now() - 1 }),
+  );
+  assert.equal(
+    (
+      await responseFor("/api/publication/publish", {
+        ids,
+        includeCompany: true,
+        confirmed: true,
+        previewId: expiredPreview.previewUrl.split("/")[2],
+      })
+    ).status,
+    400,
+  );
   const draftImage = await fetch(
     base + preview.previewUrl + `media/${uploaded.doc.filename}`,
   );
@@ -278,6 +344,7 @@ try {
     ids,
     includeCompany: true,
     confirmed: true,
+    previewId: preview.previewUrl.split("/")[2],
   });
   assert.equal(first.result.state, "published");
   assert.equal(
@@ -334,6 +401,7 @@ try {
   await request(`/api/content/${news.doc.id}`, "PATCH", {
     body: lexical("尚未选择发布的新正文。"),
   });
+  await request(`/api/content/${news.doc.id}`, "PATCH", { approved: true });
   assert.equal(
     (await request("/api/publication/state")).items.find(
       (item: { id: string }) => item.id === String(news.doc.id),
@@ -344,14 +412,38 @@ try {
     await (await fetch(publicURL + "/news/operations-news/")).text(),
     /新闻原版正文/,
   );
+  const editedPreview = await request("/api/publication/preview", "POST", {
+    ids: [String(news.doc.id)],
+    includeCompany: false,
+  });
+  await request(`/api/content/${news.doc.id}`, "PATCH", {
+    body: lexical("预览之后的新正文，仍应留在草稿中。"),
+  });
   const edited = await request("/api/publication/publish", "POST", {
     ids: [String(news.doc.id)],
     confirmed: true,
+    previewId: editedPreview.previewUrl.split("/")[2],
   });
   assert.equal(edited.result.state, "published");
   assert.match(
     await (await fetch(publicURL + "/news/operations-news/")).text(),
     /尚未选择发布的新正文/,
+  );
+  assert.equal(
+    (await request("/api/publication/state")).items.find(
+      (item: { id: string }) => item.id === String(news.doc.id),
+    ).modified,
+    true,
+  );
+  assert.equal(
+    (
+      await responseFor("/api/publication/publish", {
+        ids: [String(news.doc.id)],
+        confirmed: true,
+        previewId: editedPreview.previewUrl.split("/")[2],
+      })
+    ).status,
+    422,
   );
   const off = await request("/api/publication/unpublish", "POST", {
     ids: [String(news.doc.id)],

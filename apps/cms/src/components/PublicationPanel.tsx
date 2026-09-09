@@ -41,6 +41,7 @@ export function PublicationPanel() {
     ),
     [busy, setBusy] = useState(false),
     [preview, setPreview] = useState(""),
+    [previewId, setPreviewId] = useState(""),
     [version, setVersion] = useState(""),
     [current, setCurrent] = useState("");
   const refresh = useCallback(async () => {
@@ -66,6 +67,7 @@ export function PublicationPanel() {
   async function action(type: string, receiptId?: string) {
     setBusy(true);
     setPreview("");
+    if (type === "preview") setPreviewId("");
     setMessage(
       type === "preview"
         ? "正在生成受保护预览…"
@@ -81,13 +83,17 @@ export function PublicationPanel() {
           confirmed,
           version,
           receiptId,
+          previewId,
         }),
       });
       const data = await response.json();
       setMessage(
         data.message || data.error || "操作失败，请刷新后查看发布记录。",
       );
-      if (data.previewUrl) setPreview(data.previewUrl);
+      if (data.previewUrl) {
+        setPreview(data.previewUrl);
+        setPreviewId(data.previewUrl.split("/")[2] || "");
+      }
       if (response.ok) setConfirmed(false);
     } catch {
       setMessage("连接中断，请刷新发布记录核对结果，避免重复提交。");
@@ -110,11 +116,18 @@ export function PublicationPanel() {
           onClick={() => {
             setSelected(items.map((item) => item.id));
             setConfirmed(false);
+            setPreviewId("");
           }}
         >
           选择全部
         </button>{" "}
-        <button type="button" onClick={() => setSelected([])}>
+        <button
+          type="button"
+          onClick={() => {
+            setSelected([]);
+            setPreviewId("");
+          }}
+        >
           清空选择
         </button>{" "}
         <button type="button" onClick={() => void refresh()}>
@@ -132,6 +145,7 @@ export function PublicationPanel() {
                       ? [...selected, item.id]
                       : selected.filter((id) => id !== item.id),
                   );
+                  setPreviewId("");
                   setConfirmed(false);
                 }}
               />
@@ -162,6 +176,7 @@ export function PublicationPanel() {
             checked={company}
             onChange={(event) => {
               setCompany(event.target.checked);
+              setPreviewId("");
               setConfirmed(false);
             }}
           />{" "}
@@ -194,7 +209,9 @@ export function PublicationPanel() {
       <div className="publication-actions">
         <button
           type="button"
-          disabled={busy || !confirmed || (!selected.length && !company)}
+          disabled={
+            busy || !confirmed || !previewId || (!selected.length && !company)
+          }
           onClick={() => void action("publish")}
         >
           确认发布所选内容

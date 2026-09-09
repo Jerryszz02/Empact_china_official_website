@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtemp, writeFile, rm } from "node:fs/promises";
+import { mkdtemp, writeFile, rm, mkdir, access } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { previewSnapshot } from "@empact/content/fixtures";
@@ -12,6 +12,7 @@ import {
   unpublishSnapshot,
   mergeSelectedLive,
   listReceipts,
+  cleanupExpiredPreviews,
 } from "../apps/cms/src/publisher.js";
 
 function fixture(version: string): Snapshot {
@@ -157,6 +158,31 @@ test("filesystem lock serializes publication and prevents late old tasks from re
     release();
     assert.equal((await first).state, "published");
     assert.equal((await readLiveSnapshot(runtimeDir))?.version, "one");
+  } finally {
+    await rm(runtimeDir, { recursive: true, force: true });
+  }
+});
+
+test("expired previews are removed while fresh and in-progress previews remain", async () => {
+  const runtimeDir = await mkdtemp(join(tmpdir(), "empact-previews-"));
+  try {
+    const root = join(runtimeDir, "previews");
+    await mkdir(join(root, "expired"), { recursive: true });
+    await mkdir(join(root, "fresh"), { recursive: true });
+    await mkdir(join(root, "in-progress.building"), { recursive: true });
+    await writeFile(
+      join(root, "expired", "expires.json"),
+      JSON.stringify({ expiresAt: 1 }),
+    );
+    await writeFile(
+      join(root, "fresh", "expires.json"),
+      JSON.stringify({ expiresAt: 2_000 }),
+    );
+    await cleanupExpiredPreviews(runtimeDir, 1_000);
+    await cleanupExpiredPreviews(runtimeDir, 1_000);
+    await assert.rejects(access(join(root, "expired")));
+    await access(join(root, "fresh"));
+    await access(join(root, "in-progress.building"));
   } finally {
     await rm(runtimeDir, { recursive: true, force: true });
   }

@@ -9,9 +9,10 @@ import {
   readdir,
   realpath,
   copyFile,
+  rm,
 } from "node:fs/promises";
 import { basename, dirname, join, resolve } from "node:path";
-import { randomUUID } from "node:crypto";
+import { randomUUID, createHash } from "node:crypto";
 import { spawn } from "node:child_process";
 import { validateSnapshot, type Snapshot } from "@empact/content/schema";
 import { checkOutput } from "../../../scripts/check-output.js";
@@ -48,6 +49,31 @@ const repository = resolve(
     (basename(process.cwd()) === "cms" ? "../.." : "."),
 );
 const identifier = /^[a-zA-Z0-9_-]{1,100}$/;
+export function snapshotDigest(snapshot: Snapshot) {
+  return createHash("sha256").update(JSON.stringify(snapshot)).digest("hex");
+}
+export async function cleanupExpiredPreviews(
+  runtime = runtimeDir(),
+  now = Date.now(),
+) {
+  const root = join(runtime, "previews");
+  const entries = await readdir(root, { withFileTypes: true }).catch(
+    () => [] as import("node:fs").Dirent[],
+  );
+  for (const entry of entries) {
+    if (!entry.isDirectory() || !validPreviewId(entry.name)) continue;
+    const directory = join(root, entry.name);
+    try {
+      const expires = JSON.parse(
+        await readFile(join(directory, "expires.json"), "utf8"),
+      ) as { expiresAt?: unknown };
+      if (typeof expires.expiresAt === "number" && expires.expiresAt < now)
+        await rm(directory, { recursive: true, force: true });
+    } catch {
+      // Incomplete or concurrently-built previews are retained for a later pass.
+    }
+  }
+}
 export async function currentRelease(runtime = runtimeDir()) {
   try {
     return await realpath(join(runtime, "current"));

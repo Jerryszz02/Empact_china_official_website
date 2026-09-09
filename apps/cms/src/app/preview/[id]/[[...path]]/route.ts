@@ -3,7 +3,11 @@ import config from "@payload-config";
 import { readFile, realpath } from "node:fs/promises";
 import { join, resolve, extname, sep } from "node:path";
 import { load } from "cheerio";
-import { runtimeDir, validPreviewId } from "../../../../publisher.js";
+import {
+  runtimeDir,
+  validPreviewId,
+  cleanupExpiredPreviews,
+} from "../../../../publisher.js";
 export const dynamic = "force-dynamic";
 export async function GET(
   request: Request,
@@ -36,6 +40,7 @@ export async function GET(
       headers: responseHeaders,
     });
   try {
+    await cleanupExpiredPreviews();
     const directory = join(runtimeDir(), "previews", id);
     const expires = JSON.parse(
       await readFile(join(directory, "expires.json"), "utf8"),

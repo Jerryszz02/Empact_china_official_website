@@ -175,6 +175,32 @@ const contentFields: Field[] = [
     ],
   },
 ];
+const approvalSensitiveFields = [
+  "kind",
+  "title",
+  "slug",
+  "summary",
+  "body",
+  "featured",
+  "order",
+  "image",
+  "segment",
+  "parent",
+  "projectStatus",
+  "audience",
+  "operator",
+  "location",
+  "duration",
+  "deadline",
+  "registrationUrl",
+  "publishedAt",
+  "sourceName",
+  "sourceUrl",
+  "sourceType",
+  "eventDate",
+  "related",
+  "faqs",
+] as const;
 export const Users: CollectionConfig = {
   slug: "users",
   auth: {
@@ -228,6 +254,16 @@ export const Content: CollectionConfig = {
   hooks: {
     beforeChange: [
       async ({ data, originalDoc, context, req }) => {
+        const contentChanged =
+          originalDoc &&
+          approvalSensitiveFields.some(
+            (field) =>
+              Object.hasOwn(data, field) &&
+              JSON.stringify(data[field]) !==
+                JSON.stringify(originalDoc[field]),
+          );
+        if (contentChanged && originalDoc.approved === true)
+          data.approved = false;
         const pathChanged =
           originalDoc &&
           ["slug", "kind", "segment"].some(

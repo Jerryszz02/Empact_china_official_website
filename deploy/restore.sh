@@ -2,10 +2,19 @@
 # Explicit operator restore. The current data directory is retained for reversal.
 set -euo pipefail
 umask 077
+verify_archive_checksum() {
+  local archive=$1 expected actual
+  [[ "$archive" = /* && -f "$archive" && -f "$archive.sha256" ]] || { echo 'Archive and checksum required.' >&2; return 2; }
+  expected=$(awk 'NF {print $1; exit}' "$archive.sha256")
+  [[ "$expected" =~ ^[[:xdigit:]]{64}$ ]] || { echo 'Invalid checksum sidecar.' >&2; return 2; }
+  actual=$(sha256sum "$archive" | awk '{print $1}')
+  [[ "$actual" == "$expected" ]] || { echo 'Archive checksum mismatch.' >&2; return 1; }
+}
+main() {
 if [[ $# -ne 2 || "$2" != '--confirm-restore' ]]; then echo 'Usage: sudo deploy/restore.sh /absolute/backup.tar.gz --confirm-restore' >&2; exit 2; fi
 archive=$1
 [[ "$archive" = /* && -f "$archive" && -f "$archive.sha256" ]] || { echo 'Archive and checksum required.' >&2; exit 2; }
-sha256sum -c "$archive.sha256"
+verify_archive_checksum "$archive"
 # Reject traversal and unexpected roots before extracting trusted operator backup.
 if tar -tzf "$archive" | awk '$0 !~ /^data\// || $0 ~ /(^|\/)\.\.(\/|$)/ {bad=1} END {exit !bad}'; then echo 'Unsafe archive paths.' >&2; exit 1; fi
 stage=$(mktemp -d /srv/empact/restore.XXXXXX)
@@ -38,3 +47,5 @@ systemctl start empact-cms empact-public
 curl --fail --silent --retry 10 --retry-connrefused --retry-delay 1 --max-time 15 http://127.0.0.1:4322/release.json
 curl --fail --silent --retry 10 --retry-connrefused --retry-delay 1 --max-time 15 http://127.0.0.1:3000/admin/login >/dev/null
 printf '\nRestore complete; prior data retained at %s\n' "$previous"
+}
+if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then main "$@"; fi

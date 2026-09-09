@@ -1,6 +1,6 @@
 import { getPayload } from "payload";
 import config from "@payload-config";
-import { mkdir, writeFile, readFile } from "node:fs/promises";
+import { mkdir, writeFile, readFile, rename, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { randomUUID } from "node:crypto";
 import { isDeepStrictEqual } from "node:util";
@@ -12,6 +12,8 @@ import {
   mergeSelectedLive,
   runtimeDir,
   buildSite,
+  cleanupExpiredPreviews,
+  snapshotDigest,
 } from "../../../../publisher.js";
 import { readDraftSnapshot } from "../../../../cms-data.js";
 import { entryPath, validateSnapshot } from "@empact/content/schema";
@@ -100,6 +102,7 @@ export async function POST(
       confirmed?: boolean;
       version?: string;
       receiptId?: string;
+      previewId?: string;
     };
     const ids = Array.isArray(body.ids)
       ? [
@@ -118,6 +121,7 @@ export async function POST(
     if (action !== "preview" && body.confirmed !== true)
       throw new Error("请先勾选确认本次操作。");
     if (action === "preview") {
+      await cleanupExpiredPreviews();
       const draft = await readDraftSnapshot(payload),
         live = await readLiveSnapshot();
       const merged = mergeSelectedLive(
@@ -131,14 +135,40 @@ export async function POST(
         { production: false },
       );
       const id = randomUUID(),
-        directory = join(runtimeDir(), "previews", id);
-      await mkdir(directory, { recursive: true, mode: 0o700 });
-      await buildSite(snapshot, directory);
+        previews = join(runtimeDir(), "previews"),
+        building = join(previews, `${id}.building`),
+        directory = join(previews, id),
+        baseVersion = live?.version;
+      await mkdir(building, { recursive: true, mode: 0o700 });
       await writeFile(
-        join(directory, "expires.json"),
-        JSON.stringify({ expiresAt: Date.now() + 60 * 60_000 }),
+        join(building, "snapshot.json"),
+        JSON.stringify(snapshot),
+        {
+          mode: 0o600,
+        },
+      );
+      await writeFile(
+        join(building, "review.json"),
+        JSON.stringify({
+          ids,
+          includeCompany: Boolean(body.includeCompany),
+          baseVersion,
+          digest: snapshotDigest(snapshot),
+        }),
         { mode: 0o600 },
       );
+      try {
+        await buildSite(snapshot, building);
+        await writeFile(
+          join(building, "expires.json"),
+          JSON.stringify({ expiresAt: Date.now() + 60 * 60_000 }),
+          { mode: 0o600 },
+        );
+        await rename(building, directory);
+      } catch (error) {
+        await rm(building, { recursive: true, force: true });
+        throw error;
+      }
       return Response.json(
         {
           message: "预览已生成，有效期 1 小时；未登录不能读取。",
@@ -194,15 +224,45 @@ export async function POST(
         { state: "unpublished" },
       );
     } else {
-      const draft = await readDraftSnapshot(payload);
-      result = await publishSnapshot(async () =>
-        mergeSelectedLive(
-          await readLiveSnapshot(),
-          draft,
-          ids,
-          Boolean(body.includeCompany),
-        ),
-      );
+      if (!body.previewId || !/^[a-zA-Z0-9_-]{1,100}$/.test(body.previewId))
+        throw new Error("请先生成有效预览，再发布预览内容。");
+      const directory = join(runtimeDir(), "previews", body.previewId),
+        expires = JSON.parse(
+          await readFile(join(directory, "expires.json"), "utf8"),
+        ) as { expiresAt?: unknown },
+        review = JSON.parse(
+          await readFile(join(directory, "review.json"), "utf8"),
+        ) as {
+          ids?: unknown;
+          includeCompany?: unknown;
+          baseVersion?: unknown;
+          digest?: unknown;
+        },
+        frozen = JSON.parse(
+          await readFile(join(directory, "snapshot.json"), "utf8"),
+        );
+      if (
+        typeof expires.expiresAt !== "number" ||
+        expires.expiresAt < Date.now()
+      )
+        throw new Error("预览已过期，请重新生成。");
+      if (
+        JSON.stringify(review.ids) !== JSON.stringify(ids) ||
+        review.includeCompany !== Boolean(body.includeCompany) ||
+        review.digest !== snapshotDigest(frozen)
+      )
+        throw new Error("预览内容与当前选择不一致，请重新生成预览。");
+      result = await publishSnapshot(async () => {
+        const live = await readLiveSnapshot();
+        if (live?.version !== review.baseVersion)
+          throw new Error("官网已有更新，请重新选择内容并预览。");
+        return {
+          ...frozen,
+          mode: "production",
+          version: `v-${randomUUID()}`,
+          generatedAt: new Date().toISOString(),
+        };
+      });
     }
     if (result.state !== "failed" && action !== "unpublish") {
       for (const id of result.selectedIds || ids)
