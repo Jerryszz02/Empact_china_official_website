@@ -1,5 +1,6 @@
 ---
 import BaseLayout from "@/layouts/BaseLayout.astro";
+import CaseImage from "@/components/CaseImage.astro";
 import {
   businesses,
   pageBySlug,
@@ -17,7 +18,7 @@ const youthServices = businesses
   .slice(0, 5);
 const corporateServices = businesses
   .filter((item) => item.segment === "corporate")
-  .slice(0, 5);
+  .slice(0, 3);
 const chatCircle = projects.find((item) => item.slug === "chatcircle");
 const featuredProjects = projects.filter(
   (item) => item.featured && item.id !== chatCircle?.id,
@@ -35,7 +36,15 @@ const updates = news
   <section class="hero">
     <div>
       <span class="eyebrow">Empact China / Together, in motion</span>
-      <h1>{home?.title ?? "Empact 中国"}</h1>
+      <h1>
+        <img
+          class="hero-logo"
+          src="/brand/empact-logo-blue.png"
+          alt="Empact China"
+          width="1600"
+          height="591"
+        />
+      </h1>
       <p class="hero-copy">{home?.summary}</p>
       <div class="hero-actions">
         <a class="button button-primary" href="/youth/">
@@ -58,9 +67,13 @@ const updates = news
         与家庭
       </div>
       <div class="orbit-node center">
-        Empact
-        <br />
-        连接
+        <img
+          src="/brand/empact-logo-blue.png"
+          alt="Empact"
+          width="1600"
+          height="591"
+        />
+        <span>连接</span>
       </div>
       <div class="orbit-node corporate">
         企业
@@ -164,12 +177,19 @@ const updates = news
       <div class="section-heading">
         <h2>实践记录</h2>
       </div>
-      <div class="service-list">
+      <div class="case-grid">
         {featuredCases.map((item) => (
-          <div class="service-item">
-            <a href={`${pathFor(byId(item.parentId)!)}#cases`}>{item.title}</a>
-            <span>{item.summary}</span>
-          </div>
+          <article class="case-card">
+            <CaseImage entry={item} />
+            <div class="case-card-copy">
+              <h3>
+                <a href={`${pathFor(byId(item.parentId)!)}#${item.slug}`}>
+                  {item.title}
+                </a>
+              </h3>
+              <p>{item.summary}</p>
+            </div>
+          </article>
         ))}
       </div>
     </section>

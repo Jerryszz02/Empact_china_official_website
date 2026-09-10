@@ -58,6 +58,16 @@ try {
     ["--import", "tsx", "src/cli/create-admin.ts"],
     { cwd: cms, env, timeout: 30_000 },
   );
+  await execute(
+    process.execPath,
+    ["--import", "tsx", "src/cli/seed-local.ts"],
+    {
+      cwd: cms,
+      // The isolated database already uses the production migrations.
+      env: { ...env, NODE_ENV: "test", PAYLOAD_MIGRATING: "true" },
+      timeout: 60_000,
+    },
+  );
   child = spawn(
     process.execPath,
     [
@@ -150,6 +160,23 @@ try {
       },
       body: JSON.stringify(data),
     });
+  const seeded = await request("/api/content?limit=100");
+  const seededCases = seeded.docs.filter(
+    (entry: { kind: string }) => entry.kind === "case",
+  );
+  const expectedCases = previewSnapshot.entries.filter(
+    (entry) => entry.kind === "case",
+  );
+  assert.equal(seededCases.length, expectedCases.length);
+  for (const entry of expectedCases) {
+    const actual = seededCases.find(
+      (doc: { slug: string }) => doc.slug === entry.slug,
+    );
+    assert.ok(actual, `seeded case ${entry.slug}`);
+    assert.equal(actual.sourceName, entry.sourceName);
+    assert.equal(actual.sourceType, entry.sourceType);
+    assert.equal(actual.approved, false);
+  }
   const lexical = (text: string) => ({
     root: {
       type: "root",
@@ -183,7 +210,11 @@ try {
   for (const entry of previewSnapshot.entries.filter(
     (entry) => entry.kind === "page" || entry.kind === "business",
   )) {
-    const result = await request("/api/content", "POST", {
+    const existing = seeded.docs.find(
+      (doc: { slug: string }) => doc.slug === entry.slug,
+    );
+    assert.ok(existing, `seeded entry ${entry.slug}`);
+    const result = await request(`/api/content/${existing.id}`, "PATCH", {
       kind: entry.kind,
       slug: entry.slug,
       title: `验收-${entry.slug}`,

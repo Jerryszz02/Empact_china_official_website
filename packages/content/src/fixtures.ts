@@ -1,5 +1,26 @@
 import type { Snapshot, Entry } from "./schema.js";
 
+const corporateDescriptions: Record<
+  string,
+  { summary: string; bodyHtml: string }
+> = {
+  volunteering: {
+    summary: "围绕社区真实需求，设计员工能够参与的志愿服务。",
+    bodyHtml:
+      "<p>从企业愿景、员工兴趣与技能出发，连接社会组织的实际需求，设计一次性、技能型或服务型志愿活动。</p><p>提供需求调研、活动策划、志愿者引导、现场执行与项目复盘支持，让企业公益目标落到具体行动中。</p>",
+  },
+  "csr-consulting": {
+    summary: "将公益愿景转化为项目设计、参与机制与持续评估。",
+    bodyHtml:
+      "<p>结合企业公益目标与服务群体的需求，设计公益项目及员工参与方式，支持项目从策划走向执行。</p><p>通过目标梳理、资源协作、监测反馈与复盘，帮助企业建立可持续的公益实践。</p>",
+  },
+  "cross-border": {
+    summary: "连接区域伙伴，为跨地区公益合作提供本地化支持。",
+    bodyHtml:
+      "<p>面向企业跨地区合作需求，提供出海与跨文化沟通相关支持，结合目的地情况对接当地社会组织与合作伙伴。</p><p>从需求理解、合作沟通到项目设计与执行安排，与企业共同明确适合当地的合作方式。以下案例展示区域合作与本地化项目经验。</p>",
+  },
+};
+
 const business: Entry[] = [
   ["monthly-camp", "社会创新月月营", "youth"],
   ["international-camp", "国际社会创新研学营", "youth"],
@@ -9,19 +30,194 @@ const business: Entry[] = [
   ["volunteering", "企业志愿者服务", "corporate"],
   ["csr-consulting", "CSR与公益咨询", "corporate"],
   ["cross-border", "企业出海与跨文化支持", "corporate"],
-  ["resilience", "员工心理韧性建设", "corporate"],
-  ["organization-development", "组织发展与导师制", "corporate"],
 ].map(([slug, title, segment], index) => ({
   id: `business-${slug}`,
   kind: "business" as const,
   slug,
   title,
   segment: segment as "youth" | "corporate",
-  summary: "此方向的公开服务范围与具体安排将在审核后更新。",
-  bodyHtml: `<p>${title}的服务说明正在审核中，欢迎先与团队沟通实际需求。</p>`,
+  ...(corporateDescriptions[slug] ?? {
+    summary: "此方向的公开服务范围与具体安排将在审核后更新。",
+    bodyHtml: `<p>${title}的服务说明正在审核中，欢迎先与团队沟通实际需求。</p>`,
+  }),
   approved: false,
   order: index + 1,
 }));
+
+const cases: Entry[] = [
+  {
+    id: "case-singapore-social-innovation-camp",
+    kind: "case",
+    slug: "singapore-social-innovation-camp",
+    title: "新加坡社会创新与可持续发展研学营",
+    summary: "以社会企业、SDGs、社区服务和小组表达组成沉浸式研学路径。",
+    bodyHtml:
+      "<p>Empact在新加坡开展寒暑假社会创新与可持续发展研学营，安排营前课程、当地深度体验、每日反思及结营小组项目。</p><p>营员走访社会企业和公益机构，参与河道清理等社区活动，并通过演讲分享学习成果。2024年多期活动合计近百名营员参与。</p>",
+    segment: "youth",
+    parentId: "business-international-camp",
+    approved: false,
+    featured: true,
+    sourceName: "Empact公司介绍（中文版）",
+    sourceType: "company",
+    location: "新加坡",
+  },
+  {
+    id: "case-hong-kong-social-innovation-camp",
+    kind: "case",
+    slug: "hong-kong-social-innovation-camp",
+    title: "香港社会创新与可持续发展研学营",
+    summary: "通过社会企业参访、社区服务、SDGs实践与结业汇报认识香港社创生态。",
+    bodyHtml:
+      "<p>Empact为中学生设计香港社会创新与可持续发展研学营，设置营前课程、当地体验、团队项目和结营表达。</p><p>行程包括社会企业参观、社区服务、SDGs实践与文化探索，学生在香港中文大学进行结业汇报，分享学习成果。</p>",
+    segment: "youth",
+    parentId: "business-international-camp",
+    approved: false,
+    sourceName: "Empact公司介绍（中文版）",
+    sourceType: "company",
+    location: "中国香港",
+  },
+  {
+    id: "case-dream-workshop-inclusive-coffee",
+    kind: "case",
+    slug: "dream-workshop-inclusive-coffee",
+    title: "梦工坊咖啡厅社会共融体验",
+    summary: "在梦工坊咖啡厅与心智障碍青年伙伴共同体验拉花和手作。",
+    bodyHtml:
+      "<p>社创月月营带领学生走进梦工坊咖啡厅，与唐氏综合征及心智障碍咖啡师伙伴见面。</p><p>活动包含共同绘制帆布包和咖啡拉花体验，让参与者在具体互动中认识社会共融。</p>",
+    segment: "youth",
+    parentId: "business-monthly-camp",
+    approved: false,
+    sourceName: "Empact公司介绍（中文版）",
+    sourceType: "company",
+    location: "上海",
+  },
+  {
+    id: "case-dow-climate-action-camp",
+    kind: "case",
+    slug: "dow-climate-action-camp",
+    title: "陶氏气候行动社会创新月月营",
+    summary: "参访陶氏并通过气候拼图讨论气候变化与可能的解决方案。",
+    bodyHtml:
+      "<p>Empact社创月月营带领青年参访陶氏公司，了解其可持续发展历史与战略。</p><p>参与者通过气候拼图讨论气候变化与日常生活的距离，并尝试提出解决方案。</p>",
+    segment: "youth",
+    parentId: "business-monthly-camp",
+    approved: false,
+    sourceName: "Empact公司介绍（中文版）",
+    sourceType: "company",
+    location: "上海",
+  },
+  {
+    id: "case-youth-talk-fencing",
+    kind: "case",
+    slug: "youth-talk-fencing",
+    title: "剑指未来·少年说演讲活动",
+    summary: "Empact少年说与击剑俱乐部合作打造青少年演讲活动。",
+    bodyHtml:
+      "<p>2024年10月19日，Empact少年说与张莹击剑共同打造第四届“剑指未来・少年说”活动，在苏州工业园区领科高级中学举行。</p><p>Empact参与主题设定和流程安排，为青少年提供分享与表达的平台。</p>",
+    segment: "youth",
+    parentId: "business-public-speaking",
+    approved: false,
+    sourceName: "Empact公司介绍（中文版）",
+    sourceType: "company",
+    location: "苏州",
+  },
+  {
+    id: "case-purple-clay-digital-curation",
+    kind: "case",
+    slug: "purple-clay-digital-curation",
+    title: "非遗紫砂数字策展课程案例",
+    summary: "以紫砂文化为主题，将实地观察、PBL和AI工具结合进学校课程。",
+    bodyHtml:
+      "<p>在学校AI×社会创新×PBL学期课程中，Empact以非遗紫砂数字策展为课程案例，带领学生走进四海壶具博物馆，以策展人视角观察文化素材。</p><p>学生围绕传播议题，尝试生成紫砂数字IP角色与可视化网页。把文化观察与数字表达连接起来。</p>",
+    segment: "youth",
+    parentId: "business-ai-and-theme-courses",
+    approved: false,
+    sourceName: "Empact公司介绍（中文版）",
+    sourceType: "company",
+    location: "上海",
+  },
+  {
+    id: "case-office-camp",
+    kind: "case",
+    slug: "office-camp",
+    title: "新加坡青年职业实训营 Office Camp",
+    summary:
+      "面向18至25岁青年，以社会企业运营、咨询方法和真实议题项目组成实训。",
+    bodyHtml:
+      "<p>Office Camp安排青年了解社会企业日常运营，接受咨询方法论培训，并走访真实社会组织，观察公益与商业的结合。</p><p>每期约6至8人、全程英文，参与者从五个议题项目中选择一个完成社会创新项目。学习议题涵盖CSR实战、公益研究、青年支持和无障碍实践。</p>",
+    segment: "youth",
+    parentId: "business-youth-practice",
+    approved: false,
+    sourceName: "Empact公司介绍（中文版）",
+    sourceType: "company",
+    location: "新加坡",
+  },
+  {
+    id: "case-microsoft-d-and-i-volunteering",
+    kind: "case",
+    slug: "microsoft-d-and-i-volunteering",
+    title: "微软志愿者周多元与包容活动",
+    summary: "Empact为微软设计并统筹一场融合科技体验与多元包容主题的志愿活动。",
+    bodyHtml:
+      "<p>Empact联动孙楠携手童行公益项目及中欧上海校友公益协会，为微软设计多元与包容主题志愿活动。</p><p>活动汇集微软员工、来自西藏和新疆的肢残儿童、上海中小学生及公益伙伴，安排科技园参观、AI Copilot体验和互动游戏。</p>",
+    segment: "corporate",
+    parentId: "business-volunteering",
+    approved: false,
+    featured: true,
+    sourceName: "Empact公司介绍（中文版）",
+    sourceType: "company",
+    location: "上海",
+  },
+  {
+    id: "case-capitaland-university-career-mentoring",
+    kind: "case",
+    slug: "capitaland-university-career-mentoring",
+    title: "凯德大学生职业探索与成长陪伴计划",
+    summary:
+      "为凯德资助的乡村大学生设计职业研学营，并延伸为期六个月的志愿者陪伴。",
+    bodyHtml:
+      "<p>Empact为凯德集团设计并执行大学生城市职业探索研学营，通过企业参访、职场对话、心理韧性训练和AI技能学习，帮助学生建立城市职场初步认知。</p><p>项目进一步开发为期六个月的志愿者长期陪伴计划，安排企业参访陪伴、真人图书馆交流、社创分享和Coach陪伴，并设置监测与反馈流程。</p>",
+    segment: "corporate",
+    parentId: "business-csr-consulting",
+    approved: false,
+    featured: true,
+    sourceName: "Empact公司介绍（中文版）",
+    sourceType: "company",
+    location: "中国大陆",
+    duration: "6个月陪伴计划",
+  },
+  {
+    id: "case-ceibs-zhaoxi-youai",
+    kind: "case",
+    slug: "ceibs-zhaoxi-youai",
+    title: "中欧公益品牌“朝夕有爱”",
+    summary:
+      "Empact参与中欧公益品牌项目策划，连接校友、儿童与老年人开展志愿行动。",
+    bodyHtml:
+      "<p>2024年，Empact为中欧公益品牌“朝夕有爱”提供整体策划，连接校友家庭中的儿童与老年人，传递善意。</p><p>项目协调企业捐赠物资，联动13个中欧校友分会在6月1日至2日参与20余场活动，为老人送去安全插座、暖心物资及防滑地垫。</p>",
+    segment: "corporate",
+    parentId: "business-csr-consulting",
+    approved: false,
+    sourceName: "Empact公司介绍（中文版）",
+    sourceType: "company",
+    location: "上海",
+  },
+  {
+    id: "case-abbvie-taiwan-2025",
+    kind: "case",
+    slug: "abbvie-taiwan-2025",
+    title: "艾伯维2025台湾企业志愿周",
+    summary: "围绕残健融合，为台湾多地志愿活动提供策略、引导与本地执行支持。",
+    bodyHtml:
+      "<p>Empact参与艾伯维“Week of Possibilities”在台湾的咨询、设计与执行，以残健融合为主题，在台北、高雄和台中开展三场面向残障群体的志愿活动。</p><p>项目结合当地NGO资源，包含一对一陪伴、轻运动和自然疗愈等形式；Empact提供需求调研、策略建议、志愿者引导与本地执行支持。</p>",
+    segment: "corporate",
+    parentId: "business-cross-border",
+    approved: false,
+    sourceName: "Empact公司介绍（中文版）",
+    sourceType: "company",
+    location: "台湾（台北、高雄、台中）",
+  },
+];
 export const previewSnapshot: Snapshot = {
   version: "preview-fixture",
   generatedAt: new Date(0).toISOString(),
@@ -115,6 +311,7 @@ export const previewSnapshot: Snapshot = {
       operator: "Empact China",
     },
     ...business,
+    ...cases,
   ],
   media: [],
 };
