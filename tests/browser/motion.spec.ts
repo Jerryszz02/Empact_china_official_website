@@ -246,3 +246,41 @@ test("touch swipe stops at the middle scene and can reverse", async ({
     .toBeLessThan(3);
   await context.close();
 });
+
+test("closing logo leaves with its scene without being cut by the heading", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await expect.poll(() => canvasInk(page)).toBeGreaterThan(100);
+  await settleAt(page, "conversation");
+  await page.evaluate(() => {
+    document.documentElement.style.scrollSnapType = "none";
+    document.documentElement.style.scrollBehavior = "auto";
+  });
+  const measure = () =>
+    page.locator("[data-motion-canvas]").evaluate((element) => {
+      const canvas = element as HTMLCanvasElement;
+      const pixels = canvas
+        .getContext("2d")!
+        .getImageData(0, 0, canvas.width, canvas.height).data;
+      let count = 0,
+        totalY = 0;
+      for (let i = 3; i < pixels.length; i += 4) {
+        if (pixels[i] > 0) {
+          count++;
+          totalY += Math.floor(i / 4 / canvas.width);
+        }
+      }
+      return { count, y: totalY / count / (canvas.height / innerHeight) };
+    });
+  await page.waitForTimeout(100);
+  const before = await measure();
+  await page.evaluate(() => scrollBy({ top: 80, behavior: "instant" }));
+  await expect
+    .poll(async () => before.y - (await measure()).y)
+    .toBeGreaterThan(77);
+  const after = await measure();
+  expect(before.y - after.y).toBeLessThan(83);
+  expect(after.count / before.count).toBeGreaterThan(0.95);
+  await expect(page.locator(".motion-directory")).toHaveCount(0);
+});

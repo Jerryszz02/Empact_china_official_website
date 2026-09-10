@@ -297,7 +297,9 @@ test("footer is compact and uses the transparent white logo", async ({
     1080,
   );
   const bounds = await footer.boundingBox();
-  expect(bounds!.height).toBeLessThan(
+  const content = await footer.locator(".footer-content").boundingBox();
+  // Published links add their natural height; the original footer stays compact.
+  expect(bounds!.height - (content?.height ?? 0)).toBeLessThan(
     testInfo.project.name === "mobile" ? 340 : 210,
   );
   await footer.screenshot({

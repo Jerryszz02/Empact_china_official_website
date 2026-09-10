@@ -105,7 +105,7 @@ function canRender() {
     bounds.bottom > 0 &&
     bounds.top < innerHeight;
   canvas.hidden = !enabled;
-  // A fixed canvas must never paint over the directory or footer below its stage.
+  // A fixed canvas must never paint over the footer below its stage.
   canvas.style.clipPath = `inset(${Math.max(0, bounds.top)}px 0 ${Math.max(0, innerHeight - bounds.bottom)}px 0)`;
   return enabled;
 }
@@ -121,10 +121,13 @@ function draw() {
   const spread =
     smooth((progress - 0.1) / 0.32) * (1 - smooth((progress - 0.65) / 0.3));
   const finish = smooth((progress - 0.75) / 0.2);
+  const exitOpacity =
+    1 - smooth(Math.max(0, scrollY - end) / Math.min(180, height * 0.2));
   const mobile = width < 700;
   const centerX = width * ((mobile ? 0.5 : 0.66) * (1 - finish) + 0.5 * finish);
   const centerY =
-    height * ((mobile ? 0.31 : 0.33) * (1 - finish) + 0.32 * finish);
+    height * ((mobile ? 0.31 : 0.33) * (1 - finish) + 0.32 * finish) -
+    Math.max(0, scrollY - end);
   const size =
     width *
     ((mobile ? 0.88 : 0.49) * (1 - finish) + (mobile ? 0.72 : 0.43) * finish);
@@ -156,7 +159,7 @@ function draw() {
           : paper
             ? "#F3F0E7"
             : "#125284";
-    context.globalAlpha = 0.7 + point.seed * 0.3;
+    context.globalAlpha = (0.7 + point.seed * 0.3) * exitOpacity;
     const radius = (mobile ? 0.7 : 1) + point.seed * 0.5;
     context.beginPath();
     context.moveTo(x, y - radius);

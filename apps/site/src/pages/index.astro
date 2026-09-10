@@ -1,25 +1,7 @@
 ---
 import BaseLayout from "@/layouts/BaseLayout.astro";
-import {
-  businesses,
-  pageBySlug,
-  pathFor,
-  projects,
-  news,
-  cases,
-  byId,
-} from "@/lib/content";
+import { pageBySlug } from "@/lib/content";
 const home = pageBySlug("home");
-const youthServices = businesses.filter((item) => item.segment === "youth");
-const corporateServices = businesses.filter(
-  (item) => item.segment === "corporate",
-);
-const updates = [...news].sort((a, b) =>
-  (b.publishedAt ?? "").localeCompare(a.publishedAt ?? ""),
-);
-const featuredCases = cases.filter(
-  (item) => item.featured && byId(item.parentId),
-);
 ---
 
 <BaseLayout
@@ -111,54 +93,6 @@ const featuredCases = cases.filter(
       </span>
     </section>
   </div>
-  {(businesses.length > 0 ||
-    projects.length > 0 ||
-    updates.length > 0 ||
-    featuredCases.length > 0) && (
-    <details class="motion-directory">
-      <summary>
-        <span class="eyebrow">Explore Empact</span>
-        <span>更多内容</span>
-      </summary>
-      <div class="motion-directory-grid">
-        {(businesses.length > 0 || projects.length > 0) && (
-          <div>
-            <h3>业务与项目</h3>
-            {youthServices.map((item) => (
-              <a href={pathFor(item)}>
-                {item.title} <span aria-hidden="true">↗</span>
-              </a>
-            ))}
-            {corporateServices.map((item) => (
-              <a href={pathFor(item)}>
-                {item.title} <span aria-hidden="true">↗</span>
-              </a>
-            ))}
-            {projects.map((item) => (
-              <a href={pathFor(item)}>
-                {item.title} <span aria-hidden="true">↗</span>
-              </a>
-            ))}
-          </div>
-        )}
-        {(updates.length > 0 || featuredCases.length > 0) && (
-          <div>
-            <h3>动态与实践</h3>
-            {updates.map((item) => (
-              <a href={pathFor(item)}>
-                {item.title} <span aria-hidden="true">↗</span>
-              </a>
-            ))}
-            {featuredCases.map((item) => (
-              <a href={`${pathFor(byId(item.parentId)!)}#${item.slug}`}>
-                {item.title} <span aria-hidden="true">↗</span>
-              </a>
-            ))}
-          </div>
-        )}
-      </div>
-    </details>
-  )}
 </BaseLayout>
 
 <script>
@@ -328,42 +262,6 @@ const featuredCases = cases.filter(
     flex-direction: column;
     align-items: center;
   }
-  .motion-directory {
-    max-width: var(--max);
-    margin: auto;
-    padding: 1.5rem var(--gutter);
-    color: var(--motion-blue);
-    background: var(--motion-paper);
-  }
-  .motion-directory[open] {
-    padding-bottom: 4rem;
-  }
-  .motion-directory summary {
-    cursor: pointer;
-    display: grid;
-    gap: 0.2rem;
-  }
-  .motion-directory summary > span:last-child {
-    font-size: clamp(1.5rem, 3vw, 2.2rem);
-    font-weight: 400;
-  }
-  .motion-directory-grid {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 4rem;
-    margin-top: 2rem;
-  }
-  .motion-directory h3 {
-    font-size: 1.15rem;
-    font-weight: 400;
-  }
-  .motion-directory a {
-    display: flex;
-    justify-content: space-between;
-    border-top: 1px solid rgb(18 82 132 / 35%);
-    padding: 0.7rem 0;
-    text-decoration: none;
-  }
   @media (max-width: 600px) {
     :global(body.motion-home.motion-js .site-header) {
       top: calc(0.5rem + var(--motion-banner-space, 0px));
@@ -385,8 +283,7 @@ const featuredCases = cases.filter(
       left: 50%;
       top: 30%;
     }
-    .motion-pathways,
-    .motion-directory-grid {
+    .motion-pathways {
       grid-template-columns: 1fr;
       gap: 1.5rem;
     }
@@ -422,29 +319,6 @@ const featuredCases = cases.filter(
   }
   .motion-pathway .eyebrow {
     overflow-wrap: anywhere;
-  }
-  .motion-directory a {
-    min-width: 0;
-    gap: 1rem;
-    overflow-wrap: anywhere;
-  }
-  .motion-directory summary::after {
-    content: "+";
-    font-size: 1.5rem;
-    justify-self: end;
-    grid-column: 2;
-    grid-row: 1 / 3;
-  }
-  .motion-directory[open] summary::after {
-    content: "−";
-  }
-  .motion-directory summary {
-    grid-template-columns: 1fr auto;
-    min-height: 2.75rem;
-  }
-  .motion-directory {
-    scroll-snap-align: start;
-    scroll-margin-top: 7rem;
   }
   :global(body.motion-home .site-footer) {
     scroll-snap-align: end;
