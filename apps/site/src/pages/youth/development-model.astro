@@ -1,0 +1,202 @@
+---
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import YouthDevelopmentModel from "@/components/YouthDevelopmentModel.astro";
+const stages = [
+  ["经历", "进入真实情境，在交流与实践中行动。"],
+  ["反思", "回看经验，觉察自己的假设与感受。"],
+  ["适应", "调整方法，在差异与变化中学习。"],
+  ["重构", "重新理解问题，更新认知与行动策略。"],
+  ["再扎根", "把新的理解融入自己，带入下一次实践。"],
+];
+---
+
+<BaseLayout
+  title="国际化人才培养模型"
+  description="以主体性为核心，以内在特质为支撑，在真实实践中发展六维能力，连接自身文化与未来方向。"
+>
+  <section class="page-hero">
+    <a class="back-link" href="/youth/">
+      青少年项目 / 培养理念
+    </a>
+    <h1>国际化人才培养模型</h1>
+    <p class="page-summary">
+      扎根自身，走向世界。让每一次真实的经历，成为理解自己、连接他人和主动行动的起点。
+    </p>
+  </section>
+  <div class="model-page">
+    <section class="model-section" aria-labelledby="overview-title">
+      <div class="section-copy">
+        <span class="eyebrow">六维发展模型 · 6D Development Model</span>
+        <h2 id="overview-title">成长，从自己出发，在行动中发生。</h2>
+        <p>
+          国际化人才的成长，连接着自我认同、跨文化理解与真实行动。主体性驱动我们作出选择，内在特质支撑我们面对挑战，六维能力则体现在如何理解世界、与人协作和创造价值。
+        </p>
+      </div>
+      <YouthDevelopmentModel />
+      <p class="source-note">
+        模型来源：开物 KAIWU「六维发展模型（6D Development
+        Model）」；本页以青少年阅读语境整理说明，保留原模型的六项能力名称。
+      </p>
+    </section>
+    <section class="model-section roots-section" aria-labelledby="roots-title">
+      <div class="section-copy">
+        <span class="eyebrow">Heritage &amp; Horizon</span>
+        <h2 id="roots-title">有根，也有远方。</h2>
+        <p>理解自己的来处，也为未来保留可能。两者共同构成成长的方向。</p>
+      </div>
+      <div class="roots-grid">
+        <article>
+          <span class="root-label">根 / Heritage</span>
+          <h3>我从哪里来</h3>
+          <p>
+            文化、历史、家庭、教育与经历，塑造我们的价值与认同。理解这些来处，让我们在面对差异时拥有内在的支点。
+          </p>
+        </article>
+        <article>
+          <span class="root-label">远方 / Horizon</span>
+          <h3>我想走向哪里</h3>
+          <p>
+            愿景、使命与对未来的想象，引导我们选择下一步。带着好奇探索新的情境，在行动中逐渐找到自己的方向。
+          </p>
+        </article>
+      </div>
+    </section>
+    <section class="model-section" aria-labelledby="growth-title">
+      <div class="section-copy">
+        <span class="eyebrow">持续成长的过程</span>
+        <h2 id="growth-title">把经历，变成带得走的成长。</h2>
+        <p>
+          成长需要不断回看、调整与整合。每一轮实践形成新的根基，也为下一次探索打开空间。
+        </p>
+      </div>
+      <ol class="growth-path">
+        {stages.map(([title, body], index) => (
+          <li>
+            <span class="stage-number">0{index + 1}</span>
+            <h3>{title}</h3>
+            <p>{body}</p>
+          </li>
+        ))}
+      </ol>
+      <p class="growth-return">
+        带着新的理解，再次进入真实情境。<span aria-hidden="true"> ↻</span>
+      </p>
+      <a class="model-link" href="/youth/">
+        探索青少年项目 <span aria-hidden="true">↗</span>
+      </a>
+    </section>
+  </div>
+</BaseLayout>
+<style>
+  .back-link {
+    font-size: 0.85rem;
+    opacity: 0.85;
+  }
+  .model-page {
+    color: var(--blue);
+    background: #fff;
+  }
+  .model-section {
+    max-width: var(--max);
+    padding: 4rem var(--gutter);
+    margin: auto;
+  }
+  .section-copy {
+    max-width: 45rem;
+  }
+  h2 {
+    font-size: clamp(1.7rem, 3vw, 2.4rem);
+    line-height: 1.45;
+    margin: 0.6rem 0 1rem;
+  }
+  .section-copy p,
+  article p,
+  .growth-path p {
+    color: var(--secondary);
+  }
+  .source-note {
+    margin: 1rem 0 0;
+    font-size: 0.78rem;
+    color: var(--secondary);
+    border-top: 1px solid var(--dark-line);
+    padding-top: 1rem;
+  }
+  .roots-section {
+    background: var(--paper);
+  }
+  .roots-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4rem;
+    margin-top: 2.5rem;
+  }
+  .roots-grid article {
+    border-top: 2px solid var(--green);
+    padding-top: 1.5rem;
+  }
+  .roots-grid article:last-child {
+    border-color: #9065a7;
+  }
+  .root-label {
+    font-size: 0.8rem;
+    font-weight: 700;
+  }
+  h3 {
+    margin: 0.5rem 0;
+    font-size: 1.35rem;
+  }
+  .growth-path {
+    list-style: none;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 1.5rem;
+    margin-top: 2.5rem;
+  }
+  .growth-path li {
+    border-top: 1px solid var(--dark-line);
+    padding-top: 1rem;
+  }
+  .stage-number {
+    font-size: 0.8rem;
+    color: var(--secondary);
+  }
+  .growth-path p {
+    font-size: 0.9rem;
+  }
+  .growth-return {
+    font-size: 0.85rem;
+    padding-bottom: 2rem;
+    border-bottom: 1px solid var(--dark-line);
+  }
+  .model-link {
+    display: inline-block;
+    margin-top: 1rem;
+    font-weight: 700;
+  }
+  @media (max-width: 760px) {
+    .model-section {
+      padding-block: 2.5rem;
+    }
+    .roots-grid {
+      grid-template-columns: 1fr;
+      gap: 1.5rem;
+    }
+    .growth-path {
+      grid-template-columns: 1fr;
+      gap: 0.6rem;
+    }
+    .growth-path li {
+      display: grid;
+      grid-template-columns: 2rem 1fr;
+      column-gap: 0.5rem;
+    }
+    .stage-number {
+      align-self: center;
+    }
+    .growth-path p {
+      grid-column: 2;
+      margin-top: 0;
+    }
+  }
+</style>

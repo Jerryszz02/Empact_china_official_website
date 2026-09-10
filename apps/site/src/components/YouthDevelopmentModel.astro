@@ -1,0 +1,414 @@
+---
+const dimensions = [
+  {
+    number: "01",
+    title: "复合身份认同力",
+    copy: "理解自己，在多元文化中找到位置",
+    position: "top",
+  },
+  {
+    number: "02",
+    title: "技术人文主义力",
+    copy: "善用技术，关照人的需求与责任",
+    position: "top-right",
+  },
+  {
+    number: "03",
+    title: "敏捷跨文化诠释力",
+    copy: "理解文化差异，找到沟通的方法",
+    position: "bottom-right",
+  },
+  {
+    number: "04",
+    title: "分布式协作领导力",
+    copy: "连接不同角色，共同推动行动",
+    position: "bottom",
+  },
+  {
+    number: "05",
+    title: "问题生态诊断力",
+    copy: "看见问题关联，找到行动的切入点",
+    position: "bottom-left",
+  },
+  {
+    number: "06",
+    title: "价值理性平衡力",
+    copy: "权衡价值与影响，作出有依据的选择",
+    position: "top-left",
+  },
+];
+
+const traits = ["开放性", "反思性", "韧性", "复杂性取向", "价值扎根"];
+---
+
+<section class="youth-model" aria-label="六维发展模型图解">
+  <div class="model-visual">
+    <svg
+      class="model-lines"
+      viewBox="0 0 1100 780"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <defs>
+        <linearGradient id="ring-fill" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stop-color="#e4f7f4" />
+          <stop offset="1" stop-color="#eee9fa" />
+        </linearGradient>
+        <linearGradient id="ring-stroke" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stop-color="#29b7b9" />
+          <stop offset="1" stop-color="#9481d5" />
+        </linearGradient>
+      </defs>
+      <g class="connector-lines">
+        <line x1="550" y1="94" x2="550" y2="192" />
+        <line x1="887" y1="222" x2="765" y2="300" />
+        <line x1="887" y1="558" x2="765" y2="480" />
+        <line x1="550" y1="686" x2="550" y2="588" />
+        <line x1="213" y1="558" x2="334" y2="490" />
+        <line x1="213" y1="222" x2="334" y2="290" />
+      </g>
+      <polygon
+        class="outer-ring"
+        points="550,190 765,300 765,480 550,590 335,480 335,300"
+      />
+      <polygon
+        class="inner-ring"
+        points="550,250 685,320 685,460 550,530 415,460 415,320"
+      />
+      <circle class="ring-dot dot-teal" cx="550" cy="190" r="5" />
+      <circle class="ring-dot dot-purple" cx="765" cy="300" r="5" />
+      <circle class="ring-dot dot-coral" cx="765" cy="480" r="5" />
+      <circle class="ring-dot dot-teal" cx="550" cy="590" r="5" />
+      <circle class="ring-dot dot-purple" cx="335" cy="480" r="5" />
+      <circle class="ring-dot dot-coral" cx="335" cy="300" r="5" />
+    </svg>
+
+    <div class="model-core-copy">
+      <span class="core-label">核心</span>
+      <strong>主体性</strong>
+      <span class="core-support">自主选择 · 主动行动</span>
+      <span class="core-support">持续反思</span>
+    </div>
+
+    <div class="trait-label trait-heading">内在特质</div>
+    <div class="traits" aria-label="五项内在特质">
+      {traits.map((trait, index) => (
+        <span class={`trait trait-${index + 1}`}>{trait}</span>
+      ))}
+    </div>
+
+    <ol class="model-items" aria-label="六项发展能力">
+      {dimensions.map((dimension) => (
+        <li class={`model-item item-${dimension.position}`}>
+          <span class="item-number">{dimension.number}</span>
+          <div>
+            <h3>{dimension.title}</h3>
+            <p>{dimension.copy}</p>
+          </div>
+        </li>
+      ))}
+    </ol>
+  </div>
+</section>
+
+<style>
+  .youth-model {
+    --model-navy: var(--blue, #085a88);
+    --model-teal: var(--green, #29b7b9);
+    --model-coral: var(--red, #f06172);
+    --model-purple: #9481d5;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 2rem 0;
+    color: var(--model-navy);
+  }
+
+  .model-visual {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 1100 / 780;
+    min-height: 620px;
+  }
+
+  .model-lines {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+  }
+
+  .connector-lines line {
+    stroke: color-mix(in srgb, var(--model-navy) 28%, transparent);
+    stroke-width: 1;
+    stroke-dasharray: 2 7;
+  }
+
+  .outer-ring {
+    fill: url(#ring-fill);
+    fill-opacity: 0.7;
+    stroke: url(#ring-stroke);
+    stroke-width: 1.5;
+  }
+
+  .inner-ring {
+    fill: white;
+    fill-opacity: 0.72;
+    stroke: color-mix(in srgb, var(--model-purple) 72%, white);
+    stroke-width: 1;
+    stroke-dasharray: 3 6;
+  }
+
+  .ring-dot {
+    stroke: white;
+    stroke-width: 2;
+  }
+  .dot-teal {
+    fill: var(--model-teal);
+  }
+  .dot-purple {
+    fill: var(--model-purple);
+  }
+  .dot-coral {
+    fill: var(--model-coral);
+  }
+
+  .model-core-copy {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    display: grid;
+    width: 174px;
+    height: 142px;
+    transform: translate(-50%, -50%);
+    place-content: center;
+    gap: 0.18rem;
+    text-align: center;
+    color: white;
+    background: var(--model-navy);
+    clip-path: polygon(50% 0, 96% 25%, 96% 75%, 50% 100%, 4% 75%, 4% 25%);
+  }
+
+  .core-label,
+  .core-support {
+    font-size: 0.68rem;
+    line-height: 1.45;
+  }
+
+  .core-label {
+    color: #a9e3dd;
+    letter-spacing: 0.18em;
+  }
+  .model-core-copy strong {
+    font-size: 1.55rem;
+    letter-spacing: 0.08em;
+  }
+  .core-support {
+    color: #dcecf0;
+  }
+
+  .trait-heading {
+    position: absolute;
+    top: 30.5%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: var(--model-purple);
+    font-size: 0.72rem;
+    letter-spacing: 0.16em;
+    white-space: nowrap;
+  }
+
+  .trait {
+    position: absolute;
+    z-index: 1;
+    display: inline-flex;
+    padding: 0.28rem 0.65rem;
+    color: var(--model-navy);
+    background: rgb(255 255 255 / 84%);
+    font-size: 0.78rem;
+    line-height: 1.45;
+    white-space: nowrap;
+  }
+
+  .trait-1 {
+    top: 35%;
+    left: 37%;
+  }
+  .trait-2 {
+    top: 35%;
+    right: 37%;
+  }
+  .trait-3 {
+    top: 49%;
+    right: 32%;
+  }
+  .trait-4 {
+    top: 63%;
+    right: 35%;
+  }
+  .trait-5 {
+    top: 63%;
+    left: 35%;
+  }
+
+  .model-items {
+    position: absolute;
+    inset: 0;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .model-item {
+    position: absolute;
+    display: flex;
+    width: 245px;
+    gap: 0.65rem;
+    align-items: flex-start;
+  }
+
+  .item-number {
+    flex: 0 0 auto;
+    color: var(--model-coral);
+    font:
+      700 0.72rem/1.5 Arial,
+      sans-serif;
+    letter-spacing: 0.05em;
+  }
+
+  .model-item h3 {
+    margin: 0 0 0.25rem;
+    font-size: 1rem;
+    line-height: 1.3;
+  }
+
+  .model-item p {
+    margin: 0;
+    color: var(--secondary, #4e6979);
+    font-size: 0.78rem;
+    line-height: 1.55;
+  }
+
+  .item-top {
+    top: 2%;
+    left: 50%;
+    transform: translateX(-50%);
+    text-align: center;
+    justify-content: center;
+  }
+  .item-top-right {
+    top: 20%;
+    right: 1%;
+  }
+  .item-bottom-right {
+    bottom: 15%;
+    right: 1%;
+  }
+  .item-bottom {
+    bottom: 1%;
+    left: 50%;
+    transform: translateX(-50%);
+    text-align: center;
+    justify-content: center;
+  }
+  .item-bottom-left {
+    bottom: 15%;
+    left: 1%;
+    text-align: right;
+    flex-direction: row-reverse;
+  }
+  .item-top-left {
+    top: 20%;
+    left: 1%;
+    text-align: right;
+    flex-direction: row-reverse;
+  }
+
+  @media (max-width: 1000px) {
+    .youth-model {
+      padding: 2rem 0;
+    }
+    .model-visual {
+      min-height: 0;
+      aspect-ratio: auto;
+    }
+    .model-lines {
+      display: none;
+    }
+    .model-core-copy {
+      position: relative;
+      inset: auto;
+      width: 100%;
+      height: auto;
+      min-height: 8.5rem;
+      margin-bottom: 2rem;
+      padding: 1.5rem 1.25rem;
+      transform: none;
+      clip-path: none;
+    }
+    .model-core-copy strong {
+      font-size: 1.35rem;
+    }
+    .core-support {
+      font-size: 0.76rem;
+    }
+    .trait-heading {
+      position: relative;
+      top: auto;
+      left: auto;
+      display: block;
+      margin: 0 0 0.5rem;
+      transform: none;
+      text-align: left;
+    }
+    .traits {
+      position: relative;
+      inset: auto;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.35rem 0.45rem;
+      margin-bottom: 1.25rem;
+    }
+    .trait {
+      position: relative;
+      inset: auto;
+      padding: 0.2rem 0.45rem;
+      background: #eef7f7;
+    }
+    .model-items {
+      position: relative;
+      inset: auto;
+      display: grid;
+      gap: 0;
+    }
+    .model-item,
+    .item-top,
+    .item-top-right,
+    .item-bottom-right,
+    .item-bottom,
+    .item-bottom-left,
+    .item-top-left {
+      position: relative;
+      inset: auto;
+      display: grid;
+      width: 100%;
+      grid-template-columns: 2rem 1fr;
+      gap: 0.7rem;
+      padding: 1rem 0;
+      border-top: 1px solid rgb(8 90 136 / 16%);
+      transform: none;
+      text-align: left;
+    }
+    .model-item:last-child {
+      border-bottom: 1px solid rgb(8 90 136 / 16%);
+    }
+    .item-number {
+      padding-top: 0.15rem;
+    }
+    .model-item h3 {
+      font-size: 1rem;
+    }
+    .model-item p {
+      font-size: 0.82rem;
+    }
+  }
+</style>
