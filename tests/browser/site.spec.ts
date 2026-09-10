@@ -18,7 +18,9 @@ test("homepage paths, dropdowns, mobile navigation and draft boundary", async ({
     page.locator('.site-header img[src="/brand/empact-logo-blue.png"]'),
   ).toHaveJSProperty("complete", true);
   await expect(
-    page.locator('.site-footer img[src="/brand/empact-logo-tagline-blue.png"]'),
+    page.locator(
+      '.site-footer img[src="/brand/empact-logo-tagline-white.png"]',
+    ),
   ).toHaveJSProperty("complete", true);
   await expect(page.locator("#nav-corporate a")).toHaveCount(3);
   await expect(page.locator(".case-card")).toHaveCount(3);
@@ -220,4 +222,63 @@ test("no-script pages retain content and navigation", async ({
     ),
   ).toBe(true);
   await context.close();
+});
+
+test("project metadata remains readable on blue and light surfaces", async ({
+  page,
+}) => {
+  await page.goto("/projects/chatcircle/");
+  const metadata = page.locator(".page-hero .detail-meta");
+  await expect(metadata).toHaveCSS("color", "rgb(255, 255, 255)");
+  // Preview has no coverage records; exercise the same metadata on its light surface.
+  await metadata.evaluate((element) => {
+    document.querySelector(".content-wrap")!.append(element);
+  });
+  await expect(page.locator(".content-wrap .detail-meta")).toHaveCSS(
+    "color",
+    "rgb(78, 105, 121)",
+  );
+});
+
+test("empty form feedback stays accessible before an update", async ({
+  page,
+}) => {
+  await page.goto("/contact/");
+  const status = page.locator("[data-form-status]");
+  // Preview has fallback copy; reproduce the enabled form's initially empty state.
+  await status.evaluate((element) => {
+    element.textContent = "";
+  });
+  await expect(status).not.toHaveCSS("display", "none");
+  await expect(status).toHaveCSS("visibility", "visible");
+  await expect(page.getByRole("status").and(status)).toHaveCount(1);
+  await status.evaluate((element) => {
+    element.textContent = "咨询已提交";
+  });
+  await expect(status).toBeVisible();
+  await expect(status).toContainText("咨询已提交");
+  await expect(status).toHaveCSS("position", "static");
+});
+
+test("footer is compact and uses the transparent white logo", async ({
+  page,
+}, testInfo) => {
+  await page.goto("/");
+  const footer = page.locator(".site-footer");
+  const logo = footer.locator("img");
+  await expect(logo).toHaveAttribute(
+    "src",
+    "/brand/empact-logo-tagline-white.png",
+  );
+  await expect(logo).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
+  expect(await logo.evaluate((img: HTMLImageElement) => img.naturalWidth)).toBe(
+    1080,
+  );
+  const bounds = await footer.boundingBox();
+  expect(bounds!.height).toBeLessThan(
+    testInfo.project.name === "mobile" ? 340 : 210,
+  );
+  await footer.screenshot({
+    path: `test-results/footer-${testInfo.project.name}.png`,
+  });
 });
