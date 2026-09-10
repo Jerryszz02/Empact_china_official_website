@@ -10,6 +10,7 @@ interface Props {
   canonical?: string;
   noIndex?: boolean;
   type?: "website" | "article";
+  bodyClass?: string;
 }
 const {
   title,
@@ -17,6 +18,7 @@ const {
   canonical,
   noIndex = isPreviewMode(),
   type = "website",
+  bodyClass,
 } = Astro.props;
 const canonicalUrl = new URL(
   canonical ?? Astro.url.pathname,
@@ -100,7 +102,7 @@ const jsonLd =
       ></script>
     ))}
   </head>
-  <body>
+  <body class={bodyClass}>
     <a class="skip-link" href="#main-content">
       跳转到正文
     </a>

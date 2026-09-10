@@ -1,6 +1,5 @@
 ---
 import BaseLayout from "@/layouts/BaseLayout.astro";
-import CaseImage from "@/components/CaseImage.astro";
 import {
   businesses,
   pageBySlug,
@@ -11,190 +10,479 @@ import {
   byId,
 } from "@/lib/content";
 const home = pageBySlug("home");
-const youth = pageBySlug("youth");
-const corporate = pageBySlug("corporate");
 const youthServices = businesses.filter((item) => item.segment === "youth");
 const corporateServices = businesses.filter(
   (item) => item.segment === "corporate",
 );
-const chatCircle = projects.find((item) => item.slug === "chatcircle");
-const featuredProjects = projects.filter(
-  (item) => item.featured && item.id !== chatCircle?.id,
+const updates = [...news].sort((a, b) =>
+  (b.publishedAt ?? "").localeCompare(a.publishedAt ?? ""),
 );
 const featuredCases = cases.filter(
   (item) => item.featured && byId(item.parentId),
 );
-const updates = news
-  .filter((item) => item.featured)
-  .sort((a, b) => (b.publishedAt ?? "").localeCompare(a.publishedAt ?? ""))
-  .slice(0, 3);
 ---
 
-<BaseLayout title={home?.title ?? "Empact 中国"} description={home?.summary}>
-  <section class="hero">
-    <div class="hero-copy-block">
-      <span class="eyebrow hero-eyebrow">Empact China / Social innovation</span>
-      <h1 class="hero-title">
-        <span>
-          Empowering{" "}
-          <svg class="hero-star" viewBox="0 0 40 40" aria-hidden="true">
-            <path d="M20 2V38 M2 20H38 M7 7L33 33 M7 33L33 7" />
-          </svg>
-        </span>
-        <span>
-          Greater{" "}
-          <svg class="hero-arrow" viewBox="0 0 80 80" aria-hidden="true">
-            <path d="M8 72L72 8 M40 8H72V40" />
-          </svg>
-        </span>
-        <span>
-          Empact<span class="hero-period">.</span>
-        </span>
-      </h1>
-      <div class="hero-support">
-        <div>
-          <p class="hero-subtitle">赋能更大的影响力</p>
-          <p class="hero-copy">{home?.summary}</p>
-        </div>
-        <div class="hero-actions">
-          <a class="button button-primary" href="/youth/">
-            探索青少年项目 <span aria-hidden="true">↗</span>
-          </a>
-          <a class="button" href="/corporate/">
-            了解企业服务 <span aria-hidden="true">↗</span>
-          </a>
-        </div>
-      </div>
-    </div>
-    <div class="hero-index" aria-hidden="true">
-      <span>YOUTH</span>
-      <span>ORGANISATIONS</span>
-      <span>SOCIAL INNOVATION</span>
-    </div>
-  </section>
-  <section class="business-matrix pathways section">
-    <div class="section-heading">
-      <div>
-        <span class="eyebrow">Two ways in</span>
-        <h2>从你的关注出发</h2>
-      </div>
-      <div class="matrix-intro prose" set:html={home?.bodyHtml ?? ""} />
-    </div>
-    <div class="matrix-grid">
-      <div class="matrix-column">
-        <span class="eyebrow">For youth, families & schools</span>
-        <h3>{youth?.title ?? "青少年项目"}</h3>
-        <p>{youth?.summary}</p>
-        {youthServices.map((item) => (
-          <a class="matrix-row" href={pathFor(item)}>
-            <span>{item.title}</span>
-            <span aria-hidden="true">↗</span>
-          </a>
-        ))}
-        <a class="matrix-link" href="/youth/">
-          查看青少年项目 →
-        </a>
-      </div>
-      <div class="matrix-column">
-        <span class="eyebrow">For organisations</span>
-        <h3>{corporate?.title ?? "企业服务"}</h3>
-        <p>{corporate?.summary}</p>
-        {corporateServices.map((item) => (
-          <a class="matrix-row" href={pathFor(item)}>
-            <span>{item.title}</span>
-            <span aria-hidden="true">↗</span>
-          </a>
-        ))}
-        <a class="matrix-link" href="/corporate/">
-          查看企业服务 →
-        </a>
-      </div>
-    </div>
-  </section>
-  {featuredProjects.length > 0 && (
-    <section class="section">
-      <div class="section-heading">
-        <h2>精选项目</h2>
-      </div>
-      <div class="service-list">
-        {featuredProjects.map((item) => (
-          <div class="service-item">
-            <a href={pathFor(item)}>{item.title}</a>
-            <span>{item.summary}</span>
-          </div>
-        ))}
-      </div>
-    </section>
-  )}
-  {featuredCases.length > 0 && (
-    <section class="section">
-      <div class="section-heading">
-        <h2>实践记录</h2>
-      </div>
-      <div class="case-grid">
-        {featuredCases.map((item) => (
-          <article class="case-card">
-            <CaseImage entry={item} />
-            <div class="case-card-copy">
-              <h3>
-                <a href={`${pathFor(byId(item.parentId)!)}#${item.slug}`}>
-                  {item.title}
-                </a>
-              </h3>
-              <p>{item.summary}</p>
-            </div>
-          </article>
-        ))}
-      </div>
-    </section>
-  )}
-  {chatCircle && (
-    <section class="circle-band">
-      <div class="circle-band-inner">
-        <div>
-          <span class="eyebrow coral-label">ChatCircle</span>
-          <h2>{chatCircle.title}</h2>
-          <p>{chatCircle.summary}</p>
-        </div>
-        <a class="button" href={pathFor(chatCircle)}>
-          进入 ChatCircle <span aria-hidden="true">↗</span>
-        </a>
-      </div>
-    </section>
-  )}
-  {updates.length > 0 && (
-    <section class="section">
-      <div class="section-heading">
-        <div>
-          <span class="eyebrow">Updates</span>
-          <h2>最新动态</h2>
-        </div>
-      </div>
-      <div class="service-list">
-        {updates.map((item) => (
-          <div class="service-item">
-            <a href={pathFor(item)}>{item.title}</a>
-            <time datetime={item.publishedAt}>
-              {item.publishedAt?.slice(0, 10)}
-            </time>
-          </div>
-        ))}
-      </div>
-    </section>
-  )}
-  <section class="section">
-    <div class="section-heading">
-      <div>
-        <span class="eyebrow">Start a conversation</span>
-        <h2>
-          从一次
+<BaseLayout
+  title={home?.title ?? "Empact 中国"}
+  description={home?.summary}
+  bodyClass="motion-home"
+>
+  <div class="motion-stage motion-home" data-motion-stage>
+    <canvas
+      class="motion-canvas"
+      data-motion-canvas
+      aria-hidden="true"
+    ></canvas>
+    <section
+      id="brand"
+      class="motion-scene motion-scene-brand"
+      data-motion-scene
+    >
+      <img
+        class="motion-logo motion-logo-brand"
+        src="/brand/empact-logo-tagline-white.png"
+        alt="Empact China"
+        width="1080"
+        height="483"
+      />
+      <div class="motion-scene-content">
+        <p class="eyebrow">Empact China / Social innovation</p>
+        <h1>
+          赋能更大的
           <br />
-          交流开始
-        </h2>
+          影响力
+        </h1>
+        <p class="motion-lede">Empowering Greater Empact.</p>
       </div>
-      <a class="button button-primary" href="/contact/">
-        咨询与合作 <span aria-hidden="true">↗</span>
-      </a>
-    </div>
-  </section>
+      <span class="motion-scene-index" aria-hidden="true">
+        01 / 03
+      </span>
+    </section>
+    <section
+      id="pathways"
+      class="motion-scene motion-scene-pathways pathways"
+      data-motion-scene
+    >
+      <div class="motion-scene-content">
+        <p class="eyebrow">Two ways in</p>
+        <h2>从你的关注出发</h2>
+        <div class="motion-pathways">
+          <a class="motion-pathway" href="/youth/">
+            <span class="eyebrow">For youth, families & schools</span>
+            <strong>青少年项目</strong>
+            <span class="motion-arrow" aria-hidden="true">
+              ↗
+            </span>
+          </a>
+          <a class="motion-pathway" href="/corporate/">
+            <span class="eyebrow">For organisations</span>
+            <strong>企业服务</strong>
+            <span class="motion-arrow" aria-hidden="true">
+              ↗
+            </span>
+          </a>
+        </div>
+      </div>
+      <span class="motion-scene-index" aria-hidden="true">
+        02 / 03
+      </span>
+    </section>
+    <section
+      id="conversation"
+      class="motion-scene motion-scene-conversation"
+      data-motion-scene
+    >
+      <img
+        class="motion-logo motion-logo-conversation"
+        src="/brand/empact-logo-tagline-white.png"
+        alt="Empact China"
+        width="1080"
+        height="483"
+      />
+      <div class="motion-scene-content">
+        <p class="eyebrow">Start a conversation</p>
+        <h2>从一次交流开始</h2>
+        <a class="button motion-button" href="/contact/">
+          咨询与合作 <span aria-hidden="true">↗</span>
+        </a>
+      </div>
+      <span class="motion-scene-index" aria-hidden="true">
+        03 / 03
+      </span>
+    </section>
+  </div>
+  {(businesses.length > 0 ||
+    projects.length > 0 ||
+    updates.length > 0 ||
+    featuredCases.length > 0) && (
+    <details class="motion-directory">
+      <summary>
+        <span class="eyebrow">Explore Empact</span>
+        <span>更多内容</span>
+      </summary>
+      <div class="motion-directory-grid">
+        {(businesses.length > 0 || projects.length > 0) && (
+          <div>
+            <h3>业务与项目</h3>
+            {youthServices.map((item) => (
+              <a href={pathFor(item)}>
+                {item.title} <span aria-hidden="true">↗</span>
+              </a>
+            ))}
+            {corporateServices.map((item) => (
+              <a href={pathFor(item)}>
+                {item.title} <span aria-hidden="true">↗</span>
+              </a>
+            ))}
+            {projects.map((item) => (
+              <a href={pathFor(item)}>
+                {item.title} <span aria-hidden="true">↗</span>
+              </a>
+            ))}
+          </div>
+        )}
+        {(updates.length > 0 || featuredCases.length > 0) && (
+          <div>
+            <h3>动态与实践</h3>
+            {updates.map((item) => (
+              <a href={pathFor(item)}>
+                {item.title} <span aria-hidden="true">↗</span>
+              </a>
+            ))}
+            {featuredCases.map((item) => (
+              <a href={`${pathFor(byId(item.parentId)!)}#${item.slug}`}>
+                {item.title} <span aria-hidden="true">↗</span>
+              </a>
+            ))}
+          </div>
+        )}
+      </div>
+    </details>
+  )}
 </BaseLayout>
+
+<script>
+  import "@/lib/home-motion";
+</script>
+
+<style>
+  :global(body.motion-home) {
+    --motion-blue: var(--blue);
+    --motion-paper: var(--paper);
+    background: var(--motion-blue);
+    color: var(--motion-paper);
+  }
+  :global(body.motion-home.motion-js .site-header) {
+    position: fixed;
+    z-index: 5;
+    top: calc(0.75rem + var(--motion-banner-space, 0px));
+    left: 50%;
+    transform: translateX(-50%);
+    width: min(88rem, calc(100% - 3rem));
+    margin: 0;
+  }
+  :global(html.motion-snap-ready) {
+    scroll-snap-type: y mandatory;
+    scroll-behavior: smooth;
+  }
+  :global(html.motion-overflow),
+  :global(html.motion-menu-open),
+  :global(html.motion-reduced) {
+    scroll-snap-type: none;
+  }
+  .motion-stage {
+    position: relative;
+    min-height: 300svh;
+  }
+  .motion-scene {
+    min-height: 100svh;
+    min-height: 100dvh;
+    position: relative;
+    scroll-snap-align: start;
+    scroll-snap-stop: always;
+    display: flex;
+    align-items: flex-end;
+    padding: max(8rem, var(--motion-header-space, 6rem))
+      clamp(1.5rem, 6vw, 6rem) clamp(3rem, 8vh, 7rem);
+    overflow: visible;
+  }
+  .motion-scene-brand,
+  .motion-scene-conversation {
+    background-color: var(--motion-blue);
+    color: var(--motion-paper);
+  }
+  .motion-scene-pathways {
+    background-color: var(--motion-paper);
+    color: var(--motion-blue);
+    align-items: flex-start;
+    padding-top: clamp(8rem, 23vh, 14rem);
+  }
+  .motion-scene-content {
+    max-width: 70rem;
+    min-width: 0;
+    position: relative;
+    z-index: 3;
+  }
+  .motion-scene h1,
+  .motion-scene h2 {
+    font:
+      400 clamp(2.4rem, 5.5vw, 6rem)/1.18 Arial,
+      "PingFang SC",
+      sans-serif;
+    margin: 0.2em 0 0.3em;
+    overflow-wrap: anywhere;
+    word-break: normal;
+  }
+  .motion-scene p {
+    max-width: 42rem;
+  }
+  .motion-lede {
+    font-size: 1rem;
+    line-height: 1.8;
+  }
+  .motion-canvas {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 2;
+    pointer-events: none;
+  }
+  .motion-canvas[hidden] {
+    display: none;
+  }
+  .motion-logo {
+    position: absolute;
+    z-index: 3;
+    height: auto;
+    opacity: 1;
+  }
+  .motion-logo-brand {
+    width: min(49vw, 38rem);
+    left: 66%;
+    top: 31%;
+    transform: translate(-50%, -50%);
+  }
+  .motion-logo-conversation {
+    width: min(43vw, 34rem);
+    left: 50%;
+    top: 30%;
+    transform: translate(-50%, -50%);
+  }
+  :global(html.motion-canvas-ready) .motion-logo {
+    opacity: 0;
+  }
+  .motion-scene-index {
+    position: absolute;
+    z-index: 3;
+    right: clamp(1.5rem, 6vw, 6rem);
+    bottom: clamp(3rem, 8vh, 7rem);
+    font:
+      0.75rem/1.5 Arial,
+      sans-serif;
+    letter-spacing: 0.12em;
+  }
+  .motion-pathways {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: clamp(1.5rem, 6vw, 6rem);
+    margin-top: 2.2rem;
+    max-width: 70rem;
+  }
+  .motion-pathway {
+    border-top: 1px solid currentColor;
+    padding: 1rem 0 1.2rem;
+    display: grid;
+    gap: 0.45rem;
+    text-decoration: none;
+    position: relative;
+    min-height: 10rem;
+  }
+  .motion-pathway strong {
+    font-size: clamp(1.8rem, 3.4vw, 3.2rem);
+    font-weight: 400;
+  }
+  .motion-arrow {
+    position: absolute;
+    right: 0;
+    top: calc(0.75rem + var(--motion-banner-space, 0px));
+    font-size: 1.6rem;
+  }
+  .motion-button {
+    margin-top: 1.4rem;
+    background: var(--motion-paper);
+    color: var(--motion-blue);
+    border-color: var(--motion-paper);
+    border-radius: 3rem;
+  }
+  .motion-scene-conversation {
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding-top: max(8rem, var(--motion-header-space, 6rem));
+    padding-bottom: 13vh;
+    align-items: flex-end;
+  }
+  .motion-scene-conversation .motion-scene-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .motion-directory {
+    max-width: var(--max);
+    margin: auto;
+    padding: 1.5rem var(--gutter);
+    color: var(--motion-blue);
+    background: var(--motion-paper);
+  }
+  .motion-directory[open] {
+    padding-bottom: 4rem;
+  }
+  .motion-directory summary {
+    cursor: pointer;
+    display: grid;
+    gap: 0.2rem;
+  }
+  .motion-directory summary > span:last-child {
+    font-size: clamp(1.5rem, 3vw, 2.2rem);
+    font-weight: 400;
+  }
+  .motion-directory-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 4rem;
+    margin-top: 2rem;
+  }
+  .motion-directory h3 {
+    font-size: 1.15rem;
+    font-weight: 400;
+  }
+  .motion-directory a {
+    display: flex;
+    justify-content: space-between;
+    border-top: 1px solid rgb(18 82 132 / 35%);
+    padding: 0.7rem 0;
+    text-decoration: none;
+  }
+  @media (max-width: 600px) {
+    :global(body.motion-home.motion-js .site-header) {
+      top: calc(0.5rem + var(--motion-banner-space, 0px));
+      width: calc(100% - 2rem);
+    }
+    .motion-scene {
+      padding: max(7rem, var(--motion-header-space, 6rem)) 1.5rem 4rem;
+    }
+    .motion-scene-pathways {
+      padding-top: max(23vh, var(--motion-header-space, 6rem));
+    }
+    .motion-logo-brand {
+      width: 88vw;
+      left: 50%;
+      top: 31%;
+    }
+    .motion-logo-conversation {
+      width: 72vw;
+      left: 50%;
+      top: 30%;
+    }
+    .motion-pathways,
+    .motion-directory-grid {
+      grid-template-columns: 1fr;
+      gap: 1.5rem;
+    }
+    .motion-pathway {
+      min-height: 8rem;
+    }
+    .motion-scene-index {
+      right: 1.5rem;
+      bottom: 1.5rem;
+    }
+    .motion-scene-conversation {
+      padding-top: max(7rem, var(--motion-header-space, 6rem));
+      padding-bottom: 17vh;
+      align-items: flex-end;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    :global(html) {
+      scroll-behavior: auto;
+    }
+    .motion-canvas {
+      display: none;
+    }
+    :global(html.motion-canvas-ready) .motion-logo,
+    :global(html.motion-reduced) .motion-logo {
+      opacity: 1;
+    }
+  }
+
+  .motion-pathway {
+    min-width: 0;
+    padding-right: 1.8rem;
+  }
+  .motion-pathway .eyebrow {
+    overflow-wrap: anywhere;
+  }
+  .motion-directory a {
+    min-width: 0;
+    gap: 1rem;
+    overflow-wrap: anywhere;
+  }
+  .motion-directory summary::after {
+    content: "+";
+    font-size: 1.5rem;
+    justify-self: end;
+    grid-column: 2;
+    grid-row: 1 / 3;
+  }
+  .motion-directory[open] summary::after {
+    content: "−";
+  }
+  .motion-directory summary {
+    grid-template-columns: 1fr auto;
+    min-height: 2.75rem;
+  }
+  .motion-directory {
+    scroll-snap-align: start;
+    scroll-margin-top: 7rem;
+  }
+  :global(body.motion-home .site-footer) {
+    scroll-snap-align: end;
+    position: relative;
+    z-index: 3;
+    background: var(--blue);
+  }
+  :global(html.motion-overflow) .motion-logo {
+    opacity: 1;
+    position: static;
+    transform: none;
+    width: min(75%, 28rem);
+    margin: 1rem auto 2rem;
+  }
+  :global(html.motion-overflow) .motion-scene {
+    flex-direction: column;
+    justify-content: center;
+    align-items: stretch;
+    gap: 1rem;
+  }
+  :global(html.motion-overflow) .motion-scene-conversation {
+    align-items: center;
+  }
+  @media (max-width: 600px) {
+    .motion-scene h1,
+    .motion-scene h2 {
+      font-size: clamp(2.4rem, 11vw, 2.9rem);
+    }
+  }
+  :global(body.motion-home.motion-js .preview-bar) {
+    position: fixed;
+    top: 0;
+    width: 100%;
+    z-index: 7;
+  }
+  @media (max-width: 600px) {
+    :global(body.motion-home .wordmark img) {
+      width: min(9.4rem, 38vw);
+    }
+  }
+</style>
