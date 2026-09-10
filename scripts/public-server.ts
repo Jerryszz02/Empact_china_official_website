@@ -118,6 +118,13 @@ export function createPublicServer(options: {
       pathname.includes("\0")
     )
       return json(res, 404, { message: "页面不存在。" });
+    if (
+      pathname === "/projects/chatcircle" ||
+      pathname === "/projects/chatcircle/"
+    ) {
+      res.writeHead(301, { Location: "https://chatcircle.empact.cn" });
+      return res.end();
+    }
     const extension = extname(pathname);
     if (
       (extension && !mime[extension]) ||

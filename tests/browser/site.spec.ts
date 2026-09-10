@@ -12,7 +12,7 @@ test("homepage paths, dropdowns, mobile navigation and draft boundary", async ({
     "rgb(8, 90, 136)",
   );
   await expect(
-    page.locator('.site-nav a[href="/projects/chatcircle/"]'),
+    page.locator('.site-nav a[href="https://chatcircle.empact.cn"]'),
   ).toHaveCount(1);
   await expect(
     page.locator('.site-header img[src="/brand/empact-logo-blue.png"]'),
@@ -154,7 +154,6 @@ test("core pages render body, contact is truthful, ChatCircle stays isolated", a
     "/contact/",
     "/privacy/",
     "/terms/",
-    "/projects/chatcircle/",
   ]) {
     const response = await page.goto(path);
     expect(response?.status(), path).toBe(200);
@@ -231,7 +230,9 @@ test("no-script pages retain content and navigation", async ({
   const nav = page.getByRole("navigation", { name: "主导航" });
   await expect(nav.locator('a[href="/youth/"]')).toBeVisible();
   await expect(nav.locator('a[href="/corporate/"]')).toBeVisible();
-  await expect(nav.locator('a[href="/projects/chatcircle/"]')).toBeVisible();
+  await expect(
+    nav.locator('a[href="https://chatcircle.empact.cn"]'),
+  ).toBeVisible();
   await nav.locator('a[href="/contact/"]').click();
   await expect(page.getByRole("button", { name: /发送咨询/ })).toBeDisabled();
   expect(
@@ -245,7 +246,14 @@ test("no-script pages retain content and navigation", async ({
 test("project metadata remains readable on blue and light surfaces", async ({
   page,
 }) => {
-  await page.goto("/projects/chatcircle/");
+  await page.goto("/youth/monthly-camp/");
+  // ChatCircle is external; exercise project metadata styling on a local hero.
+  await page.locator(".page-hero").evaluate((hero) => {
+    const metadata = document.createElement("div");
+    metadata.className = "detail-meta";
+    metadata.textContent = "欢迎咨询";
+    hero.append(metadata);
+  });
   const metadata = page.locator(".page-hero .detail-meta");
   await expect(metadata).toHaveCSS("color", "rgb(255, 255, 255)");
   // Preview has no coverage records; exercise the same metadata on its light surface.

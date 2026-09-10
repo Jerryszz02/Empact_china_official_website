@@ -43,7 +43,12 @@ test(
         duration: "一天",
       }));
       const parent = data.entries.find((entry) => entry.kind === "business")!;
-      const project = data.entries.find((entry) => entry.kind === "project")!;
+      const project = {
+        ...data.entries.find((entry) => entry.kind === "project")!,
+        id: "project-test",
+        slug: "project-test",
+      };
+      data.entries.push(project);
       project.parentId = parent.id;
       project.projectStatus = "open";
       project.deadline = "2000-01-01T00:00:00Z";
@@ -173,7 +178,17 @@ test(
       assert.ok(
         news('script[type="application/ld+json"]').text().includes("\\u003c"),
       );
+      for (const file of ["index.html", "contact/index.html"]) {
+        const html = load(await readFile(join(out, file), "utf8"));
+        assert.ok(html('a[href="https://chatcircle.empact.cn"]').length >= 2);
+        assert.equal(html('a[href="/projects/chatcircle/"]').length, 0);
+      }
+      await assert.rejects(
+        readFile(join(out, "projects/chatcircle/index.html"), "utf8"),
+        { code: "ENOENT" },
+      );
       const sitemap = await readFile(join(out, "sitemap.xml"), "utf8");
+      assert.ok(!sitemap.includes("chatcircle"));
       assert.ok(
         !sitemap.includes("/case-test/") &&
           !sitemap.includes("/coverage-test/"),

@@ -50,7 +50,10 @@ export function pathFor(entry: SitePage) {
     return entry.slug === "home" ? "/" : `/${entry.slug}/`;
   if (entry.kind === "business")
     return `/${entry.segment ?? "youth"}/${entry.slug}/`;
-  if (entry.kind === "project") return `/projects/${entry.slug}/`;
+  if (entry.kind === "project")
+    return entry.slug === "chatcircle"
+      ? "https://chatcircle.empact.cn"
+      : `/projects/${entry.slug}/`;
   if (entry.kind === "news") return `/news/${entry.slug}/`;
   return "";
 }
