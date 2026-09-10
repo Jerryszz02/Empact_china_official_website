@@ -284,3 +284,13 @@ test("closing logo leaves with its scene without being cut by the heading", asyn
   expect(after.count / before.count).toBeGreaterThan(0.95);
   await expect(page.locator(".motion-directory")).toHaveCount(0);
 });
+
+test("motion recovers after a short viewport grows", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 480 });
+  await page.goto("/");
+  await expect(page.locator("html")).toHaveClass(/motion-overflow/);
+  await page.setViewportSize({ width: 1440, height: 700 });
+  await expect(page.locator("html")).not.toHaveClass(/motion-overflow/);
+  await expect(page.locator("html")).toHaveClass(/motion-snap-ready/);
+  await expect.poll(() => canvasInk(page)).toBeGreaterThan(100);
+});

@@ -180,6 +180,8 @@ function schedule() {
 }
 
 function updateLayout() {
+  // Measure the normal layout; fallback logos in flex flow inflate scrollHeight.
+  root.classList.remove("motion-overflow");
   const viewport = Math.min(
     innerHeight,
     window.visualViewport?.height ?? innerHeight,
