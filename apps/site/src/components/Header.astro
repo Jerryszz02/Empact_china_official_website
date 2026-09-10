@@ -1,5 +1,6 @@
 ---
-import { businesses, pages, pathFor } from "@/lib/content";
+import { businesses, pages, projects, pathFor } from "@/lib/content";
+const chatCircle = projects.find((item) => item.slug === "chatcircle");
 const youthBusinesses = businesses.filter((item) => item.segment === "youth");
 const corporateBusinesses = businesses.filter(
   (item) => item.segment === "corporate",
@@ -23,7 +24,7 @@ const corporatePage = pages.find((item) => item.slug === "corporate");
     aria-expanded="false"
     aria-controls="site-navigation"
   >
-    <span>菜单</span>
+    <span class="menu-label">菜单</span>
     <span class="menu-icon" aria-hidden="true">
       ☰
     </span>
@@ -76,15 +77,21 @@ const corporatePage = pages.find((item) => item.slug === "corporate");
         </div>
       )}
     </div>
-    <a href="/about/">关于我们</a>
+    <a href="/about/">关于 Empact</a>
+    {chatCircle && <a href={pathFor(chatCircle)}>ChatCircle</a>}
     <a class="nav-contact" href="/contact/">
-      联系 Empact <span aria-hidden="true">↗</span>
+      咨询与合作 <span aria-hidden="true">↗</span>
     </a>
+    <button class="nav-close" type="button" aria-label="关闭导航">
+      关闭
+    </button>
   </nav>
 </header>
 <script>
+  document.documentElement.classList.add("js");
   const menu = document.querySelector<HTMLButtonElement>(".menu-toggle");
   const nav = document.querySelector<HTMLElement>("#site-navigation");
+  const close = document.querySelector<HTMLButtonElement>(".nav-close");
   const toggles = [
     ...document.querySelectorAll<HTMLButtonElement>(".nav-expand"),
   ];
@@ -108,6 +115,10 @@ const corporatePage = pages.find((item) => item.slug === "corporate");
       menu.setAttribute("aria-expanded", "true");
       nav?.classList.add("is-open");
     }
+  });
+  close?.addEventListener("click", () => {
+    closeMenu();
+    menu?.focus();
   });
   toggles.forEach((button) =>
     button.addEventListener("click", () => {

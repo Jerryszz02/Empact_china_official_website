@@ -7,6 +7,13 @@ test("homepage paths, dropdowns, mobile navigation and draft boundary", async ({
   page.on("pageerror", (error) => errors.push(error.message));
   await page.goto("/");
   await expect(page.locator("h1")).toBeVisible();
+  await expect(page.locator(".pathways")).toHaveCSS(
+    "background-color",
+    "rgb(8, 90, 136)",
+  );
+  await expect(
+    page.locator('.site-nav a[href="/projects/chatcircle/"]'),
+  ).toHaveCount(1);
   await expect(
     page.locator('.site-header img[src="/brand/empact-logo-blue.png"]'),
   ).toHaveJSProperty("complete", true);
@@ -54,12 +61,21 @@ test("homepage paths, dropdowns, mobile navigation and draft boundary", async ({
   ).toBeVisible();
   await page.keyboard.press("Escape");
   await expect(expand).toHaveAttribute("aria-expanded", "false");
+  await expect(expand).toBeFocused();
   if (testInfo.project.name === "mobile") {
     await page.keyboard.press("Escape");
     await expect(page.getByRole("button", { name: "菜单" })).toHaveAttribute(
       "aria-expanded",
       "false",
     );
+    await expect(page.getByRole("button", { name: "菜单" })).toBeFocused();
+    await page.getByRole("button", { name: "菜单" }).click();
+    await page.getByRole("button", { name: "关闭导航" }).click();
+    await expect(page.getByRole("button", { name: "菜单" })).toHaveAttribute(
+      "aria-expanded",
+      "false",
+    );
+    await expect(page.getByRole("button", { name: "菜单" })).toBeFocused();
   }
   expect(
     await page.evaluate(
@@ -110,7 +126,7 @@ test("featured case cards link to anchored parent content", async ({
 
 test("core pages render body, contact is truthful, ChatCircle stays isolated", async ({
   page,
-}) => {
+}, testInfo) => {
   for (const path of [
     "/youth/",
     "/corporate/",
@@ -135,4 +151,73 @@ test("core pages render body, contact is truthful, ChatCircle stays isolated", a
   await expect(page.locator('select[name="business"]')).toHaveValue("other");
   await expect(page.getByRole("button", { name: /发送咨询/ })).toBeDisabled();
   await expect(page.locator("main")).not.toContainText("hello@example.com");
+  await page.screenshot({
+    path: `test-results/contact-${testInfo.project.name}.png`,
+    fullPage: true,
+  });
+});
+
+test("redesign remains readable at narrow and large widths with reduced motion", async ({
+  page,
+}) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  for (const width of [320, 768, 820, 1024, 1920]) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto("/");
+    await expect(page.locator("h1")).toContainText(
+      /Empowering\s*Greater\s*Empact/,
+    );
+    const title = page.locator("h1");
+    const bounds = await title.boundingBox();
+    expect(bounds!.x).toBeGreaterThanOrEqual(0);
+    expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(width);
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
+    expect(
+      await page
+        .locator("main")
+        .evaluate(
+          (main) =>
+            main
+              .getAnimations({ subtree: true })
+              .filter((animation) => animation.playState === "running").length,
+        ),
+    ).toBe(0);
+    await page.goto("/contact/");
+    await expect(page.getByLabel("联系方式", { exact: true })).toBeVisible();
+    await expect(page.locator("[data-form-status]")).toContainText(/咨询/);
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
+  }
+});
+
+test("no-script pages retain content and navigation", async ({
+  browser,
+  baseURL,
+}) => {
+  const context = await browser.newContext({
+    javaScriptEnabled: false,
+    viewport: { width: 320, height: 800 },
+  });
+  const page = await context.newPage();
+  await page.goto(baseURL!);
+  await expect(page.locator("h1")).toBeVisible();
+  const nav = page.getByRole("navigation", { name: "主导航" });
+  await expect(nav.locator('a[href="/youth/"]')).toBeVisible();
+  await expect(nav.locator('a[href="/corporate/"]')).toBeVisible();
+  await expect(nav.locator('a[href="/projects/chatcircle/"]')).toBeVisible();
+  await nav.locator('a[href="/contact/"]').click();
+  await expect(page.getByRole("button", { name: /发送咨询/ })).toBeDisabled();
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+  await context.close();
 });

@@ -1,6 +1,13 @@
 ---
 import BaseLayout from "@/layouts/BaseLayout.astro";
-import { snapshot, businesses, pageBySlug } from "@/lib/content";
+import {
+  snapshot,
+  businesses,
+  pageBySlug,
+  projects,
+  pathFor,
+} from "@/lib/content";
+const chatCircle = projects.find((item) => item.slug === "chatcircle");
 const enabled =
   snapshot.company.contactEnabled &&
   snapshot.company.approved &&
@@ -11,19 +18,28 @@ const entry = pageBySlug("contact");
 ---
 
 <BaseLayout title={entry?.title ?? "联系 Empact"} description={entry?.summary}>
-  <section class="page-hero">
-    <span class="eyebrow">Start a conversation</span>
-    <h1>{entry?.title ?? "联系我们"}</h1>
-    <p class="page-summary">{entry?.summary}</p>
-  </section>
   <section class="contact-layout">
-    <div>
-      <h2>联系 Empact</h2>
+    <div class="contact-intro">
+      <span class="eyebrow">Start a conversation</span>
+      <h1>
+        从一次
+        <br />
+        交流开始
+        <span class="contact-period" aria-hidden="true">
+          。
+        </span>
+      </h1>
+      <p>{entry?.summary}</p>
       <div class="prose" set:html={entry?.bodyHtml ?? ""} />
       {fallback && (
         <p>
           <a href={`mailto:${fallback}`}>{fallback}</a>
         </p>
+      )}
+      {chatCircle && (
+        <a class="contact-project" href={pathFor(chatCircle)}>
+          ChatCircle <span aria-hidden="true">↗</span>
+        </a>
       )}
     </div>
     <form
@@ -32,6 +48,7 @@ const entry = pageBySlug("contact");
       action="/api/contact"
       data-contact-form
     >
+      <h2>咨询与合作</h2>
       <label for="business">你想咨询什么</label>
       <select id="business" name="business">
         <option value="">请选择</option>
@@ -83,6 +100,11 @@ const entry = pageBySlug("contact");
         发送咨询 <span aria-hidden="true">↗</span>
       </button>
     </form>
+  </section>
+  <section class="section contact-paths">
+    <h2>从你的关注出发</h2>
+    <a href="/youth/">查看青少年项目 ↗</a>
+    <a href="/corporate/">查看企业服务 ↗</a>
   </section>
   <script>
     const form = document.querySelector<HTMLFormElement>("[data-contact-form]");
