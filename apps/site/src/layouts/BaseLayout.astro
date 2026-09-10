@@ -114,5 +114,57 @@ const jsonLd =
       <slot />
     </main>
     <Footer />
+    <script>
+      const reducedMotion = window.matchMedia(
+        "(prefers-reduced-motion: reduce)",
+      );
+      const animated = new Set<Animation>();
+      if ("IntersectionObserver" in window) {
+        const star = document.querySelector<SVGElement>(".hero-star");
+        if (star) {
+          new IntersectionObserver(([entry]) => {
+            star.classList.toggle("is-visible", entry.isIntersecting);
+          }).observe(star);
+        }
+        const reveal = new IntersectionObserver(
+          (entries, observer) => {
+            entries.forEach((entry) => {
+              if (!entry.isIntersecting) return;
+              observer.unobserve(entry.target);
+              if (
+                reducedMotion.matches ||
+                entry.target.contains(document.activeElement)
+              )
+                return;
+              // Only animate content arriving below the first screen; it is visible by default.
+              if (
+                entry.boundingClientRect.top < 80 ||
+                !("animate" in entry.target)
+              )
+                return;
+              const animation = entry.target.animate(
+                [
+                  { opacity: 0.72, transform: "translateY(1.15rem)" },
+                  { opacity: 1, transform: "translateY(0)" },
+                ],
+                { duration: 900, easing: "ease-out" },
+              );
+              animated.add(animation);
+              animation.onfinish = () => animated.delete(animation);
+            });
+          },
+          { threshold: 0.1 },
+        );
+        document
+          .querySelectorAll(".matrix-column, .case-card, .embedded-item")
+          .forEach((element) => reveal.observe(element));
+      }
+      function finishMotion() {
+        animated.forEach((animation) => animation.cancel());
+        animated.clear();
+      }
+      reducedMotion.addEventListener("change", finishMotion);
+      document.addEventListener("focusin", finishMotion);
+    </script>
   </body>
 </html>

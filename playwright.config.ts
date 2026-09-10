@@ -1,8 +1,9 @@
 import { defineConfig, devices } from "@playwright/test";
+const previewURL = `http://127.0.0.1:${process.env.PREVIEW_PORT ?? 4321}`;
 export default defineConfig({
   testDir: "./tests/browser",
   timeout: 30_000,
-  use: { baseURL: "http://127.0.0.1:4321", trace: "retain-on-failure" },
+  use: { baseURL: previewURL, trace: "retain-on-failure" },
   projects: [
     { name: "desktop", use: { ...devices["Desktop Chrome"] } },
     {
@@ -12,7 +13,7 @@ export default defineConfig({
   ],
   webServer: {
     command: "npm run build:preview && npm run serve:preview",
-    url: "http://127.0.0.1:4321",
+    url: previewURL,
     reuseExistingServer: false,
     timeout: 60_000,
   },

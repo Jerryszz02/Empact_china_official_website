@@ -13,12 +13,10 @@ import {
 const home = pageBySlug("home");
 const youth = pageBySlug("youth");
 const corporate = pageBySlug("corporate");
-const youthServices = businesses
-  .filter((item) => item.segment === "youth")
-  .slice(0, 5);
-const corporateServices = businesses
-  .filter((item) => item.segment === "corporate")
-  .slice(0, 3);
+const youthServices = businesses.filter((item) => item.segment === "youth");
+const corporateServices = businesses.filter(
+  (item) => item.segment === "corporate",
+);
 const chatCircle = projects.find((item) => item.slug === "chatcircle");
 const featuredProjects = projects.filter(
   (item) => item.featured && item.id !== chatCircle?.id,
@@ -34,129 +32,85 @@ const updates = news
 
 <BaseLayout title={home?.title ?? "Empact 中国"} description={home?.summary}>
   <section class="hero">
-    <div>
-      <span class="eyebrow">Empact China / Together, in motion</span>
-      <h1>
-        <img
-          class="hero-logo"
-          src="/brand/empact-logo-blue.png"
-          alt="Empact China"
-          width="1600"
-          height="591"
-        />
+    <div class="hero-copy-block">
+      <span class="eyebrow hero-eyebrow">Empact China / Social innovation</span>
+      <h1 class="hero-title">
+        <span>
+          Empowering{" "}
+          <svg class="hero-star" viewBox="0 0 40 40" aria-hidden="true">
+            <path d="M20 2V38 M2 20H38 M7 7L33 33 M7 33L33 7" />
+          </svg>
+        </span>
+        <span>
+          Greater{" "}
+          <svg class="hero-arrow" viewBox="0 0 80 80" aria-hidden="true">
+            <path d="M8 72L72 8 M40 8H72V40" />
+          </svg>
+        </span>
+        <span>
+          Empact<span class="hero-period">.</span>
+        </span>
       </h1>
-      <p class="hero-copy">{home?.summary}</p>
-      <div class="hero-actions">
-        <a class="button button-primary" href="/youth/">
-          探索青少年项目 <span aria-hidden="true">↗</span>
-        </a>
-        <a class="button" href="/corporate/">
-          了解企业服务 <span aria-hidden="true">↗</span>
-        </a>
-      </div>
-    </div>
-    <div
-      class="orbit-art"
-      aria-label="青年与企业在 Empact 中连接的示意图"
-      role="img"
-    >
-      <div class="orbit-line" aria-hidden="true"></div>
-      <div class="orbit-node youth">
-        青年
-        <br />
-        与家庭
-      </div>
-      <div class="orbit-node center">
-        <img
-          src="/brand/empact-logo-blue.png"
-          alt="Empact"
-          width="1600"
-          height="591"
-        />
-        <span>连接</span>
-      </div>
-      <div class="orbit-node corporate">
-        企业
-        <br />
-        与组织
-      </div>
-    </div>
-  </section>
-  <section class="pathways">
-    <div class="pathways-inner">
-      <div class="section-heading">
+      <div class="hero-support">
         <div>
-          <span class="eyebrow">Two ways in</span>
-          <h2>
-            从你的
-            <br />
-            关注出发
-          </h2>
+          <p class="hero-subtitle">赋能更大的影响力</p>
+          <p class="hero-copy">{home?.summary}</p>
         </div>
-        <div class="prose" set:html={home?.bodyHtml ?? ""} />
-      </div>
-      <div class="pathway-grid">
-        <div class="pathway">
-          <span class="eyebrow">For youth, families & schools</span>
-          <h3>{youth?.title ?? "青少年项目"}</h3>
-          <p>{youth?.summary}</p>
-          <a href="/youth/">
-            查看青少年项目 <span aria-hidden="true">→</span>
+        <div class="hero-actions">
+          <a class="button button-primary" href="/youth/">
+            探索青少年项目 <span aria-hidden="true">↗</span>
           </a>
-        </div>
-        <div class="pathway">
-          <span class="eyebrow">For organisations</span>
-          <h3>{corporate?.title ?? "企业服务"}</h3>
-          <p>{corporate?.summary}</p>
-          <a href="/corporate/">
-            查看企业服务 <span aria-hidden="true">→</span>
+          <a class="button" href="/corporate/">
+            了解企业服务 <span aria-hidden="true">↗</span>
           </a>
         </div>
       </div>
     </div>
+    <div class="hero-index" aria-hidden="true">
+      <span>YOUTH</span>
+      <span>ORGANISATIONS</span>
+      <span>SOCIAL INNOVATION</span>
+    </div>
   </section>
-  {youthServices.length > 0 && (
-    <section class="section editorial">
+  <section class="business-matrix pathways section">
+    <div class="section-heading">
       <div>
-        <span class="eyebrow">Youth / learning by doing</span>
-        <h2>探索与实践</h2>
+        <span class="eyebrow">Two ways in</span>
+        <h2>从你的关注出发</h2>
+      </div>
+      <div class="matrix-intro prose" set:html={home?.bodyHtml ?? ""} />
+    </div>
+    <div class="matrix-grid">
+      <div class="matrix-column">
+        <span class="eyebrow">For youth, families & schools</span>
+        <h3>{youth?.title ?? "青少年项目"}</h3>
         <p>{youth?.summary}</p>
-      </div>
-      <div class="service-list">
         {youthServices.map((item) => (
-          <div class="service-item">
-            <a href={pathFor(item)}>{item.title}</a>
+          <a class="matrix-row" href={pathFor(item)}>
+            <span>{item.title}</span>
             <span aria-hidden="true">↗</span>
-          </div>
+          </a>
         ))}
-      </div>
-    </section>
-  )}
-  {corporateServices.length > 0 && (
-    <section class="section">
-      <div class="section-heading">
-        <div>
-          <span class="eyebrow">Corporate / collaboration</span>
-          <h2>
-            一起回应
-            <br />
-            组织的需要
-          </h2>
-        </div>
-        <a href="/corporate/" class="button">
-          全部企业服务 ↗
+        <a class="matrix-link" href="/youth/">
+          查看青少年项目 →
         </a>
       </div>
-      <div class="service-list">
+      <div class="matrix-column">
+        <span class="eyebrow">For organisations</span>
+        <h3>{corporate?.title ?? "企业服务"}</h3>
+        <p>{corporate?.summary}</p>
         {corporateServices.map((item) => (
-          <div class="service-item">
-            <a href={pathFor(item)}>{item.title}</a>
-            <span>{item.summary}</span>
-          </div>
+          <a class="matrix-row" href={pathFor(item)}>
+            <span>{item.title}</span>
+            <span aria-hidden="true">↗</span>
+          </a>
         ))}
+        <a class="matrix-link" href="/corporate/">
+          查看企业服务 →
+        </a>
       </div>
-    </section>
-  )}
+    </div>
+  </section>
   {featuredProjects.length > 0 && (
     <section class="section">
       <div class="section-heading">
