@@ -34,7 +34,7 @@ Empact 中国官网以 Astro 前台、CMS 内容编辑和静态发布流程构�
 文档检查命令：
 
 ```sh
-python3 /Users/jerryszz/.agents/skills/plan-project-docs/scripts/audit_planning_docs.py --root /private/tmp/empact-frontend-motion-plan
+python3 scripts/audit_planning_docs.py --root .
 git diff --check
 ```
 
