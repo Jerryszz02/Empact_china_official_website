@@ -18,7 +18,7 @@ const smooth = (value: number) => {
   return x * x * (3 - 2 * x);
 };
 
-type Particle = { x: number; y: number; seed: number; accent: number };
+type Particle = { x: number; y: number; seed: number; underline: boolean };
 let context: CanvasRenderingContext2D | null = null;
 try {
   context = canvas?.getContext("2d") ?? null;
@@ -62,11 +62,15 @@ function sampleLogo() {
           continue;
         const index = points.length;
         const random = Math.sin(index * 127.1 + 311.7) * 43758.5453;
+        // The red underline is the only coloured part of the assembled mark.
+        // Its lower-left spatial region is stable across the source asset;
+        // the decorative flower in the upper-right remains white.
+        const underline = x / sample.width < 0.16 && y / sample.height > 0.8;
         points.push({
           x: x / sample.width - 0.5,
           y: (y - sample.height / 2) / sample.width,
           seed: random - Math.floor(random),
-          accent: index % 10,
+          underline,
         });
       }
     }
@@ -124,23 +128,28 @@ function draw() {
   const exitOpacity =
     1 - smooth(Math.max(0, scrollY - end) / Math.min(180, height * 0.2));
   const mobile = width < 700;
-  const centerX = width * ((mobile ? 0.5 : 0.66) * (1 - finish) + 0.5 * finish);
+  const centerX = width * ((mobile ? 0.5 : 0.62) * (1 - finish) + 0.5 * finish);
   const centerY =
-    height * ((mobile ? 0.31 : 0.33) * (1 - finish) + 0.32 * finish) -
-    Math.max(0, scrollY - end);
+    height * ((mobile ? 0.32 : 0.36) * (1 - finish) + 0.32 * finish);
   const size =
     width *
-    ((mobile ? 0.88 : 0.49) * (1 - finish) + (mobile ? 0.72 : 0.43) * finish);
-  const paper = progress < 0.25 || progress > 0.75;
+    ((mobile ? 0.92 : 0.59) * (1 - finish) + (mobile ? 0.72 : 0.43) * finish);
+  const headerBottom = header?.getBoundingClientRect().bottom ?? 96;
+  // Apply header clearance before letting the closing logo leave with its scene.
+  const safeCenterY =
+    Math.max(centerY, headerBottom + 12 + size * 0.19) -
+    Math.max(0, scrollY - end);
   const textBounds = scenes.map((scene) =>
     scene.querySelector(".motion-scene-content")!.getBoundingClientRect(),
   );
+  const pathway = scenes[1].getBoundingClientRect();
+  const edge = 72;
   context.clearRect(0, 0, width, height);
   for (const point of points) {
     const distance = spread * (width * 0.4 + point.seed * height * 0.22);
     const angle = point.seed * Math.PI * 2 + progress * 2.7;
     const x = centerX + point.x * size + Math.cos(angle) * distance;
-    const y = centerY + point.y * size + Math.sin(angle) * distance;
+    const y = safeCenterY + point.y * size + Math.sin(angle) * distance;
     if (
       textBounds.some(
         (box) =>
@@ -151,16 +160,23 @@ function draw() {
       )
     )
       continue;
-    context.fillStyle =
-      point.accent === 8
-        ? "#FB394D"
-        : point.accent === 9
-          ? "#2CB3B9"
-          : paper
-            ? "#F3F0E7"
-            : "#125284";
-    context.globalAlpha = (0.7 + point.seed * 0.3) * exitOpacity;
-    const radius = (mobile ? 0.7 : 1) + point.seed * 0.5;
+    const pathwayTop = pathway.top;
+    const pathwayBottom = pathway.bottom;
+    const paperWeight =
+      smooth((y - pathwayTop + edge) / (edge * 2)) *
+      (1 - smooth((y - pathwayBottom + edge) / (edge * 2)));
+    const blue = [18, 82, 132];
+    const white = [255, 255, 255];
+    const foreground = point.underline
+      ? [251, 57, 77]
+      : [
+          white[0] * (1 - paperWeight) + blue[0] * paperWeight,
+          white[1] * (1 - paperWeight) + blue[1] * paperWeight,
+          white[2] * (1 - paperWeight) + blue[2] * paperWeight,
+        ];
+    context.fillStyle = `rgb(${foreground.map((value) => Math.round(value)).join(",")})`;
+    context.globalAlpha = (0.9 + point.seed * 0.1) * exitOpacity;
+    const radius = (mobile ? 1.1 : 1.6) + point.seed * 0.4;
     context.beginPath();
     context.moveTo(x, y - radius);
     context.lineTo(x + radius, y + radius);
@@ -212,13 +228,76 @@ function updateLayout() {
   schedule();
 }
 
-// Some browsers ignore scroll-snap-stop for a wheel event with a large delta.
-// Correct only the completed wheel gesture; links, touch and keyboard stay native.
-let wheelGesture: { start: number; direction: number } | null = null;
-// Passive wheel events may arrive after the compositor has moved scrollY.
-let observedScrollY = scrollY;
+type WheelState = {
+  start: number;
+  direction: number;
+  total: number;
+  idle: number;
+  animation: number;
+  cooldown: number;
+};
+let wheelState: WheelState | null = null;
+let savedScrollStyles: { snap: string; behavior: string } | null = null;
 function clearWheelGesture() {
-  wheelGesture = null;
+  if (wheelState?.idle) clearTimeout(wheelState.idle);
+  wheelState = null;
+}
+function restoreScrollStyles() {
+  if (!savedScrollStyles) return;
+  root.style.scrollSnapType = savedScrollStyles.snap;
+  root.style.scrollBehavior = savedScrollStyles.behavior;
+  savedScrollStyles = null;
+}
+function cancelWheelTransition() {
+  if (wheelState?.animation) cancelAnimationFrame(wheelState.animation);
+  clearWheelGesture();
+  restoreScrollStyles();
+}
+function startWheelTransition(start: number, direction: number) {
+  if (start + direction < 0 || start + direction >= scenes.length) {
+    clearWheelGesture();
+    restoreScrollStyles();
+    return;
+  }
+  const target =
+    scenes[start + direction].getBoundingClientRect().top + scrollY;
+  const from = scrollY;
+  const duration = 800;
+  const started = performance.now();
+  if (wheelState?.idle) clearTimeout(wheelState.idle);
+  savedScrollStyles = {
+    snap: root.style.scrollSnapType,
+    behavior: root.style.scrollBehavior,
+  };
+  root.style.scrollSnapType = "none";
+  root.style.scrollBehavior = "auto";
+  const animate = (now: number) => {
+    if (!wheelState) return;
+    const t = clamp((now - started) / duration);
+    scrollTo({ top: from + (target - from) * smooth(t), behavior: "instant" });
+    if (t < 1) wheelState.animation = requestAnimationFrame(animate);
+    else {
+      scrollTo({ top: target, behavior: "instant" });
+      if (wheelState?.idle) clearTimeout(wheelState.idle);
+      restoreScrollStyles();
+      wheelState = {
+        start: start + direction,
+        direction,
+        total: 0,
+        idle: 0,
+        animation: 0,
+        cooldown: performance.now() + 180,
+      };
+    }
+  };
+  wheelState = {
+    start,
+    direction,
+    total: 0,
+    idle: 0,
+    animation: requestAnimationFrame(animate),
+    cooldown: 0,
+  };
 }
 function noteWheel(event: WheelEvent) {
   if (
@@ -228,40 +307,56 @@ function noteWheel(event: WheelEvent) {
     reduced.matches ||
     nav?.classList.contains("is-open")
   )
-    return clearWheelGesture();
-  if (wheelGesture?.direction !== Math.sign(event.deltaY)) clearWheelGesture();
-  if (wheelGesture || !stage) return;
+    return cancelWheelTransition();
+  const direction = Math.sign(event.deltaY);
+  if (!stage) return;
+  if (wheelState?.animation) {
+    event.preventDefault();
+    if (wheelState.direction !== direction) cancelWheelTransition();
+    else return;
+  }
   const first = scenes[0].getBoundingClientRect().top + scrollY;
   const last = scenes[2].getBoundingClientRect().top + scrollY;
-  if (observedScrollY < first - 3 || observedScrollY > last + 3) return;
+  if (scrollY < first - 3 || scrollY > last + 3) return;
   const stops = scenes.map(
     (scene) => scene.getBoundingClientRect().top + scrollY,
   );
   const nearest = stops.reduce(
     (best, stop, index) =>
-      Math.abs(stop - observedScrollY) < Math.abs(stops[best] - observedScrollY)
-        ? index
-        : best,
+      Math.abs(stop - scrollY) < Math.abs(stops[best] - scrollY) ? index : best,
     0,
   );
-  wheelGesture = { start: nearest, direction: Math.sign(event.deltaY) };
-}
-function settleWheel() {
-  const gesture = wheelGesture;
-  clearWheelGesture();
-  if (
-    !gesture ||
-    oversized ||
-    reduced.matches ||
-    nav?.classList.contains("is-open")
-  )
+  const state = wheelState ?? {
+    start: nearest,
+    direction,
+    total: 0,
+    idle: 0,
+    animation: 0,
+    cooldown: 0,
+  };
+  if (state.cooldown > performance.now() && state.direction === direction) {
+    event.preventDefault();
     return;
-  const next = gesture.start + gesture.direction;
-  // Allow normal departure from the three scenes into the directory and footer.
-  if (next < 0 || next >= scenes.length) return;
-  const target = scenes[next].getBoundingClientRect().top + scrollY;
-  if ((scrollY - target) * gesture.direction > 3)
-    scrollTo({ top: target, behavior: "smooth" });
+  }
+  if (state.direction !== direction) state.total = 0;
+  state.start = nearest;
+  state.direction = direction;
+  // Wheel devices may report pixels, text lines, or whole pages.
+  const deltaScale =
+    event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? innerHeight : 1;
+  state.total += Math.abs(event.deltaY) * deltaScale;
+  wheelState = state;
+  if (
+    state.start + state.direction < 0 ||
+    state.start + state.direction >= scenes.length
+  ) {
+    clearWheelGesture();
+    return;
+  }
+  event.preventDefault();
+  if (state.idle) clearTimeout(state.idle);
+  state.idle = window.setTimeout(clearWheelGesture, 140);
+  if (state.total >= 30) startWheelTransition(state.start, state.direction);
 }
 
 if (stage && scenes.length === 3) {
@@ -272,35 +367,47 @@ if (stage && scenes.length === 3) {
   if (preview) observer.observe(preview);
   if (nav)
     new MutationObserver(() => {
+      if (nav.classList.contains("is-open")) cancelWheelTransition();
       root.classList.toggle(
         "motion-menu-open",
         nav.classList.contains("is-open"),
       );
     }).observe(nav, { attributes: true, attributeFilter: ["class"] });
+  addEventListener("scroll", schedule, { passive: true });
+  addEventListener("wheel", noteWheel, { passive: false });
+  document.addEventListener("keydown", cancelWheelTransition);
+  document.addEventListener("focusin", cancelWheelTransition);
+  document.addEventListener("pointerdown", cancelWheelTransition);
   addEventListener(
-    "scroll",
+    "resize",
     () => {
-      schedule();
-      observedScrollY = scrollY;
+      cancelWheelTransition();
+      updateLayout();
     },
     { passive: true },
   );
-  addEventListener("wheel", noteWheel, { passive: true });
-  document.addEventListener("scrollend", settleWheel);
-  document.addEventListener("keydown", clearWheelGesture);
-  document.addEventListener("focusin", clearWheelGesture);
-  document.addEventListener("pointerdown", clearWheelGesture);
-  addEventListener("resize", updateLayout, { passive: true });
-  window.visualViewport?.addEventListener("resize", updateLayout, {
-    passive: true,
+  window.visualViewport?.addEventListener(
+    "resize",
+    () => {
+      cancelWheelTransition();
+      updateLayout();
+    },
+    {
+      passive: true,
+    },
+  );
+  reduced.addEventListener("change", () => {
+    cancelWheelTransition();
+    updateLayout();
   });
-  reduced.addEventListener("change", updateLayout);
   document.addEventListener("visibilitychange", () => {
     hidden = document.hidden;
+    cancelWheelTransition();
     schedule();
   });
   addEventListener("pagehide", () => {
     hidden = true;
+    cancelWheelTransition();
     stopFrame();
   });
   addEventListener("pageshow", () => {
