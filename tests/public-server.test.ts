@@ -46,6 +46,27 @@ test("static server preserves real 404, blocks private files, switches release a
       (await fetch(url + "/%2fabout", { redirect: "manual" })).status,
       404,
     );
+    for (const path of [
+      "/projects/chatcircle",
+      "/projects/chatcircle/",
+      "/projects/chatcircle/?source=bookmark",
+    ]) {
+      for (const method of ["GET", "HEAD"]) {
+        const redirect = await fetch(url + path, {
+          method,
+          redirect: "manual",
+        });
+        assert.equal(redirect.status, 301);
+        assert.equal(
+          redirect.headers.get("location"),
+          "https://chatcircle.empact.cn",
+        );
+      }
+    }
+    assert.equal(
+      (await fetch(url + "/projects/chatcircle/unknown")).status,
+      404,
+    );
     assert.equal((await fetch(url + "/missing")).status, 404);
     assert.equal((await fetch(url + "/.env")).status, 404);
     assert.equal((await fetch(url + "/leak.txt")).status, 404);
