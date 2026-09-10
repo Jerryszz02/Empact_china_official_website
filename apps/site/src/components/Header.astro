@@ -31,19 +31,14 @@ const corporatePage = pages.find((item) => item.slug === "corporate");
   </button>
   <nav id="site-navigation" class="site-nav" aria-label="主导航">
     <div class="nav-group">
-      <a class="nav-parent" href={youthPage ? pathFor(youthPage) : "/youth/"}>
+      <a
+        class="nav-parent"
+        href={youthPage ? pathFor(youthPage) : "/youth/"}
+        aria-expanded={youthBusinesses.length > 0 ? "false" : undefined}
+        aria-controls={youthBusinesses.length > 0 ? "nav-youth" : undefined}
+      >
         青少年项目
       </a>
-      {youthBusinesses.length > 0 && (
-        <button
-          class="nav-expand"
-          type="button"
-          aria-expanded="false"
-          aria-controls="nav-youth"
-        >
-          展开
-        </button>
-      )}
       {youthBusinesses.length > 0 && (
         <div id="nav-youth" class="nav-dropdown">
           {youthBusinesses.map((item) => (
@@ -56,19 +51,13 @@ const corporatePage = pages.find((item) => item.slug === "corporate");
       <a
         class="nav-parent"
         href={corporatePage ? pathFor(corporatePage) : "/corporate/"}
+        aria-expanded={corporateBusinesses.length > 0 ? "false" : undefined}
+        aria-controls={
+          corporateBusinesses.length > 0 ? "nav-corporate" : undefined
+        }
       >
         企业服务
       </a>
-      {corporateBusinesses.length > 0 && (
-        <button
-          class="nav-expand"
-          type="button"
-          aria-expanded="false"
-          aria-controls="nav-corporate"
-        >
-          展开
-        </button>
-      )}
       {corporateBusinesses.length > 0 && (
         <div id="nav-corporate" class="nav-dropdown">
           {corporateBusinesses.map((item) => (
@@ -93,7 +82,9 @@ const corporatePage = pages.find((item) => item.slug === "corporate");
   const nav = document.querySelector<HTMLElement>("#site-navigation");
   const close = document.querySelector<HTMLButtonElement>(".nav-close");
   const toggles = [
-    ...document.querySelectorAll<HTMLButtonElement>(".nav-expand"),
+    ...document.querySelectorAll<HTMLAnchorElement>(
+      ".nav-parent[aria-controls]",
+    ),
   ];
   function closeDropdowns() {
     toggles.forEach((button) => {
@@ -120,26 +111,60 @@ const corporatePage = pages.find((item) => item.slug === "corporate");
     closeMenu();
     menu?.focus();
   });
-  toggles.forEach((button) =>
-    button.addEventListener("click", () => {
-      const wasOpen = button.getAttribute("aria-expanded") === "true";
+  const hover = window.matchMedia("(hover: hover) and (pointer: fine)");
+  toggles.forEach((link) => {
+    const group = link.closest<HTMLElement>(".nav-group")!;
+    const dropdown = document.getElementById(
+      link.getAttribute("aria-controls")!,
+    )!;
+    function openDropdown() {
       closeDropdowns();
-      if (!wasOpen) {
-        button.setAttribute("aria-expanded", "true");
-        document
-          .getElementById(button.getAttribute("aria-controls")!)
-          ?.classList.add("is-open");
+      link.setAttribute("aria-expanded", "true");
+      dropdown.classList.add("is-open");
+    }
+    group.addEventListener("pointerenter", (event) => {
+      if (hover.matches && event.pointerType !== "touch") openDropdown();
+    });
+    group.addEventListener("pointerleave", (event) => {
+      if (event.pointerType !== "touch") {
+        link.setAttribute("aria-expanded", "false");
+        dropdown.classList.remove("is-open");
       }
-    }),
-  );
+    });
+    link.addEventListener("focus", () => {
+      if (hover.matches) openDropdown();
+    });
+    link.addEventListener("keydown", (event) => {
+      if (event.key === "ArrowDown") {
+        event.preventDefault();
+        openDropdown();
+        dropdown.querySelector<HTMLAnchorElement>("a")?.focus();
+      }
+    });
+    link.addEventListener("click", (event) => {
+      if (!hover.matches && link.getAttribute("aria-expanded") !== "true") {
+        event.preventDefault();
+        openDropdown();
+      }
+    });
+    group.addEventListener("focusout", (event) => {
+      if (
+        !(event.relatedTarget instanceof Node) ||
+        !group.contains(event.relatedTarget)
+      ) {
+        link.setAttribute("aria-expanded", "false");
+        dropdown.classList.remove("is-open");
+      }
+    });
+  });
   document.addEventListener("keydown", (event) => {
     if (event.key !== "Escape") return;
     const openDropdown = toggles.find(
       (button) => button.getAttribute("aria-expanded") === "true",
     );
     if (openDropdown) {
-      closeDropdowns();
       openDropdown.focus();
+      closeDropdowns();
     } else if (menu?.getAttribute("aria-expanded") === "true") {
       closeMenu();
       menu.focus();
