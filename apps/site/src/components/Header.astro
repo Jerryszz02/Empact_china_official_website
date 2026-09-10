@@ -34,18 +34,17 @@ const corporatePage = pages.find((item) => item.slug === "corporate");
       <a
         class="nav-parent"
         href={youthPage ? pathFor(youthPage) : "/youth/"}
-        aria-expanded={youthBusinesses.length > 0 ? "false" : undefined}
-        aria-controls={youthBusinesses.length > 0 ? "nav-youth" : undefined}
+        aria-expanded="false"
+        aria-controls="nav-youth"
       >
         青少年项目
       </a>
-      {youthBusinesses.length > 0 && (
-        <div id="nav-youth" class="nav-dropdown">
-          {youthBusinesses.map((item) => (
-            <a href={pathFor(item)}>{item.title}</a>
-          ))}
-        </div>
-      )}
+      <div id="nav-youth" class="nav-dropdown">
+        <a href="/youth/development-model/">国际化人才培养模型</a>
+        {youthBusinesses.map((item) => (
+          <a href={pathFor(item)}>{item.title}</a>
+        ))}
+      </div>
     </div>
     <div class="nav-group">
       <a

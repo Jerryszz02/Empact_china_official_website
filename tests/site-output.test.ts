@@ -129,6 +129,25 @@ test(
         timeout: 50_000,
       });
       assert.deepEqual(await checkOutput(out, true), []);
+      const model = load(
+        await readFile(join(out, "youth/development-model/index.html"), "utf8"),
+      );
+      const breadcrumbs = model('script[type="application/ld+json"]')
+        .toArray()
+        .map((element) => JSON.parse(model(element).text()))
+        .find((item) => item["@type"] === "BreadcrumbList");
+      assert.deepEqual(
+        breadcrumbs.itemListElement.map((item: { item: string }) => item.item),
+        [
+          "https://empact.cn/",
+          "https://empact.cn/youth/",
+          "https://empact.cn/youth/development-model/",
+        ],
+      );
+      assert.equal(
+        breadcrumbs.itemListElement.at(-1).name,
+        "国际化人才培养模型",
+      );
       const business = load(
         await readFile(
           join(out, parent.segment!, parent.slug, "index.html"),

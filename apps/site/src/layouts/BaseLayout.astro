@@ -6,6 +6,7 @@ import "@/styles/global.css";
 
 interface Props {
   title: string;
+  breadcrumbTitle?: string;
   description?: string;
   canonical?: string;
   noIndex?: boolean;
@@ -14,6 +15,7 @@ interface Props {
 }
 const {
   title,
+  breadcrumbTitle,
   description = snapshot.company.description,
   canonical,
   noIndex = isPreviewMode(),
@@ -31,7 +33,14 @@ const ancestors = entries.filter(
     pathFor(entry) !== Astro.url.pathname &&
     Astro.url.pathname.startsWith(pathFor(entry)),
 );
-const breadcrumb = [...ancestors, ...(current ? [current] : [])];
+const breadcrumb = [...ancestors, ...(current ? [current] : [])].map(
+  (entry) => ({
+    title: entry.title,
+    path: pathFor(entry),
+  }),
+);
+if (!current && breadcrumbTitle)
+  breadcrumb.push({ title: breadcrumbTitle, path: Astro.url.pathname });
 const jsonLd =
   isPreviewMode() || noIndex
     ? []
@@ -57,7 +66,7 @@ const jsonLd =
             "@type": "ListItem",
             position: index + 1,
             name: entry.title,
-            item: `https://empact.cn${pathFor(entry)}`,
+            item: `https://empact.cn${entry.path}`,
           })),
         },
         ...(type === "article"
