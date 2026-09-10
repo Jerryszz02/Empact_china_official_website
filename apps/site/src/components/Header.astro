@@ -131,10 +131,18 @@ const corporatePage = pages.find((item) => item.slug === "corporate");
         dropdown.classList.remove("is-open");
       }
     });
+    let touchActivation = false;
+    link.addEventListener("pointerdown", (event) => {
+      touchActivation = event.pointerType === "touch";
+    });
+    link.addEventListener("pointercancel", () => {
+      touchActivation = false;
+    });
     link.addEventListener("focus", () => {
-      if (hover.matches) openDropdown();
+      if (hover.matches && !touchActivation) openDropdown();
     });
     link.addEventListener("keydown", (event) => {
+      touchActivation = false;
       if (event.key === "ArrowDown") {
         event.preventDefault();
         openDropdown();
@@ -142,7 +150,14 @@ const corporatePage = pages.find((item) => item.slug === "corporate");
       }
     });
     link.addEventListener("click", (event) => {
-      if (!hover.matches && link.getAttribute("aria-expanded") !== "true") {
+      const isTouch =
+        touchActivation ||
+        (event instanceof PointerEvent && event.pointerType === "touch");
+      touchActivation = false;
+      if (
+        (isTouch || !hover.matches) &&
+        link.getAttribute("aria-expanded") !== "true"
+      ) {
         event.preventDefault();
         openDropdown();
       }

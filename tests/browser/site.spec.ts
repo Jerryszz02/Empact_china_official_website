@@ -300,3 +300,45 @@ test("footer is compact and uses the transparent white logo", async ({
     path: `test-results/footer-${testInfo.project.name}.png`,
   });
 });
+
+test("hybrid pointers reveal dropdowns on touch before following parent links", async ({
+  browser,
+  baseURL,
+}) => {
+  const context = await browser.newContext({
+    hasTouch: true,
+    viewport: { width: 1280, height: 800 },
+  });
+  // Chromium touch emulation disables hover; restore the hybrid device capability.
+  await context.addInitScript(() => {
+    const matchMedia = window.matchMedia.bind(window);
+    window.matchMedia = (query) => {
+      const result = matchMedia(query);
+      if (query === "(hover: hover) and (pointer: fine)") {
+        Object.defineProperty(result, "matches", { value: true });
+      }
+      return result;
+    };
+  });
+  const page = await context.newPage();
+  await page.goto(baseURL!);
+  const parent = page.locator(".nav-parent").first();
+  const dropdown = page.locator("#nav-youth");
+  await expect(dropdown).toBeHidden();
+  await parent.tap();
+  await expect(page).toHaveURL(baseURL! + "/");
+  await expect(parent).toHaveAttribute("aria-expanded", "true");
+  await expect(dropdown).toBeVisible();
+  await dropdown.locator("a").first().tap();
+  await expect(page).not.toHaveURL(baseURL! + "/");
+  await page.goto(baseURL!);
+  await parent.tap();
+  await parent.tap();
+  await expect(page).toHaveURL(baseURL! + "/youth/");
+  await page.goto(baseURL!);
+  await parent.hover();
+  await expect(dropdown).toBeVisible();
+  await parent.click();
+  await expect(page).toHaveURL(baseURL! + "/youth/");
+  await context.close();
+});
