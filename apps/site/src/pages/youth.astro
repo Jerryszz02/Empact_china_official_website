@@ -24,6 +24,16 @@ const services = businesses.filter((item) => item.segment === "youth");
         "<p>我们与青年、家庭和学校一起，创造可以探索和行动的空间。</p>"
       }
     />
+    <aside class="model-intro" aria-labelledby="model-intro-title">
+      <span class="eyebrow">我们的培养理念</span>
+      <h2 id="model-intro-title">从认识自己，到理解世界、主动行动</h2>
+      <p>
+        我们希望青少年在真实的交流与实践中，理解自己的文化与价值，学会与不同背景的人协作，并运用技术与系统思考回应现实问题。成长不仅在于获得知识，更在于形成自主选择、付诸行动和持续反思的能力。
+      </p>
+      <a class="button button-primary" href="/youth/development-model/">
+        了解国际化人才培养模型 <span aria-hidden="true">↗</span>
+      </a>
+    </aside>
     {services.length > 0 && (
       <div class="service-list service-list-spaced">
         {services.map((item) => (
@@ -36,3 +46,26 @@ const services = businesses.filter((item) => item.segment === "youth");
     )}
   </section>
 </BaseLayout>
+
+<style>
+  .model-intro {
+    margin-block: 2.5rem;
+    padding: 2rem;
+    border-left: 3px solid var(--green);
+    background: white;
+  }
+  .model-intro h2 {
+    font-size: clamp(1.4rem, 3vw, 1.85rem);
+    line-height: 1.5;
+    margin: 0.6rem 0 1rem;
+  }
+  .model-intro p {
+    color: var(--secondary);
+    margin: 0 0 1.5rem;
+  }
+  @media (max-width: 600px) {
+    .model-intro {
+      padding: 1.4rem;
+    }
+  }
+</style>
