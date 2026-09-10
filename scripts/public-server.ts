@@ -202,7 +202,7 @@ if (
   server.requestTimeout = 20_000;
   server.headersTimeout = 15_000;
   server.listen(
-    Number(process.env.PUBLIC_PORT || 4322),
+    Number(process.env.PUBLIC_PORT || 4321),
     process.env.PUBLIC_HOST || "127.0.0.1",
     () => console.log("Empact public service ready"),
   );
