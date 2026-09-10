@@ -49,16 +49,6 @@ const traits = ["开放性", "反思性", "韧性", "复杂性取向", "价值�
       aria-hidden="true"
       focusable="false"
     >
-      <defs>
-        <linearGradient id="ring-fill" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stop-color="#e4f7f4" />
-          <stop offset="1" stop-color="#eee9fa" />
-        </linearGradient>
-        <linearGradient id="ring-stroke" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stop-color="#29b7b9" />
-          <stop offset="1" stop-color="#9481d5" />
-        </linearGradient>
-      </defs>
       <g class="connector-lines">
         <line x1="550" y1="94" x2="550" y2="192" />
         <line x1="887" y1="222" x2="765" y2="300" />
@@ -73,7 +63,7 @@ const traits = ["开放性", "反思性", "韧性", "复杂性取向", "价值�
       />
       <polygon
         class="inner-ring"
-        points="550,250 685,320 685,460 550,530 415,460 415,320"
+        points="550,240 692.7,343.6 638.2,511.4 461.8,511.4 407.3,343.6"
       />
       <circle class="ring-dot dot-teal" cx="550" cy="190" r="5" />
       <circle class="ring-dot dot-purple" cx="765" cy="300" r="5" />
@@ -144,16 +134,14 @@ const traits = ["开放性", "反思性", "韧性", "复杂性取向", "价值�
   }
 
   .outer-ring {
-    fill: url(#ring-fill);
-    fill-opacity: 0.7;
-    stroke: url(#ring-stroke);
+    fill: none;
+    stroke: var(--model-teal);
     stroke-width: 1.5;
   }
 
   .inner-ring {
-    fill: white;
-    fill-opacity: 0.72;
-    stroke: color-mix(in srgb, var(--model-purple) 72%, white);
+    fill: none;
+    stroke: var(--model-purple);
     stroke-width: 1;
     stroke-dasharray: 3 6;
   }
@@ -208,7 +196,7 @@ const traits = ["开放性", "反思性", "韧性", "复杂性取向", "价值�
 
   .trait-heading {
     position: absolute;
-    top: 30.5%;
+    top: 26%;
     left: 50%;
     transform: translate(-50%, -50%);
     color: var(--model-purple);
@@ -223,31 +211,32 @@ const traits = ["开放性", "反思性", "韧性", "复杂性取向", "价值�
     display: inline-flex;
     padding: 0.28rem 0.65rem;
     color: var(--model-navy);
-    background: rgb(255 255 255 / 84%);
+    background: white;
+    transform: translate(-50%, -50%);
     font-size: 0.78rem;
     line-height: 1.45;
     white-space: nowrap;
   }
 
   .trait-1 {
-    top: 35%;
-    left: 37%;
+    top: 30.77%;
+    left: 50%;
   }
   .trait-2 {
-    top: 35%;
-    right: 37%;
+    top: 44.05%;
+    left: 62.97%;
   }
   .trait-3 {
-    top: 49%;
-    right: 32%;
+    top: 65.56%;
+    left: 58.02%;
   }
   .trait-4 {
-    top: 63%;
-    right: 35%;
+    top: 65.56%;
+    left: 41.98%;
   }
   .trait-5 {
-    top: 63%;
-    left: 35%;
+    top: 44.05%;
+    left: 37.03%;
   }
 
   .model-items {
@@ -373,6 +362,7 @@ const traits = ["开放性", "反思性", "韧性", "复杂性取向", "价值�
       inset: auto;
       padding: 0.2rem 0.45rem;
       background: #eef7f7;
+      transform: none;
     }
     .model-items {
       position: relative;
