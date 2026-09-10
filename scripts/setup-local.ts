@@ -15,7 +15,7 @@ try {
       `RUNTIME_DIR=${resolve(".data/site")}`,
       "SITE_URL=https://empact.cn",
       "PUBLIC_HOST=127.0.0.1",
-      "PUBLIC_PORT=4322",
+      "PUBLIC_PORT=4321",
       "CONTACT_ENABLED=false",
       "CONTACT_RETENTION_DAYS=30",
       "",
