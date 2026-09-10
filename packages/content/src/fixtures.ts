@@ -36,9 +36,10 @@ const business: Entry[] = [
   slug,
   title,
   segment: segment as "youth" | "corporate",
-  summary: "此方向的公开服务范围与具体安排将在审核后更新。",
-  bodyHtml: `<p>${title}的服务说明正在审核中，欢迎先与团队沟通实际需求。</p>`,
-  ...corporateDescriptions[slug],
+  ...(corporateDescriptions[slug] ?? {
+    summary: "此方向的公开服务范围与具体安排将在审核后更新。",
+    bodyHtml: `<p>${title}的服务说明正在审核中，欢迎先与团队沟通实际需求。</p>`,
+  }),
   approved: false,
   order: index + 1,
 }));

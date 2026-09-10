@@ -61,6 +61,18 @@ test(
       ];
       data.entries.push(
         {
+          id: "case-no-image",
+          kind: "case",
+          slug: "case-no-image",
+          title: "无图片的已审核案例",
+          summary: "已审核案例摘要。",
+          bodyHtml: "<p>已审核案例正文。</p>",
+          approved: true,
+          featured: true,
+          parentId: parent.id,
+          order: -1,
+        },
+        {
           id: "case-test",
           kind: "case",
           slug: "case-test",
@@ -118,6 +130,13 @@ test(
           "utf8",
         ),
       );
+      const home = load(await readFile(join(out, "index.html"), "utf8"));
+      for (const html of [home, business]) {
+        assert.ok(html("main").text().includes("无图片的已审核案例"));
+        assert.equal(html(".case-image-placeholder").length, 0);
+        assert.ok(!html.html().includes("项目图片待补充"));
+      }
+      assert.equal(business("#case-no-image .case-image").length, 0);
       assert.match(business("#cases").text(), /案例行动与结果正文/);
       assert.equal(
         business("#case-test .case-image img").attr("src"),

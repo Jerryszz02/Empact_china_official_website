@@ -1,4 +1,5 @@
 import { getPayload } from "payload";
+import { z } from "zod";
 import config from "../../payload.config.js";
 import { previewSnapshot } from "@empact/content/fixtures";
 import { randomBytes } from "node:crypto";
@@ -78,6 +79,11 @@ if (existing.totalDocs === 0) {
         title: entry.title,
         slug: entry.slug,
         summary: entry.summary,
+        sourceName: entry.sourceName,
+        sourceType: z
+          .enum(["media", "partner", "official", "company", "sponsored"])
+          .optional()
+          .parse(entry.sourceType),
         body,
         approved: false,
         featured: entry.featured,

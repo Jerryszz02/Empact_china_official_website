@@ -15,12 +15,18 @@ test("homepage paths, dropdowns, mobile navigation and draft boundary", async ({
   ).toHaveJSProperty("complete", true);
   await expect(page.locator("#nav-corporate a")).toHaveCount(3);
   await expect(page.locator(".case-card")).toHaveCount(3);
+  await expect(page.locator(".case-image-placeholder")).toHaveCount(3);
   await expect(page.locator(".case-image-placeholder img")).toHaveCount(0);
   expect(
     await page
       .locator("img")
       .evaluateAll((images) =>
-        images.every((image) => image.complete && image.naturalWidth > 0),
+        images.every(
+          (image) =>
+            image instanceof HTMLImageElement &&
+            image.complete &&
+            image.naturalWidth > 0,
+        ),
       ),
   ).toBe(true);
   await expect(page.locator('meta[name="robots"]')).toHaveAttribute(

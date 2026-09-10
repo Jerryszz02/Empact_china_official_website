@@ -1,6 +1,6 @@
 ---
 import type { Entry } from "@empact/content/schema";
-import { mediaById } from "@/lib/content";
+import { isPreviewMode, mediaById } from "@/lib/content";
 
 interface Props {
   entry: Entry;
@@ -22,10 +22,12 @@ const media = mediaById(entry.imageId);
     />
   </figure>
 ) : (
-  <div
-    class={`case-image case-image-placeholder ${className}`}
-    aria-label="项目图片待补充"
-  >
-    <span>项目图片待补充</span>
-  </div>
+  isPreviewMode() && (
+    <div
+      class={`case-image case-image-placeholder ${className}`}
+      aria-label="项目图片待补充"
+    >
+      <span>项目图片待补充</span>
+    </div>
+  )
 )}
