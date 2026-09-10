@@ -33,6 +33,6 @@
 文档检查：
 
 ```sh
-python3 /Users/jerryszz/.agents/skills/plan-project-docs/scripts/audit_planning_docs.py --root /private/tmp/empact-frontend-motion-implementation
+python3 scripts/audit_planning_docs.py --root .
 git diff --check
 ```

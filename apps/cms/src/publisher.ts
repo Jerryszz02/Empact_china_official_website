@@ -268,7 +268,8 @@ async function health(
     return true;
   }
   const response = await fetch(
-    process.env.PUBLIC_HEALTH_URL || "http://127.0.0.1:4322/release.json",
+    process.env.PUBLIC_HEALTH_URL ||
+      `http://127.0.0.1:${process.env.PUBLIC_PORT || 4321}/release.json`,
     { signal: AbortSignal.timeout(10_000), cache: "no-store" },
   );
   const body = (await response.json()) as { version?: string };
