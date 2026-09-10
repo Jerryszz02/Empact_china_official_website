@@ -1,5 +1,5 @@
 import { randomBytes } from "node:crypto";
-import { mkdir, open } from "node:fs/promises";
+import { mkdir, open, readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
 await mkdir(".data/media", { recursive: true, mode: 0o700 });
@@ -15,7 +15,7 @@ try {
       `RUNTIME_DIR=${resolve(".data/site")}`,
       "SITE_URL=https://empact.cn",
       "PUBLIC_HOST=127.0.0.1",
-      "PUBLIC_PORT=4322",
+      "PUBLIC_PORT=4321",
       "CONTACT_ENABLED=false",
       "CONTACT_RETENTION_DAYS=30",
       "",
@@ -27,5 +27,13 @@ try {
   );
 } catch (error) {
   if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
-  console.log(".env already exists; preserved existing configuration.");
+  const existing = await readFile(".env", "utf8");
+  const updated = existing.replace(
+    /^PUBLIC_PORT=4322\r?$/gm,
+    "PUBLIC_PORT=4321",
+  );
+  if (updated !== existing) await writeFile(".env", updated);
+  console.log(
+    ".env already exists; migrated the legacy local port and preserved other configuration.",
+  );
 }
