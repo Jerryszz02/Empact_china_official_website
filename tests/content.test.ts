@@ -42,3 +42,13 @@ test("deadline has a deterministic status boundary", () => {
     "ended",
   );
 });
+
+test("youth development model route is reserved from CMS businesses", () => {
+  const data = structuredClone(previewSnapshot);
+  const business = data.entries.find((entry) => entry.kind === "business")!;
+  business.segment = "youth";
+  business.slug = "development-model";
+  assert.throws(() => validateSnapshot(data), /reserved route/);
+  business.segment = "corporate";
+  assert.doesNotThrow(() => validateSnapshot(data));
+});

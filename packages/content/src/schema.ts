@@ -229,6 +229,12 @@ export function validateSnapshot(
   for (const e of input.entries) {
     if (ids.has(e.id)) throw new Error(`duplicate entry id: ${e.id}`);
     ids.add(e.id);
+    if (
+      e.kind === "business" &&
+      (e.segment ?? "youth") === "youth" &&
+      e.slug === "development-model"
+    )
+      throw new Error("reserved route: /youth/development-model/");
     if (!slug.test(e.slug) || slugs.has(`${e.kind}:${e.slug}`))
       throw new Error(`duplicate or invalid slug: ${e.slug}`);
     slugs.add(`${e.kind}:${e.slug}`);

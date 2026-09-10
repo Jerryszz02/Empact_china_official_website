@@ -21,6 +21,28 @@ test("youth model is reachable, readable and responsive", async ({
   }
   await expect(page.getByText("主体性", { exact: true })).toBeVisible();
   await expect(page.locator(".growth-path li")).toHaveCount(5);
+  for (const selector of [".trait-heading", ".item-number"]) {
+    const contrast = await page
+      .locator(selector)
+      .first()
+      .evaluate((element) => {
+        const rgb = getComputedStyle(element)
+          .color.match(/\d+/g)!
+          .slice(0, 3)
+          .map(Number);
+        const linear = rgb.map((value) => {
+          const channel = value / 255;
+          return channel <= 0.04045
+            ? channel / 12.92
+            : ((channel + 0.055) / 1.055) ** 2.4;
+        });
+        return (
+          1.05 /
+          (linear[0] * 0.2126 + linear[1] * 0.7152 + linear[2] * 0.0722 + 0.05)
+        );
+      });
+    expect(contrast).toBeGreaterThanOrEqual(4.5);
+  }
   for (const trait of ["开放性", "反思性", "韧性", "复杂性取向", "价值扎根"]) {
     await expect(page.getByText(trait, { exact: true })).toBeVisible();
   }
