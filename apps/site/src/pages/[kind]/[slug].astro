@@ -5,7 +5,11 @@ import { effectiveProjectStatus } from "@empact/content/schema";
 import { entries, pathFor, mediaById, byId } from "@/lib/content";
 export function getStaticPaths() {
   return entries
-    .filter((entry) => ["business", "project", "news"].includes(entry.kind))
+    .filter(
+      (entry) =>
+        ["business", "project", "news"].includes(entry.kind) &&
+        pathFor(entry).startsWith("/"),
+    )
     .map((entry) => ({
       params: {
         kind:
