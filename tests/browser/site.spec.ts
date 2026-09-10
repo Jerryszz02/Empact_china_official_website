@@ -9,7 +9,7 @@ test("homepage paths, dropdowns, mobile navigation and draft boundary", async ({
   await expect(page.locator("h1")).toBeVisible();
   await expect(page.locator(".pathways")).toHaveCSS(
     "background-color",
-    "rgb(8, 90, 136)",
+    "rgb(243, 240, 231)",
   );
   await expect(
     page.locator('.site-nav a[href="https://chatcircle.empact.cn"]'),
@@ -23,9 +23,7 @@ test("homepage paths, dropdowns, mobile navigation and draft boundary", async ({
     ),
   ).toHaveJSProperty("complete", true);
   await expect(page.locator("#nav-corporate a")).toHaveCount(3);
-  await expect(page.locator(".case-card")).toHaveCount(3);
-  await expect(page.locator(".case-image-placeholder")).toHaveCount(3);
-  await expect(page.locator(".case-image-placeholder img")).toHaveCount(0);
+  await expect(page.locator(".motion-home > section")).toHaveCount(3);
   expect(
     await page
       .locator("img")
@@ -113,33 +111,27 @@ test("homepage paths, dropdowns, mobile navigation and draft boundary", async ({
   expect(errors).toEqual([]);
 });
 
-test("featured case cards link to anchored parent content", async ({
+test("business paths retain their embedded cases after homepage simplification", async ({
   page,
 }, testInfo) => {
   await page.goto("/");
-  const firstCase = page.locator(".case-card").first();
-  const href = await firstCase.locator("a").getAttribute("href");
-  expect(href).toMatch(/#.+$/);
-  await firstCase.locator("a").click();
-  await expect(page).toHaveURL(new RegExp(href! + "$"));
-  await expect(
-    page.locator(`article[id="${href!.split("#")[1]}"]`),
-  ).toBeInViewport();
+  await page.locator('.pathways a[href="/youth/"]').click();
+  await expect(page).toHaveURL(/\/youth\/$/);
   await page
-    .locator(".case-editorial")
-    .first()
-    .screenshot({
-      path: `test-results/case-${testInfo.project.name}.png`,
-    });
-  await expect(
-    page
-      .locator("article[id]")
-      .filter({ has: page.locator("h3") })
-      .first(),
-  ).toBeVisible();
+    .locator('.service-list a[href="/youth/international-camp/"]')
+    .click();
+  const firstCase = page.locator("#cases > article").first();
+  await firstCase.scrollIntoViewIfNeeded();
+  await expect(firstCase).toBeInViewport();
+  await expect(firstCase.locator("h3")).toContainText("新加坡");
+  await expect(page.locator(".case-image-placeholder")).toHaveCount(2);
+  await expect(page.locator(".case-image-placeholder img")).toHaveCount(0);
+  await firstCase.screenshot({
+    path: `test-results/case-${testInfo.project.name}.png`,
+  });
   expect(
     await page.evaluate(
-      () => document.documentElement.scrollWidth <= window.innerWidth,
+      () => document.documentElement.scrollWidth <= innerWidth,
     ),
   ).toBe(true);
 });
@@ -183,9 +175,7 @@ test("redesign remains readable at narrow and large widths with reduced motion",
   for (const width of [320, 768, 820, 1024, 1920]) {
     await page.setViewportSize({ width, height: 900 });
     await page.goto("/");
-    await expect(page.locator("h1")).toContainText(
-      /Empowering\s*Greater\s*Empact/,
-    );
+    await expect(page.locator("h1")).toContainText(/赋能更大的\s*影响力/);
     const title = page.locator("h1");
     const bounds = await title.boundingBox();
     expect(bounds!.x).toBeGreaterThanOrEqual(0);
@@ -227,6 +217,12 @@ test("no-script pages retain content and navigation", async ({
   const page = await context.newPage();
   await page.goto(baseURL!);
   await expect(page.locator("h1")).toBeVisible();
+  await expect(page.locator(".motion-home > section")).toHaveCount(3);
+  await expect(page.locator(".motion-logo").first()).toBeVisible();
+  await expect(page.locator("html")).toHaveCSS("scroll-snap-type", "none");
+  await expect(page.locator("#conversation")).toContainText(
+    /从一次\s*交流开始/,
+  );
   const nav = page.getByRole("navigation", { name: "主导航" });
   await expect(nav.locator('a[href="/youth/"]')).toBeVisible();
   await expect(nav.locator('a[href="/corporate/"]')).toBeVisible();
@@ -301,7 +297,9 @@ test("footer is compact and uses the transparent white logo", async ({
     1080,
   );
   const bounds = await footer.boundingBox();
-  expect(bounds!.height).toBeLessThan(
+  const content = await footer.locator(".footer-content").boundingBox();
+  // Published links add their natural height; the original footer stays compact.
+  expect(bounds!.height - (content?.height ?? 0)).toBeLessThan(
     testInfo.project.name === "mobile" ? 340 : 210,
   );
   await footer.screenshot({

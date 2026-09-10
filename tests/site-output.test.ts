@@ -111,7 +111,7 @@ test(
           bodyHtml: "<p>新闻正文。</p>",
           approved: true,
           parentId: parent.id,
-          featured: true,
+          featured: false,
           publishedAt: "2026-01-01T00:00:00Z",
         },
       );
@@ -156,10 +156,15 @@ test(
       );
       const home = load(await readFile(join(out, "index.html"), "utf8"));
       for (const html of [home, business]) {
-        assert.ok(html("main").text().includes("无图片的已审核案例"));
         assert.equal(html(".case-image-placeholder").length, 0);
         assert.ok(!html.html().includes("项目图片待补充"));
       }
+      assert.ok(business("main").text().includes("无图片的已审核案例"));
+      assert.equal(home(".motion-directory").length, 0);
+      // The compact homepage keeps published work discoverable outside its three scenes.
+      assert.ok(home(`footer a[href="/projects/${project.slug}/"]`).length);
+      assert.ok(home('footer a[href="/news/news-test/"]').length);
+      assert.equal(home(".motion-home > section").length, 3);
       assert.equal(business("#case-no-image .case-image").length, 0);
       assert.match(business("#cases").text(), /案例行动与结果正文/);
       assert.equal(
@@ -199,7 +204,10 @@ test(
       );
       for (const file of ["index.html", "contact/index.html"]) {
         const html = load(await readFile(join(out, file), "utf8"));
-        assert.ok(html('a[href="https://chatcircle.empact.cn"]').length >= 2);
+        assert.ok(
+          html('a[href="https://chatcircle.empact.cn"]').length >=
+            (file === "index.html" ? 1 : 2),
+        );
         assert.equal(html('a[href="/projects/chatcircle/"]').length, 0);
       }
       await assert.rejects(
