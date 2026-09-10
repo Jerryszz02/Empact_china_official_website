@@ -1,5 +1,6 @@
 ---
 import BaseLayout from "@/layouts/BaseLayout.astro";
+import CaseImage from "@/components/CaseImage.astro";
 import { effectiveProjectStatus } from "@empact/content/schema";
 import { entries, pathFor, mediaById, byId } from "@/lib/content";
 export function getStaticPaths() {
@@ -118,20 +119,13 @@ const media = mediaById(entry.imageId);
       <section id="cases" class="embedded-section">
         <h2>相关案例</h2>
         {embeddedCases.map((item) => (
-          <article class="embedded-item">
+          <article id={item.slug} class="embedded-item">
             <h3>{item.title}</h3>
             <p>{item.summary}</p>
-            {mediaById(item.imageId) && (
-              <img
-                class="detail-image"
-                src={`/media/${mediaById(item.imageId)!.filename}`}
-                alt={mediaById(item.imageId)!.alt}
-                width={mediaById(item.imageId)!.width}
-                height={mediaById(item.imageId)!.height}
-                loading="lazy"
-              />
-            )}
-            <div class="prose" set:html={item.bodyHtml} />
+            <div class="case-editorial">
+              <CaseImage entry={item} />
+              <div class="prose" set:html={item.bodyHtml} />
+            </div>
           </article>
         ))}
       </section>

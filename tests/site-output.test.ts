@@ -65,6 +65,7 @@ test(
           kind: "case",
           slug: "case-test",
           title: "隔离案例",
+          imageId: "image-test",
           summary: "隔离案例摘要",
           bodyHtml: "<p>案例行动与结果正文。</p>",
           approved: true,
@@ -119,6 +120,14 @@ test(
       );
       assert.match(business("#cases").text(), /案例行动与结果正文/);
       assert.equal(
+        business("#case-test .case-image img").attr("src"),
+        "/media/test.png",
+      );
+      assert.equal(
+        business("#case-test .case-image img").attr("alt"),
+        "隔离验收图片",
+      );
+      assert.equal(
         business("#coverage a").attr("href"),
         "https://example.invalid/original",
       );
@@ -134,7 +143,7 @@ test(
         page('a[href="https://example.invalid/expired-registration"]').length,
         0,
       );
-      assert.equal(page("img").attr("alt"), "隔离验收图片");
+      assert.equal(page("img.detail-image").attr("alt"), "隔离验收图片");
       const news = load(
         await readFile(join(out, "news/news-test/index.html"), "utf8"),
       );
