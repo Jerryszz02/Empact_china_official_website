@@ -302,7 +302,10 @@ test("fine repeated wheel updates make monotonic progress without a delayed rewi
   await page.waitForTimeout(700);
   const after = await scrollY(page);
   expect(after).toBeGreaterThanOrEqual(settled - 3);
-  expect(after).toBeLessThanOrEqual(settled + 3);
+  const next = await sceneTop(page, "pathways");
+  const capture = await page.evaluate(() => Math.min(innerHeight * 0.32, 360));
+  const expected = next - settled <= capture ? next : settled;
+  expect(Math.abs(after - expected)).toBeLessThan(3);
 });
 
 test("proximity snapping aligns a near-anchor stop from both directions", async ({
@@ -311,20 +314,25 @@ test("proximity snapping aligns a near-anchor stop from both directions", async 
   await page.goto("/");
   expect(await enhancementDisabled(page)).toBe(false);
   const pathways = await sceneTop(page, "pathways");
-  // Approach from above, moving down: land 50px short and let idle snapping
-  // finish the short correction.
+  // Stop 28% of a screen short: the expanded capture zone finishes docking.
   await settleAt(page, "brand");
   const started = Date.now();
-  await wheelTo(page, pathways - 50);
+  await wheelTo(page, pathways - Math.round(pathways * 0.28));
   await expect
-    .poll(() => sceneOffset(page, "pathways"), { timeout: 1500 })
+    .poll(() => sceneOffset(page, "pathways"), {
+      timeout: 1500,
+      intervals: [50],
+    })
     .toBeLessThan(3);
   expect(Date.now() - started).toBeLessThan(900);
   // Approach from below, moving up, and settle on the same anchor.
   await settleAt(page, "conversation");
-  await wheelTo(page, pathways + 50);
+  await wheelTo(page, pathways + Math.round(pathways * 0.28));
   await expect
-    .poll(() => sceneOffset(page, "pathways"), { timeout: 1500 })
+    .poll(() => sceneOffset(page, "pathways"), {
+      timeout: 1500,
+      intervals: [50],
+    })
     .toBeLessThan(3);
 });
 
@@ -341,11 +349,11 @@ test("distant mid-page stops are not pulled to a scene anchor", async ({
   const mid = await scrollY(page);
   expect(Math.abs(mid - middle)).toBeLessThan(30);
   expect(Math.abs(mid - pathways)).toBeGreaterThan(72);
-  // 120px short of the anchor is still outside the 72px window and stays put.
-  await wheelTo(page, pathways - 120);
+  // A stop 40% short remains outside the 32% capture zone.
+  await wheelTo(page, pathways * 0.6);
   await page.waitForTimeout(500);
   const near = await scrollY(page);
-  expect(Math.abs(near - (pathways - 120))).toBeLessThan(30);
+  expect(Math.abs(near - pathways * 0.6)).toBeLessThan(30);
   expect(Math.abs(near - pathways)).toBeGreaterThan(72);
 });
 

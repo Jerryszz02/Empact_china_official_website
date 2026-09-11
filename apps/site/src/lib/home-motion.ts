@@ -537,7 +537,7 @@ function canSettle() {
 
 function startAlignment(target: number, from: number) {
   settling = true;
-  const duration = 160;
+  const duration = 260;
   const started = performance.now();
   const step = (now: number) => {
     settleFrame = 0;
@@ -582,7 +582,9 @@ function maybeSettle() {
   }
   if (candidate === null) return;
   const delta = candidate - y;
-  if (Math.abs(delta) < 0.5 || Math.abs(delta) > 72) return;
+  // A perceptible approach zone, while keeping mid-scene stops free.
+  const captureDistance = Math.min(innerHeight * 0.32, 360);
+  if (Math.abs(delta) < 0.5 || Math.abs(delta) > captureDistance) return;
   startAlignment(candidate, y);
 }
 
