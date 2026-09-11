@@ -10,7 +10,10 @@
     "node": ">=22.12.0 <23"
   },
   "scripts": {
-    "dev": "npm run dev -w @empact/site",
+    "dev": "cd apps/site && ASTRO_TELEMETRY_DISABLED=1 SITE_MODE=preview astro dev --background",
+    "dev:stop": "cd apps/site && ASTRO_TELEMETRY_DISABLED=1 astro dev stop",
+    "dev:status": "cd apps/site && ASTRO_TELEMETRY_DISABLED=1 astro dev status",
+    "dev:logs": "cd apps/site && ASTRO_TELEMETRY_DISABLED=1 astro dev logs",
     "dev:cms": "npm run dev -w @empact/cms",
     "build": "npm run build -w @empact/site",
     "build:cms": "npm run build -w @empact/cms",
