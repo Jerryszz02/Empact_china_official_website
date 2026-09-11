@@ -25,7 +25,6 @@ const coarse = matchMedia("(pointer: coarse)");
 const fine = matchMedia("(hover: hover) and (pointer: fine)");
 const header = document.querySelector<HTMLElement>(".site-header");
 const nav = document.querySelector<HTMLElement>("#site-navigation");
-const preview = document.querySelector<HTMLElement>(".preview-bar");
 
 const clamp = (value: number) => Math.max(0, Math.min(1, value));
 const smooth = (value: number) => {
@@ -686,12 +685,7 @@ function updateLayout() {
     scenes.some((scene) => scene.scrollHeight > viewport + 2);
   root.classList.toggle("motion-overflow", oversized);
   root.classList.toggle("motion-reduced", reduced.matches);
-  const bannerSpace = preview?.offsetHeight ?? 0;
-  root.style.setProperty("--motion-banner-space", `${bannerSpace}px`);
-  const headerSpace = Math.max(
-    96,
-    (header?.offsetHeight ?? 80) + bannerSpace + 32,
-  );
+  const headerSpace = Math.max(96, (header?.offsetHeight ?? 80) + 32);
   // Expanded menus are overlays; their height must not resize every scene.
   if (!nav?.classList.contains("is-open"))
     root.style.setProperty("--motion-header-space", `${headerSpace}px`);
@@ -711,7 +705,6 @@ if (stage && scenes.length === 3) {
   const observer = new ResizeObserver(updateLayout);
   scenes.forEach((scene) => observer.observe(scene));
   if (header) observer.observe(header);
-  if (preview) observer.observe(preview);
   if (nav)
     new MutationObserver(() => {
       if (nav.classList.contains("is-open")) cancelAlignment();

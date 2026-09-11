@@ -62,8 +62,8 @@ const business: Entry[] = [
   title,
   segment: segment as "youth" | "corporate",
   ...(businessDescriptions[slug] ?? {
-    summary: "此方向的公开服务范围与具体安排将在审核后更新。",
-    bodyHtml: `<p>${title}的服务说明正在审核中，欢迎先与团队沟通实际需求。</p>`,
+    summary: "欢迎与团队沟通服务内容与具体安排。",
+    bodyHtml: `<p>如需了解${title}，欢迎与团队沟通实际需求。</p>`,
   }),
   approved: false,
   order: index + 1,
@@ -265,7 +265,7 @@ export const previewSnapshot: Snapshot = {
       title: "Empact China",
       summary: "连接青年实践与组织协作，探索面向真实议题的社会创新。",
       bodyHtml:
-        "<p>从青少年与青年实践，到企业合作与组织支持，Empact China 正在整理可公开的服务信息。</p>",
+        "<p>从青少年与青年实践，到企业合作与组织支持，Empact China 连接青年成长与组织发展。</p>",
       approved: false,
     },
     {
@@ -274,7 +274,7 @@ export const previewSnapshot: Snapshot = {
       slug: "youth",
       title: "青少年项目",
       summary: "面向青少年与青年的学习、表达与实践方向。",
-      bodyHtml: "<p>具体项目安排以审核后公布的信息为准。</p>",
+      bodyHtml: "<p>具体项目安排请查看项目介绍或联系团队。</p>",
       approved: false,
     },
     {
@@ -292,7 +292,7 @@ export const previewSnapshot: Snapshot = {
       slug: "about",
       title: "关于 Empact",
       summary: "了解团队正在开展的服务方向与合作方式。",
-      bodyHtml: "<p>公司主体与公开资料将在完成审核后展示。</p>",
+      bodyHtml: "<p>Empact 中国致力于连接青年成长与组织发展。</p>",
       approved: false,
     },
     {
@@ -327,9 +327,8 @@ export const previewSnapshot: Snapshot = {
       kind: "project",
       slug: "chatcircle",
       title: "ChatCircle",
-      summary: "一个仍在整理公开材料的公益对话项目。",
-      bodyHtml:
-        "<p>ChatCircle 的项目介绍、参与方式和平台链接将在取得审核材料后更新。</p>",
+      summary: "通过聆听与一对一交流支持青年心理健康的公益项目。",
+      bodyHtml: "<p>欢迎前往 ChatCircle 平台了解项目与参与方式。</p>",
       approved: false,
       projectStatus: "consultation",
       audience: "青年",
