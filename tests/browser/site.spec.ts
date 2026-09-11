@@ -319,6 +319,18 @@ test("empty form feedback stays accessible before an update", async ({
   await expect(status).toHaveCSS("position", "static");
 });
 
+test("footer links keep usable touch targets on narrow phones", async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 740 });
+  await page.goto("/");
+  const links = page.locator(".footer-links a, .footer-legal a");
+  await expect(links).not.toHaveCount(0);
+  for (const link of await links.all()) {
+    const bounds = await link.boundingBox();
+    expect(bounds!.height).toBeGreaterThanOrEqual(24);
+    expect(bounds!.width).toBeGreaterThanOrEqual(24);
+  }
+});
+
 test("footer is compact and uses the transparent white logo", async ({
   page,
 }, testInfo) => {
