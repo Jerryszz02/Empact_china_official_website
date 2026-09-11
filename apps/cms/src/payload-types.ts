@@ -159,7 +159,7 @@ export interface Content {
   id: number;
   title?: string | null;
   summary?: string | null;
-  segment?: ('youth' | 'corporate') | null;
+  segment?: ('youth' | 'corporate' | 'school' | 'community') | null;
   parent?: (number | null) | Content;
   order?: number | null;
   image?: (number | null) | Media;

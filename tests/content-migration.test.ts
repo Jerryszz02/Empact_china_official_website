@@ -4,7 +4,9 @@ import {
   backupBeforeMigration,
   htmlToLexical,
   migrateBusinessContent,
+  resetBusinessFramework,
 } from "../apps/cms/src/content-migration.js";
+import { previewSnapshot } from "@empact/content/fixtures";
 import type { Snapshot } from "@empact/content/schema";
 import { mkdtemp, access } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -107,4 +109,127 @@ test("backup failure happens before media or runtime copies", async () => {
     }),
   );
   await assert.rejects(() => access(mediaBackup));
+});
+
+test("framework reset dry-run plans case cleanup and four group sync without writes", async () => {
+  const calls: any[] = [];
+  const payload: any = {
+    find: async ({ collection }: any) =>
+      collection === "content"
+        ? {
+            docs: [
+              { id: 1, kind: "case", slug: "old-case" },
+              { id: 2, kind: "coverage", slug: "old-coverage", parent: 1 },
+              {
+                id: 3,
+                kind: "business",
+                slug: "international-camp",
+                segment: "youth",
+              },
+              { id: 4, kind: "business", slug: "volunteering" },
+            ],
+          }
+        : { docs: [] },
+    create: async (value: any) => calls.push(["create", value]),
+    update: async (value: any) => calls.push(["update", value]),
+    delete: async (value: any) => calls.push(["delete", value]),
+  };
+  const report = await resetBusinessFramework(payload, previewSnapshot, {
+    dryRun: true,
+  });
+  assert.deepEqual(report.casesRemoved, ["1"]);
+  assert.deepEqual(report.dependentsRemoved, ["2"]);
+  assert.deepEqual(report.obsoleteBusinessesRemoved, ["3"]);
+  assert.equal(report.activeCaseCount, 0);
+  assert.ok(report.upserted.includes("page:school"));
+  assert.ok(report.upserted.includes("page:community"));
+  assert.ok(report.upserted.includes("business:student-stories"));
+  assert.deepEqual(calls, []);
+});
+
+test("framework reset apply deletes only case coverage and youth obsolete content", async () => {
+  const calls: any[] = [];
+  const docs: any[] = [
+    { id: 1, kind: "case", slug: "old-case", related: [2] },
+    { id: 2, kind: "coverage", slug: "old-coverage", parent: 1, related: [1] },
+    { id: 3, kind: "business", slug: "international-camp", segment: "youth" },
+    {
+      id: 4,
+      kind: "business",
+      slug: "volunteering",
+      segment: "corporate",
+      related: [1, 3, 99],
+    },
+    { id: 5, kind: "project", slug: "keep-project", related: [1] },
+  ];
+  const payload: any = {
+    find: async () => ({ docs }),
+    create: async (value: any) => calls.push(["create", value]),
+    update: async (value: any) => {
+      calls.push(["update", value]);
+      Object.assign(
+        docs.find((doc) => String(doc.id) === String(value.id))!,
+        value.data,
+      );
+    },
+    delete: async (value: any) => {
+      const references = docs.filter(
+        (doc) =>
+          String(doc.id) !== String(value.id) &&
+          (String(doc.parent) === String(value.id) ||
+            doc.related?.some((id: number) => String(id) === String(value.id))),
+      );
+      assert.equal(
+        references.length,
+        0,
+        "delete must respect actual CMS dependency guards",
+      );
+      calls.push(["delete", value]);
+      docs.splice(
+        docs.findIndex((doc) => String(doc.id) === String(value.id)),
+        1,
+      );
+    },
+  };
+  const report = await resetBusinessFramework(payload, previewSnapshot, {
+    dryRun: false,
+  });
+  assert.deepEqual(
+    calls
+      .filter(([type]) => type === "delete")
+      .map(([, value]) => String(value.id)),
+    ["2", "1", "3"],
+  );
+  const corporateUpdate = calls.find(
+    ([type, value]) => type === "update" && String(value.id) === "4",
+  );
+  assert.deepEqual(corporateUpdate?.[1].data.related, [99]);
+  assert.equal(report.obsoleteBusinessesRemoved.length, 1);
+  assert.ok(
+    calls.some(
+      ([type, value]) =>
+        ["create", "update"].includes(type) && value.data.segment === "youth",
+    ),
+  );
+  assert.ok(calls.every(([, value]) => value.collection === "content"));
+});
+
+test("framework reset refuses a case with a project child before any write", async () => {
+  const calls: any[] = [];
+  const payload: any = {
+    find: async () => ({
+      docs: [
+        { id: 1, kind: "case", slug: "old-case" },
+        { id: 2, kind: "project", slug: "unsafe-child", parent: 1 },
+      ],
+    }),
+    create: async (value: any) => calls.push(["create", value]),
+    update: async (value: any) => calls.push(["update", value]),
+    delete: async (value: any) => calls.push(["delete", value]),
+  };
+  await assert.rejects(
+    () => resetBusinessFramework(payload, previewSnapshot, { dryRun: false }),
+    /非 coverage 子内容/,
+  );
+  assert.deepEqual(calls, []);
 });

@@ -14,6 +14,7 @@
     "rebuild-current": "node --env-file-if-exists=../../.env --import tsx src/cli/rebuild-current.ts",
     "seed:local": "node --env-file-if-exists=../../.env --import tsx src/cli/seed-local.ts",
     "migrate:business-content": "node --env-file-if-exists=../../.env --import tsx src/cli/migrate-business-content.ts",
+    "reset:business-framework": "node --env-file-if-exists=../../.env --import tsx src/cli/reset-business-framework.ts",
     "generate": "node --env-file-if-exists=../../.env --import tsx ../../node_modules/payload/bin.js generate:types && node --env-file-if-exists=../../.env --import tsx ../../node_modules/payload/bin.js generate:importmap",
     "migrate": "NODE_ENV=production node --env-file-if-exists=../../.env --import tsx ../../node_modules/payload/bin.js migrate",
     "initialize:publication": "node --env-file-if-exists=../../.env --import tsx src/cli/initialize-publication.ts"

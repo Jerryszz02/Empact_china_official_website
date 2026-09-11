@@ -110,67 +110,31 @@ test("homepage paths, dropdowns, mobile navigation and draft boundary", async ({
   expect(errors).toEqual([]);
 });
 
-test("business pages show case cards that open independent case articles", async ({
+test("youth framework has five categories and no old case articles", async ({
   page,
-}, testInfo) => {
-  await page.goto("/");
-  await page.locator('.pathways a[href="/youth/"]').click();
-  await expect(page).toHaveURL(/\/youth\/$/);
-  await page
-    .locator('.service-list a[href="/youth/international-camp/"]')
-    .click();
-  await expect(page).toHaveURL(/\/youth\/international-camp\/$/);
-  const cases = page.locator("#cases");
-  await cases.scrollIntoViewIfNeeded();
-  await expect(cases).toBeVisible();
-  const cards = cases.locator(".case-card");
-  await expect(cards).toHaveCount(2);
-  const firstCard = cards.first();
-  await expect(firstCard.locator("h3")).toContainText("新加坡");
-  await expect(firstCard).toHaveAttribute(
-    "href",
+}) => {
+  await page.goto("/youth/");
+  await expect(page.locator("#nav-youth a")).toHaveText([
+    "国际化人才培养模型",
+    "公益社创体验",
+    "AI 加思辨",
+    "演讲与表达",
+    "学员故事与家长说",
+  ]);
+  await expect(page.locator(".service-list a")).toHaveCount(4);
+  await page.locator('.service-list a[href="/youth/monthly-camp/"]').click();
+  await expect(page.locator("h1")).toHaveText("公益社创体验");
+  await expect(page.locator("#cases .case-card")).toHaveCount(0);
+  await expect(page.locator("#cases")).not.toContainText("陶氏");
+  for (const path of [
     "/cases/singapore-social-innovation-camp/",
-  );
-  await expect(firstCard).toHaveAccessibleName(/新加坡/);
-  await expect(firstCard.locator(".case-image-placeholder")).toHaveCount(0);
-  await expect(firstCard.locator(".case-image")).toHaveCount(0);
-  // The full case body now lives on the article page instead of the business page.
-  await expect(cases).not.toContainText("安排营前课程");
-  if (testInfo.project.name === "mobile") {
-    const columns = await cases
-      .locator(".case-grid")
-      .evaluate((element) => getComputedStyle(element).gridTemplateColumns);
-    expect(columns.split(" ").filter(Boolean)).toHaveLength(1);
+    "/cases/microsoft-d-and-i-volunteering/",
+    "/youth/international-camp/",
+    "/youth/youth-practice/",
+  ]) {
+    const response = await page.goto(path);
+    expect(response?.status(), path).toBe(404);
   }
-  await firstCard.screenshot({
-    path: `test-results/case-card-${testInfo.project.name}.png`,
-  });
-  await firstCard.click();
-  await expect(page).toHaveURL(/\/cases\/singapore-social-innovation-camp\/$/);
-  await expect(page.locator("h1")).toContainText(
-    "新加坡社会创新与可持续发展研学营",
-  );
-  await expect(page.locator(".article-body .prose")).toContainText("营前课程");
-  await expect(page.locator(".article-cover")).toHaveCount(0);
-  const back = page.locator(".back-link");
-  await expect(back).toHaveAttribute("href", "/youth/international-camp/");
-  await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
-    "href",
-    "https://empact.cn/cases/singapore-social-innovation-camp/",
-  );
-  await expect(page.locator('meta[property="og:type"]')).toHaveAttribute(
-    "content",
-    "article",
-  );
-  await page.screenshot({
-    path: `test-results/case-article-${testInfo.project.name}.png`,
-    fullPage: true,
-  });
-  expect(
-    await page.evaluate(
-      () => document.documentElement.scrollWidth <= innerWidth,
-    ),
-  ).toBe(true);
 });
 
 test("core pages render body, contact is truthful, ChatCircle stays isolated", async ({
@@ -179,6 +143,8 @@ test("core pages render body, contact is truthful, ChatCircle stays isolated", a
   for (const path of [
     "/youth/",
     "/corporate/",
+    "/school/",
+    "/community/",
     "/about/",
     "/contact/",
     "/privacy/",
@@ -319,7 +285,9 @@ test("empty form feedback stays accessible before an update", async ({
   await expect(status).toHaveCSS("position", "static");
 });
 
-test("footer links keep usable touch targets on narrow phones", async ({ page }) => {
+test("footer links keep usable touch targets on narrow phones", async ({
+  page,
+}) => {
   await page.setViewportSize({ width: 320, height: 740 });
   await page.goto("/");
   const links = page.locator(".footer-links a, .footer-legal a");
@@ -472,58 +440,56 @@ test("hybrid pointers reveal dropdowns on touch before following parent links", 
   await context.close();
 });
 
-test("supplied case photos and posters load without cropping or overflow", async ({
+test("four homepage entrances preserve row order and open their framework pages", async ({
   page,
-}, testInfo) => {
-  const paths = [
-    "/youth/international-camp/",
+}) => {
+  await page.goto("/");
+  const links = page.locator(".motion-pathway");
+  await expect(links).toHaveCount(4);
+  const expected = ["/youth/", "/corporate/", "/school/", "/community/"];
+  for (const [index, href] of expected.entries()) {
+    await expect(links.nth(index)).toHaveAttribute("href", href);
+  }
+  const boxes = await links.evaluateAll((elements) =>
+    elements.map((element) => {
+      const box = element.getBoundingClientRect();
+      return { top: box.top, left: box.left, bottom: box.bottom };
+    }),
+  );
+  expect(boxes[0].top).toBe(boxes[1].top);
+  expect(boxes[2].top).toBe(boxes[3].top);
+  expect(boxes[2].top).toBeGreaterThanOrEqual(boxes[0].bottom);
+  for (const href of ["/school/", "/community/"]) {
+    await page.goto("/");
+    await page.locator(`.motion-pathway[href="${href}"]`).click();
+    await expect(page).toHaveURL(new RegExp(href + "$"));
+    await expect(page.locator("h1")).toHaveText(
+      href === "/school/" ? "学校业务" : "社区业务",
+    );
+    await expect(page.locator(".case-card")).toHaveCount(0);
+    await expect(
+      page.locator('.content-wrap a[href="/contact/"]'),
+    ).toBeVisible();
+  }
+});
+
+test("business framework contains no old cases or case image fallbacks", async ({
+  page,
+}) => {
+  for (const path of [
+    "/youth/monthly-camp/",
+    "/youth/ai-and-theme-courses/",
     "/youth/public-speaking/",
-    "/youth/youth-practice/",
+    "/youth/student-stories/",
     "/corporate/volunteering/",
     "/corporate/csr-consulting/",
     "/corporate/cross-border/",
-  ];
-  let loaded = 0;
-  for (const path of paths) {
-    await page.goto(path);
-    const images = page.locator(".case-image-supplied img");
-    await expect(images).toHaveCount(path.includes("csr-consulting") ? 2 : 1);
-    for (const img of await images.all()) {
-      await img.scrollIntoViewIfNeeded();
-      await expect
-        .poll(() =>
-          img.evaluate(
-            (element: HTMLImageElement) =>
-              element.complete && element.naturalWidth > 0,
-          ),
-        )
-        .toBe(true);
-      await expect(img).toHaveCSS("object-fit", "contain");
-      await expect(img.locator("xpath=ancestor::a[1]")).toHaveAttribute(
-        "href",
-        /\/cases\//,
-      );
-      await expect(page.locator(".case-card a")).toHaveCount(0);
-      loaded++;
-    }
-    expect(
-      await page.evaluate(
-        () => document.documentElement.scrollWidth <= innerWidth,
-      ),
-    ).toBe(true);
-    await page.locator("#cases").screenshot({
-      path: `test-results/images-${path.split("/")[2]}-${testInfo.project.name}.png`,
-    });
+  ]) {
+    const response = await page.goto(path);
+    expect(response?.status(), path).toBe(200);
+    await expect(page.locator("#cases")).toBeVisible();
+    await expect(
+      page.locator(".case-card, .case-image-supplied, .case-image-placeholder"),
+    ).toHaveCount(0);
   }
-  expect(loaded).toBe(7);
-  await page.goto("/youth/public-speaking/");
-  await expect(page.locator(".case-image-supplied figcaption")).toHaveText(
-    "Empact 少年说系列主视觉",
-  );
-  await page.locator(".case-card").click();
-  const articleImage = page.locator(".article-cover img");
-  await expect(articleImage.locator("..")).toHaveAttribute(
-    "href",
-    (await articleImage.getAttribute("src"))!,
-  );
 });

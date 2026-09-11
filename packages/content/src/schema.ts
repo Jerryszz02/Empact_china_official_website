@@ -3,7 +3,7 @@ import { z } from "zod";
 
 export type EntryKind =
   "page" | "business" | "project" | "news" | "coverage" | "case";
-export type Segment = "youth" | "corporate";
+export type Segment = "youth" | "corporate" | "school" | "community";
 export type ProjectStatus = "upcoming" | "open" | "ended" | "consultation";
 
 export type Entry = {
@@ -132,7 +132,7 @@ const entrySchema = z.object({
   summary: z.string(),
   bodyHtml: z.string(),
   bodyMediaIds: z.array(z.string()).optional(),
-  segment: z.enum(["youth", "corporate"]).optional(),
+  segment: z.enum(["youth", "corporate", "school", "community"]).optional(),
   parentId: z.string().optional(),
   relatedIds: z.array(z.string()).optional(),
   approved: z.boolean(),

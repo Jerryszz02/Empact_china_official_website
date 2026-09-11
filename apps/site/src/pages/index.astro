@@ -2,6 +2,12 @@
 import BaseLayout from "@/layouts/BaseLayout.astro";
 import { pageBySlug } from "@/lib/content";
 const home = pageBySlug("home");
+const pathways = [
+  { href: "/youth/", title: "青少年项目", label: "For youth & families" },
+  { href: "/corporate/", title: "企业服务", label: "For organisations" },
+  { href: "/school/", title: "学校业务", label: "For schools" },
+  { href: "/community/", title: "社区业务", label: "For communities" },
+];
 ---
 
 <BaseLayout
@@ -51,51 +57,32 @@ const home = pageBySlug("home");
       data-motion-scene
     >
       <div class="motion-scene-content">
-        <p class="eyebrow">Two ways in</p>
+        <p class="eyebrow">Our services</p>
         <h2>从你的关注出发</h2>
         <div class="motion-pathways">
-          <a class="motion-pathway" href="/youth/">
-            <span class="motion-pathway-turn">
-              <span class="motion-pathway-face motion-pathway-front">
-                <span class="eyebrow">For youth, families & schools</span>
-                <strong>青少年项目</strong>
-                <span class="motion-arrow" aria-hidden="true">
-                  ↗
+          {pathways.map((pathway) => (
+            <a class="motion-pathway" href={pathway.href}>
+              <span class="motion-pathway-turn">
+                <span class="motion-pathway-face motion-pathway-front">
+                  <span class="eyebrow">{pathway.label}</span>
+                  <strong>{pathway.title}</strong>
+                  <span class="motion-arrow" aria-hidden="true">
+                    ↗
+                  </span>
+                </span>
+                <span
+                  class="motion-pathway-face motion-pathway-back"
+                  aria-hidden="true"
+                >
+                  <span class="eyebrow">{pathway.label}</span>
+                  <strong>{pathway.title}</strong>
+                  <span class="motion-arrow" aria-hidden="true">
+                    ↗
+                  </span>
                 </span>
               </span>
-              <span
-                class="motion-pathway-face motion-pathway-back"
-                aria-hidden="true"
-              >
-                <span class="eyebrow">For youth, families & schools</span>
-                <strong>青少年项目</strong>
-                <span class="motion-arrow" aria-hidden="true">
-                  ↗
-                </span>
-              </span>
-            </span>
-          </a>
-          <a class="motion-pathway" href="/corporate/">
-            <span class="motion-pathway-turn">
-              <span class="motion-pathway-face motion-pathway-front">
-                <span class="eyebrow">For organisations</span>
-                <strong>企业服务</strong>
-                <span class="motion-arrow" aria-hidden="true">
-                  ↗
-                </span>
-              </span>
-              <span
-                class="motion-pathway-face motion-pathway-back"
-                aria-hidden="true"
-              >
-                <span class="eyebrow">For organisations</span>
-                <strong>企业服务</strong>
-                <span class="motion-arrow" aria-hidden="true">
-                  ↗
-                </span>
-              </span>
-            </span>
-          </a>
+            </a>
+          ))}
         </div>
       </div>
       <span class="motion-scene-index" aria-hidden="true">
@@ -197,7 +184,8 @@ const home = pageBySlug("home");
     align-items: flex-start;
     justify-content: flex-start;
     text-align: left;
-    padding-top: clamp(8rem, 23vh, 14rem);
+    padding-top: max(7rem, var(--motion-header-space, 6rem));
+    justify-content: center;
   }
   :global(html.motion-live) .motion-scene {
     background-color: transparent;
@@ -299,13 +287,13 @@ const home = pageBySlug("home");
   .motion-pathways {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: clamp(1.5rem, 6vw, 6rem);
-    margin-top: 2.2rem;
+    gap: clamp(1rem, 2.5vh, 2rem) clamp(1.5rem, 6vw, 6rem);
+    margin-top: 1.5rem;
     width: 100%;
     max-width: 70rem;
   }
   .motion-pathway {
-    --pathway-height: 11rem;
+    --pathway-height: clamp(8rem, 19vh, 11rem);
     --pathway-depth: calc(var(--pathway-height) / 2);
     position: relative;
     display: block;
@@ -412,7 +400,7 @@ const home = pageBySlug("home");
       padding: max(7rem, var(--motion-header-space, 6rem)) 1.5rem 4rem;
     }
     .motion-scene-pathways {
-      padding-top: max(23vh, var(--motion-header-space, 6rem));
+      padding-top: max(7rem, var(--motion-header-space, 6rem));
     }
     .motion-logo-brand {
       width: min(92vw, 30rem);
@@ -421,11 +409,25 @@ const home = pageBySlug("home");
       width: min(76vw, 22rem);
     }
     .motion-pathways {
-      grid-template-columns: 1fr;
-      gap: 1.5rem;
+      gap: 1rem;
+    }
+    .motion-pathway-face {
+      padding: 0.9rem 0.65rem;
+    }
+    .motion-pathway strong {
+      font-size: clamp(1.15rem, 5vw, 1.8rem);
+    }
+    .motion-pathway .eyebrow {
+      font-size: 0.65rem;
+      max-width: calc(100% - 1rem);
+    }
+    .motion-arrow {
+      right: 0.5rem;
+      top: 0.65rem;
+      font-size: 1.2rem;
     }
     .motion-pathway {
-      --pathway-height: 9rem;
+      --pathway-height: 7.5rem;
     }
     .motion-scene-index {
       right: 1.5rem;

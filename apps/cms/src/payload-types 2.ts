@@ -180,7 +180,7 @@ export interface Content {
   featured?: boolean | null;
   order?: number | null;
   image?: (number | null) | Media;
-  segment?: ('youth' | 'corporate') | null;
+  segment?: ('youth' | 'corporate' | 'school' | 'community') | null;
   parent?: (number | null) | Content;
   projectStatus?: ('upcoming' | 'open' | 'ended' | 'consultation') | null;
   audience?: string | null;

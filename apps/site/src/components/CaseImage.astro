@@ -1,23 +1,17 @@
 ---
 import type { Entry } from "@empact/content/schema";
-import { isPreviewMode, mediaById } from "@/lib/content";
+import { mediaById } from "@/lib/content";
 
 interface Props {
   entry: Entry;
   class?: string;
-  linkImage?: boolean;
 }
 
-const { entry, class: className = "", linkImage = true } = Astro.props;
-const ImageWrapper = linkImage ? "a" : "div";
+const { entry, class: className = "" } = Astro.props;
 const media = mediaById(entry.imageId);
-const localImage =
-  !media && isPreviewMode()
-    ? (await import("@/lib/case-images")).caseImages[entry.id]
-    : undefined;
 ---
 
-{media ? (
+{media && (
   <figure class={`case-image ${className}`}>
     <img
       src={`/media/${media.filename}`}
@@ -27,45 +21,4 @@ const localImage =
       loading="lazy"
     />
   </figure>
-) : localImage ? (
-  <figure class={`case-image case-image-supplied ${className}`}>
-    <ImageWrapper
-      {...(linkImage
-        ? {
-            href: localImage.image.src,
-            target: "_blank",
-            rel: "noopener",
-            "aria-label": `${localImage.alt}（打开完整图片）`,
-          }
-        : {})}
-    >
-      <img
-        src={localImage.image.src}
-        alt={localImage.alt}
-        width={localImage.image.width}
-        height={localImage.image.height}
-        loading="lazy"
-      />
-    </ImageWrapper>
-    {localImage.caption && <figcaption>{localImage.caption}</figcaption>}
-  </figure>
-) : null}
-
-<style>
-  .case-image-supplied {
-    aspect-ratio: auto;
-  }
-  .case-image-supplied a {
-    display: block;
-  }
-  .case-image-supplied img {
-    height: auto;
-    max-height: 32rem;
-    object-fit: contain;
-  }
-  .case-image-supplied figcaption {
-    padding: 0.6rem 0.9rem;
-    color: var(--secondary);
-    font-size: 0.85rem;
-  }
-</style>
+)}

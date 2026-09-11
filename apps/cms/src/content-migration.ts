@@ -5,6 +5,7 @@ import { cp, mkdir, stat, readFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import { spawn } from "node:child_process";
 import type { Entry, Media, Snapshot } from "@empact/content/schema";
+import { readLiveSnapshot, runtimeDir } from "./publisher.js";
 
 export type MigrationReport = {
   dryRun: boolean;
@@ -17,12 +18,204 @@ export type MigrationReport = {
   entries: string[];
 };
 
+export type BusinessFrameworkResetReport = {
+  dryRun: boolean;
+  casesRemoved: string[];
+  dependentsRemoved: string[];
+  obsoleteBusinessesRemoved: string[];
+  upserted: string[];
+  relationsUpdated: string[];
+  activeCaseCount: number;
+};
+
 type Existing = { id: string; kind: string; slug: string; image?: unknown };
 type MigrationOptions = {
   dryRun?: boolean;
   mediaDir?: string;
   media?: Media[];
 };
+
+const frameworkBusinessSlugs = new Set([
+  "monthly-camp",
+  "public-speaking",
+  "ai-and-theme-courses",
+  "student-stories",
+]);
+
+/**
+ * Reset only the business framework. The caller must create a full database,
+ * media, runtime and Payload versions backup before applying this operation.
+ * Company data, unrelated pages, projects, news and media are retained.
+ */
+export async function resetBusinessFramework(
+  payload: Payload,
+  source: Snapshot,
+  options: { dryRun?: boolean; runtimeDir?: string } = {},
+): Promise<BusinessFrameworkResetReport> {
+  const dryRun = options.dryRun !== false;
+  const report: BusinessFrameworkResetReport = {
+    dryRun,
+    casesRemoved: [],
+    dependentsRemoved: [],
+    obsoleteBusinessesRemoved: [],
+    upserted: [],
+    relationsUpdated: [],
+    activeCaseCount: 0,
+  };
+  const result = await payload.find({
+    collection: "content",
+    pagination: false,
+    depth: 0,
+    overrideAccess: true,
+  });
+  const docs = result.docs as Array<Record<string, any>>;
+  const cases = docs.filter((doc) => doc.kind === "case");
+  const caseIds = new Set(cases.map((doc) => String(doc.id)));
+  const dependents = docs.filter((candidate) =>
+    caseIds.has(String(candidate.parent?.id ?? candidate.parent)),
+  );
+  const unsupportedDependents = dependents.filter(
+    (doc) => doc.kind !== "coverage",
+  );
+  if (unsupportedDependents.length)
+    throw new Error(
+      `案例仍有非 coverage 子内容，未执行 reset：${unsupportedDependents.map((doc) => String(doc.id)).join(",")}`,
+    );
+  const removedIds = new Set([
+    ...caseIds,
+    ...dependents.map((doc) => String(doc.id)),
+  ]);
+  for (const doc of cases) {
+    report.casesRemoved.push(String(doc.id));
+    for (const dependent of dependents.filter(
+      (candidate) =>
+        String(candidate.parent?.id ?? candidate.parent) === String(doc.id),
+    ))
+      report.dependentsRemoved.push(String(dependent.id));
+  }
+  const obsolete = docs.filter(
+    (doc) =>
+      doc.kind === "business" &&
+      doc.segment === "youth" &&
+      ["international-camp", "youth-practice"].includes(String(doc.slug)),
+  );
+  for (const doc of obsolete)
+    report.obsoleteBusinessesRemoved.push(String(doc.id));
+  const live = await readLiveSnapshot(options.runtimeDir || runtimeDir());
+  const activeCases =
+    live?.entries.filter(
+      (entry) =>
+        entry.kind === "case" ||
+        (entry.kind === "business" &&
+          ["international-camp", "youth-practice"].includes(entry.slug)),
+    ) ?? [];
+  report.activeCaseCount = activeCases.filter(
+    (entry) => entry.kind === "case",
+  ).length;
+  if (!dryRun && live)
+    throw new Error(
+      "当前已有发布版本；本地框架 reset 只允许在无 current publication 时执行，数据库未修改。",
+    );
+  const desired = source.entries.filter(
+    (entry) =>
+      (entry.kind === "business" &&
+        entry.segment === "youth" &&
+        frameworkBusinessSlugs.has(entry.slug)) ||
+      (entry.kind === "page" &&
+        ["youth", "school", "community"].includes(entry.slug)),
+  );
+  const byKey = new Map(docs.map((doc) => [`${doc.kind}:${doc.slug}`, doc]));
+  const bySlug = new Map<string, Record<string, any>[]>();
+  for (const doc of docs)
+    bySlug.set(String(doc.slug), [
+      ...(bySlug.get(String(doc.slug)) ?? []),
+      doc,
+    ]);
+  for (const entry of desired) {
+    const conflicts = (bySlug.get(entry.slug) ?? []).filter(
+      (doc) => doc.kind !== entry.kind,
+    );
+    if (conflicts.length)
+      throw new Error(`框架路径类型冲突，未执行 reset：${entry.slug}`);
+    const existing = byKey.get(`${entry.kind}:${entry.slug}`);
+    if (
+      entry.kind === "business" &&
+      frameworkBusinessSlugs.has(entry.slug) &&
+      existing &&
+      existing.segment !== "youth"
+    )
+      throw new Error(`框架业务分组冲突，未执行 reset：${entry.slug}`);
+  }
+  const obsoleteIds = new Set(obsolete.map((doc) => String(doc.id)));
+  const survivorParentRefs = docs.filter(
+    (doc) =>
+      !removedIds.has(String(doc.id)) &&
+      (removedIds.has(String(doc.parent?.id ?? doc.parent)) ||
+        obsoleteIds.has(String(doc.parent?.id ?? doc.parent))),
+  );
+  if (survivorParentRefs.length)
+    throw new Error(
+      `存活内容仍引用待删除内容，未执行 reset：${survivorParentRefs.map((doc) => String(doc.id)).join(",")}`,
+    );
+  if (!dryRun) {
+    for (const doc of docs) {
+      const related = Array.isArray(doc.related)
+        ? doc.related.filter(
+            (value: any) =>
+              !removedIds.has(String(value?.id ?? value)) &&
+              !obsoleteIds.has(String(value?.id ?? value)),
+          )
+        : undefined;
+      if (related && related.length !== doc.related.length) {
+        await payload.update({
+          collection: "content",
+          id: doc.id,
+          data: { related },
+          overrideAccess: true,
+        } as any);
+        report.relationsUpdated.push(String(doc.id));
+      }
+    }
+    for (const dependent of dependents)
+      await payload.delete({
+        collection: "content",
+        id: dependent.id,
+        overrideAccess: true,
+      });
+    for (const doc of cases)
+      await payload.delete({
+        collection: "content",
+        id: doc.id,
+        overrideAccess: true,
+      });
+    for (const doc of obsolete)
+      await payload.delete({
+        collection: "content",
+        id: doc.id,
+        overrideAccess: true,
+      });
+  }
+  for (const entry of desired) {
+    const existing = byKey.get(`${entry.kind}:${entry.slug}`);
+    report.upserted.push(`${entry.kind}:${entry.slug}`);
+    if (dryRun) continue;
+    const data = entryData(entry, { entries: new Map(), media: new Map() });
+    if (existing)
+      await payload.update({
+        collection: "content",
+        id: existing.id,
+        data,
+        overrideAccess: true,
+      } as any);
+    else
+      await payload.create({
+        collection: "content",
+        data,
+        overrideAccess: true,
+      } as any);
+  }
+  return report;
+}
 
 export async function backupBeforeMigration(opts: {
   database: string;

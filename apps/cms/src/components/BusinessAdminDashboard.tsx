@@ -7,7 +7,7 @@ type Item = {
   id: string;
   title: string;
   kind: string;
-  segment?: "youth" | "corporate";
+  segment?: "youth" | "corporate" | "school" | "community";
   parentId?: string;
   summary?: string;
   slug: string;
@@ -21,7 +21,12 @@ type Item = {
   lastAction?: string;
 };
 
-const segmentLabels = { corporate: "企业服务", youth: "青少年与青年" } as const;
+const segmentLabels = {
+  corporate: "企业服务",
+  youth: "青少年与青年",
+  school: "学校业务",
+  community: "社区业务",
+} as const;
 
 function status(item: Item) {
   if (item.lastError) return { label: "操作失败 · 可重试", tone: "changed" };
@@ -183,34 +188,36 @@ export function BusinessAdminDashboard() {
             </div>
           ) : (
             <div className="business-cards">
-              {(["corporate", "youth"] as const).map((segment) => (
-                <section key={segment}>
-                  <h3>{segmentLabels[segment]}</h3>
-                  {businesses
-                    .filter((item) => item.segment === segment)
-                    .map((item) => {
-                      const current = status(item);
-                      return (
-                        <button
-                          key={item.id}
-                          className={`business-card ${selected?.id === item.id ? "is-selected" : ""}`}
-                          onClick={() => setSelectedId(item.id)}
-                        >
-                          <span className="business-card__mark">
-                            {item.segment
-                              ? segmentLabels[item.segment]
-                              : "业务方向"}
-                          </span>
-                          <strong>{item.title}</strong>
-                          <span>{item.summary || "还没有导读"}</span>
-                          <em className={`status status--${current.tone}`}>
-                            {current.label}
-                          </em>
-                        </button>
-                      );
-                    })}
-                </section>
-              ))}
+              {(["youth", "corporate", "school", "community"] as const).map(
+                (segment) => (
+                  <section key={segment}>
+                    <h3>{segmentLabels[segment]}</h3>
+                    {businesses
+                      .filter((item) => item.segment === segment)
+                      .map((item) => {
+                        const current = status(item);
+                        return (
+                          <button
+                            key={item.id}
+                            className={`business-card ${selected?.id === item.id ? "is-selected" : ""}`}
+                            onClick={() => setSelectedId(item.id)}
+                          >
+                            <span className="business-card__mark">
+                              {item.segment
+                                ? segmentLabels[item.segment]
+                                : "业务方向"}
+                            </span>
+                            <strong>{item.title}</strong>
+                            <span>{item.summary || "还没有导读"}</span>
+                            <em className={`status status--${current.tone}`}>
+                              {current.label}
+                            </em>
+                          </button>
+                        );
+                      })}
+                  </section>
+                ),
+              )}
             </div>
           )}
         </section>

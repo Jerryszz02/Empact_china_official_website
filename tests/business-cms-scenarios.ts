@@ -207,6 +207,55 @@ export async function verifyBusinessWorkflow(options: {
     await publicText("/corporate/"),
     /empty-business-workflow/,
   );
+
+  for (const group of ["school", "community"] as const) {
+    const createdGroup = await request("/api/content", "POST", {
+      kind: "business",
+      slug: `${group}-workflow-group`,
+      title: group === "school" ? "学校业务验收" : "社区业务验收",
+      summary: `${group} 业务摘要。`,
+      body: lexical(`${group} 业务正文。`),
+      segment: group,
+      order: 1,
+    });
+    const groupId = String(createdGroup.doc.id);
+    await request(`/api/content/${groupId}`, "PATCH", {
+      summary: `${group} 业务修改后的摘要。`,
+      body: lexical(`${group} 业务修改后的正文。`),
+    });
+    await action("publish", groupId);
+    const groupPath = `/${group}/${group}-workflow-group/`;
+    assert.equal((await fetch(publicURL + groupPath)).status, 200);
+    assert.match(await publicText(`/${group}/`), /workflow-group/);
+    assert.match(await publicText(groupPath), /修改后的正文/);
+
+    if (group === "school") {
+      const groupCase = await request("/api/content", "POST", {
+        kind: "case",
+        slug: "school-workflow-case",
+        title: "学校业务案例验收",
+        summary: "学校业务案例摘要。",
+        body: lexical("学校业务案例正文。"),
+        parent: Number(groupId),
+        image: coverId,
+        approved: false,
+      });
+      const groupCaseId = String(groupCase.doc.id);
+      await action("publish", groupCaseId);
+      assert.match(
+        await publicText("/cases/school-workflow-case/"),
+        /学校业务案例正文/,
+      );
+      await action("unpublish", groupCaseId);
+      assert.equal(
+        (await fetch(publicURL + "/cases/school-workflow-case/")).status,
+        404,
+      );
+      await action("delete", groupCaseId);
+    }
+    await action("delete", groupId);
+    assert.equal((await fetch(publicURL + groupPath)).status, 404);
+  }
   console.log(
     "PASS: business CRUD, rich case preview/publish/edit/transfer/unpublish/delete, inline media protection, stable date and sitemap.",
   );
