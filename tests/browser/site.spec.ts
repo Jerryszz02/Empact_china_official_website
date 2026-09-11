@@ -39,7 +39,7 @@ test("homepage paths, dropdowns, mobile navigation and draft boundary", async ({
     "content",
     /noindex/,
   );
-  await expect(page.getByRole("status").first()).toContainText("结构预览");
+  await expect(page.locator(".preview-bar")).toHaveCount(0);
   if (testInfo.project.name === "mobile")
     await page.getByRole("button", { name: "菜单" }).click();
   const navigation = page.getByRole("navigation", { name: "主导航" });
@@ -123,8 +123,8 @@ test("business paths retain their embedded cases after homepage simplification",
   await firstCase.scrollIntoViewIfNeeded();
   await expect(firstCase).toBeInViewport();
   await expect(firstCase.locator("h3")).toContainText("新加坡");
-  await expect(page.locator(".case-image-placeholder")).toHaveCount(1);
-  await expect(page.locator(".case-image-placeholder img")).toHaveCount(0);
+  await expect(page.locator(".case-image-placeholder")).toHaveCount(0);
+  await expect(firstCase.locator(".case-image")).toHaveCount(0);
   await firstCase.screenshot({
     path: `test-results/case-${testInfo.project.name}.png`,
   });
