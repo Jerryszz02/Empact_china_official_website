@@ -110,7 +110,7 @@ test("homepage paths, dropdowns, mobile navigation and draft boundary", async ({
   expect(errors).toEqual([]);
 });
 
-test("business paths retain their embedded cases after homepage simplification", async ({
+test("business pages show case cards that open independent case articles", async ({
   page,
 }, testInfo) => {
   await page.goto("/");
@@ -119,14 +119,51 @@ test("business paths retain their embedded cases after homepage simplification",
   await page
     .locator('.service-list a[href="/youth/international-camp/"]')
     .click();
-  const firstCase = page.locator("#cases > article").first();
-  await firstCase.scrollIntoViewIfNeeded();
-  await expect(firstCase).toBeInViewport();
-  await expect(firstCase.locator("h3")).toContainText("新加坡");
-  await expect(page.locator(".case-image-placeholder")).toHaveCount(1);
-  await expect(page.locator(".case-image-placeholder img")).toHaveCount(0);
-  await firstCase.screenshot({
-    path: `test-results/case-${testInfo.project.name}.png`,
+  await expect(page).toHaveURL(/\/youth\/international-camp\/$/);
+  const cases = page.locator("#cases");
+  await cases.scrollIntoViewIfNeeded();
+  await expect(cases).toBeVisible();
+  const cards = cases.locator(".case-card");
+  await expect(cards).toHaveCount(2);
+  const firstCard = cards.first();
+  await expect(firstCard.locator("h3")).toContainText("新加坡");
+  await expect(firstCard).toHaveAttribute(
+    "href",
+    "/cases/singapore-social-innovation-camp/",
+  );
+  await expect(firstCard).toHaveAccessibleName(/新加坡/);
+  await expect(firstCard.locator(".case-image-placeholder")).toHaveCount(1);
+  // The full case body now lives on the article page instead of the business page.
+  await expect(cases).not.toContainText("安排营前课程");
+  if (testInfo.project.name === "mobile") {
+    const columns = await cases
+      .locator(".case-grid")
+      .evaluate((element) => getComputedStyle(element).gridTemplateColumns);
+    expect(columns.split(" ").filter(Boolean)).toHaveLength(1);
+  }
+  await firstCard.screenshot({
+    path: `test-results/case-card-${testInfo.project.name}.png`,
+  });
+  await firstCard.click();
+  await expect(page).toHaveURL(/\/cases\/singapore-social-innovation-camp\/$/);
+  await expect(page.locator("h1")).toContainText(
+    "新加坡社会创新与可持续发展研学营",
+  );
+  await expect(page.locator(".article-body .prose")).toContainText("营前课程");
+  await expect(page.locator(".article-cover")).toHaveCount(1);
+  const back = page.locator(".back-link");
+  await expect(back).toHaveAttribute("href", "/youth/international-camp/");
+  await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
+    "href",
+    "https://empact.cn/cases/singapore-social-innovation-camp/",
+  );
+  await expect(page.locator('meta[property="og:type"]')).toHaveAttribute(
+    "content",
+    "article",
+  );
+  await page.screenshot({
+    path: `test-results/case-article-${testInfo.project.name}.png`,
+    fullPage: true,
   });
   expect(
     await page.evaluate(
@@ -375,10 +412,11 @@ test("supplied case photos and posters load without cropping or overflow", async
         )
         .toBe(true);
       await expect(img).toHaveCSS("object-fit", "contain");
-      await expect(img.locator("..")).toHaveAttribute(
+      await expect(img.locator("xpath=ancestor::a[1]")).toHaveAttribute(
         "href",
-        (await img.getAttribute("src")) as string,
+        /\/cases\//,
       );
+      await expect(page.locator(".case-card a")).toHaveCount(0);
       loaded++;
     }
     expect(
@@ -386,15 +424,19 @@ test("supplied case photos and posters load without cropping or overflow", async
         () => document.documentElement.scrollWidth <= innerWidth,
       ),
     ).toBe(true);
-    await page
-      .locator("#cases")
-      .screenshot({
-        path: `test-results/images-${path.split("/")[2]}-${testInfo.project.name}.png`,
-      });
+    await page.locator("#cases").screenshot({
+      path: `test-results/images-${path.split("/")[2]}-${testInfo.project.name}.png`,
+    });
   }
   expect(loaded).toBe(7);
   await page.goto("/youth/public-speaking/");
   await expect(page.locator(".case-image-supplied figcaption")).toHaveText(
     "Empact 少年说系列主视觉",
+  );
+  await page.locator(".case-card").click();
+  const articleImage = page.locator(".article-cover img");
+  await expect(articleImage.locator("..")).toHaveAttribute(
+    "href",
+    (await articleImage.getAttribute("src"))!,
   );
 });

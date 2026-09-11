@@ -41,6 +41,7 @@ export type PublisherOptions = {
   ) => Promise<boolean>;
   now?: () => Date;
   state?: "published" | "unpublished";
+  selectedIds?: string[];
 };
 export const runtimeDir = () =>
   resolve(process.env.RUNTIME_DIR || ".data/site");
@@ -164,7 +165,11 @@ export function mergeSelectedLive(
   const changedMedia = new Set(
     selectedIds.flatMap((id) => {
       const e = entries.get(id);
-      return e?.imageId ? [e.imageId] : [];
+      return e
+        ? [e.imageId, ...(e.bodyMediaIds ?? [])].filter(
+            (value): value is string => Boolean(value),
+          )
+        : [];
     }),
   );
   const media = new Map((live?.media || []).map((item) => [item.id, item]));
@@ -175,7 +180,9 @@ export function mergeSelectedLive(
   }
   const used = new Set(
     [...entries.values()].flatMap((entry) =>
-      entry.imageId ? [entry.imageId] : [],
+      [entry.imageId, ...(entry.bodyMediaIds ?? [])].filter(
+        (value): value is string => Boolean(value),
+      ),
     ),
   );
   if (!live && !includeCompany) throw new Error("首次发布须勾选公司公开资料。");
@@ -288,6 +295,7 @@ export async function publishSnapshot(
         version: "",
         state: "publishing",
         startedAt: now().toISOString(),
+        selectedIds: options.selectedIds,
       };
     const previous = await currentRelease(runtime);
     receipt.baseVersion = (await readLiveSnapshot(runtime))?.version;
@@ -299,7 +307,8 @@ export async function publishSnapshot(
         { production: true, now: now() },
       );
       receipt.version = snapshot.version;
-      receipt.selectedIds = snapshot.entries.map((entry) => entry.id);
+      receipt.selectedIds =
+        options.selectedIds || snapshot.entries.map((entry) => entry.id);
       await receiptWrite(runtime, receipt);
       const release = join(runtime, "releases", id);
       receipt.releasePath = release;
@@ -336,7 +345,11 @@ export async function unpublishSnapshot(
   const remove = new Set(ids),
     entries = snapshot.entries.filter((entry) => !remove.has(entry.id));
   const used = new Set(
-    entries.flatMap((entry) => (entry.imageId ? [entry.imageId] : [])),
+    entries.flatMap((entry) =>
+      [entry.imageId, ...(entry.bodyMediaIds ?? [])].filter(
+        (value): value is string => Boolean(value),
+      ),
+    ),
   );
   return publishSnapshot(
     {

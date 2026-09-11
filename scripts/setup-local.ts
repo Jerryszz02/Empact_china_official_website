@@ -9,7 +9,7 @@ try {
   await env.writeFile(
     [
       `PAYLOAD_SECRET=${randomBytes(48).toString("hex")}`,
-      "CMS_URL=http://127.0.0.1:3000",
+      "CMS_URL=http://127.0.0.1:4321",
       `DATABASE_URL=file:${resolve(".data/cms.db")}`,
       `MEDIA_DIR=${resolve(".data/media")}`,
       `RUNTIME_DIR=${resolve(".data/site")}`,

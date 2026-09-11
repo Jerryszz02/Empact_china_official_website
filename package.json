@@ -23,6 +23,7 @@
     "check:output": "tsx scripts/check-output.ts",
     "setup:local": "tsx scripts/setup-local.ts",
     "serve:preview": "tsx scripts/serve-preview.ts",
+    "serve:workspace": "tsx --env-file=.env scripts/serve-workspace.ts",
     "test:cms": "tsx tests/cms-live.ts",
     "format": "prettier --write apps packages scripts tests *.json playwright.config.ts"
   },

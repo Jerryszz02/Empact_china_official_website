@@ -1,4 +1,5 @@
 import {
+  entryPath,
   validateSnapshot,
   type Entry,
   type Snapshot,
@@ -46,16 +47,38 @@ export function pageBySlug(slug: string) {
 }
 
 export function pathFor(entry: SitePage) {
-  if (entry.kind === "page")
-    return entry.slug === "home" ? "/" : `/${entry.slug}/`;
-  if (entry.kind === "business")
-    return `/${entry.segment ?? "youth"}/${entry.slug}/`;
-  if (entry.kind === "project")
-    return entry.slug === "chatcircle"
-      ? "https://chatcircle.empact.cn"
-      : `/projects/${entry.slug}/`;
-  if (entry.kind === "news") return `/news/${entry.slug}/`;
-  return "";
+  // ChatCircle intentionally leaves the site: keep the direct external link.
+  if (entry.kind === "project" && entry.slug === "chatcircle")
+    return "https://chatcircle.empact.cn";
+  return entryPath(entry);
+}
+
+/** Stable publishedAt-descending sort; legacy entries without a date keep their order. */
+export function sortByPublishedAt<T extends SitePage>(list: T[]): T[] {
+  return list.slice().sort((a, b) => {
+    const aTime = a.publishedAt ? Date.parse(a.publishedAt) : Number.NaN;
+    const bTime = b.publishedAt ? Date.parse(b.publishedAt) : Number.NaN;
+    const aValid = Number.isFinite(aTime);
+    const bValid = Number.isFinite(bTime);
+    if (aValid && bValid && aTime !== bTime) return bTime - aTime;
+    if (aValid !== bValid) return aValid ? -1 : 1;
+    return 0;
+  });
+}
+
+export function sourceTypeLabel(type?: string) {
+  if (!type) return undefined;
+  return (
+    (
+      {
+        media: "独立媒体报道",
+        partner: "合作方记录",
+        official: "官方公开信息",
+        company: "公司自述",
+        sponsored: "合作稿",
+      } as Record<string, string>
+    )[type] ?? type
+  );
 }
 
 export function mediaById(id?: string) {

@@ -98,7 +98,7 @@ export function createContactHandler(options: {
   };
 }
 
-export function smtpDelivery(env: NodeJS.ProcessEnv): Delivery | undefined {
+export function smtpDelivery(env: Partial<NodeJS.ProcessEnv>): Delivery | undefined {
   const required = [
     "SMTP_HOST",
     "SMTP_USER",

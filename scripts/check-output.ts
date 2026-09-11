@@ -99,7 +99,7 @@ export async function checkOutput(
   if (!sitemapPath) errors.push("Missing sitemap");
   if (sitemapPath) {
     const sitemap = await readFile(sitemapPath, "utf8");
-    if (/\/(admin|preview|api|cases)\//.test(sitemap))
+    if (/\/(admin|preview|api)\//.test(sitemap))
       errors.push("Private/unplanned route in sitemap");
     if (!production && /<loc>/.test(sitemap))
       errors.push("Preview sitemap must be empty");

@@ -1,0 +1,132 @@
+---
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import CaseImage from "@/components/CaseImage.astro";
+import { cases, entries, pathFor, byId, sourceTypeLabel } from "@/lib/content";
+export function getStaticPaths() {
+  return cases
+    .filter((entry) => pathFor(entry).startsWith("/"))
+    .map((entry) => ({ params: { slug: entry.slug }, props: { entry } }));
+}
+const { entry } = Astro.props;
+const parent = byId(entry.parentId);
+const publishedAt = entry.publishedAt;
+const publishedLabel =
+  publishedAt && Number.isFinite(Date.parse(publishedAt))
+    ? new Date(publishedAt).toISOString().slice(0, 10)
+    : undefined;
+const coverage = entries.filter(
+  (item) => item.kind === "coverage" && item.parentId === entry.id,
+);
+const related = (entry.relatedIds ?? []).map((id) => byId(id)).filter(Boolean);
+const relatedCases = [
+  ...new Map(
+    [
+      ...related.filter((item) => item?.kind === "case"),
+      ...entries.filter(
+        (item) =>
+          item.kind === "case" &&
+          item.id !== entry.id &&
+          item.relatedIds?.includes(entry.id),
+      ),
+    ].map((item) => [item!.id, item!]),
+  ).values(),
+];
+---
+
+<BaseLayout
+  title={entry.title}
+  breadcrumbTitle={entry.title}
+  description={entry.summary}
+  type="article"
+>
+  <section class="page-hero article-hero">
+    {parent && (
+      <a class="back-link" href={pathFor(parent)}>
+        <span aria-hidden="true">←</span> 返回{parent.title}
+      </a>
+    )}
+    <span class="eyebrow">Case study</span>
+    <h1>{entry.title}</h1>
+    <p class="page-summary">{entry.summary}</p>
+    {(publishedLabel || entry.location) && (
+      <div class="detail-meta">
+        {publishedLabel && (
+          <span>
+            <time datetime={publishedAt ?? ""}>{publishedLabel}</time>
+          </span>
+        )}
+        {entry.location && <span>地点：{entry.location}</span>}
+      </div>
+    )}
+  </section>
+  <section class="content-wrap">
+    <article class="article-body">
+      <CaseImage entry={entry} class="article-cover" />
+      <div class="prose" set:html={entry.bodyHtml} />
+    </article>
+    {(entry.sourceName || entry.sourceUrl) && (
+      <section class="article-source">
+        <h2>来源</h2>
+        <p class="detail-meta">
+          {entry.sourceName && <span>{entry.sourceName}</span>}
+          {sourceTypeLabel(entry.sourceType) && (
+            <span>{sourceTypeLabel(entry.sourceType)}</span>
+          )}
+          {entry.sourceUrl && (
+            <a href={entry.sourceUrl} rel="noopener noreferrer">
+              查看原文 ↗
+            </a>
+          )}
+        </p>
+      </section>
+    )}
+    {coverage.length > 0 && (
+      <section id="coverage" class="embedded-section">
+        <h2>相关报道与合作记录</h2>
+        {coverage.map((item) => (
+          <article class="embedded-item">
+            <h3>{item.title}</h3>
+            <p>{item.summary}</p>
+            <p class="detail-meta">
+              {item.sourceName && <span>{item.sourceName}</span>}
+              {sourceTypeLabel(item.sourceType) && (
+                <span>{sourceTypeLabel(item.sourceType)}</span>
+              )}
+              {item.eventDate && <span>{item.eventDate}</span>}
+              {item.sourceUrl && (
+                <a href={item.sourceUrl} rel="noopener noreferrer">
+                  查看原文 ↗
+                </a>
+              )}
+            </p>
+          </article>
+        ))}
+      </section>
+    )}
+    {relatedCases.length > 0 && (
+      <section class="embedded-section">
+        <h2>相关案例</h2>
+        {relatedCases.map((item) => (
+          <p>
+            <a href={pathFor(item)}>{item.title}</a> · {item.summary}
+          </p>
+        ))}
+      </section>
+    )}
+    <section class="embedded-section">
+      <h2>咨询与合作</h2>
+      {parent ? (
+        <a class="button button-primary" href={pathFor(parent)}>
+          了解{parent.title} <span aria-hidden="true">↗</span>
+        </a>
+      ) : (
+        <a
+          class="button button-primary"
+          href={`/contact/?business=${encodeURIComponent(entry.segment ?? "")}`}
+        >
+          咨询与合作 <span aria-hidden="true">↗</span>
+        </a>
+      )}
+    </section>
+  </section>
+</BaseLayout>

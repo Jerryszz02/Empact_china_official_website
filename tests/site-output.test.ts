@@ -166,7 +166,10 @@ test(
       assert.ok(home('footer a[href="/news/news-test/"]').length);
       assert.equal(home(".motion-home > section").length, 3);
       assert.equal(business("#case-no-image .case-image").length, 0);
-      assert.match(business("#cases").text(), /案例行动与结果正文/);
+      assert.equal(business("#case-test").attr("href"), "/cases/case-test/");
+      assert.ok(business("#case-test").text().includes("隔离案例摘要"));
+      // Case bodies moved to their own articles, not embedded on the business page.
+      assert.ok(!business("#cases").text().includes("案例行动与结果正文"));
       assert.equal(
         business("#case-test .case-image img").attr("src"),
         "/media/test.png",
@@ -180,6 +183,27 @@ test(
         "https://example.invalid/original",
       );
       assert.ok(business(`a[href="/projects/${project.slug}/"]`).length);
+      const caseArticle = load(
+        await readFile(join(out, "cases", "case-test", "index.html"), "utf8"),
+      );
+      assert.match(caseArticle("main").text(), /案例行动与结果正文/);
+      assert.equal(
+        caseArticle('link[rel="canonical"]').attr("href"),
+        "https://empact.cn/cases/case-test/",
+      );
+      assert.equal(
+        caseArticle('meta[property="og:type"]').attr("content"),
+        "article",
+      );
+      assert.equal(
+        caseArticle(".back-link").attr("href"),
+        `/${parent.segment}/${parent.slug}/`,
+      );
+      const caseNoImage = load(
+        await readFile(join(out, "cases", "case-no-image", "index.html"), "utf8"),
+      );
+      assert.match(caseNoImage("main").text(), /已审核案例摘要/);
+      assert.equal(caseNoImage(".article-body .case-image").length, 0);
       const page = load(
         await readFile(
           join(out, "projects", project.slug, "index.html"),
@@ -216,10 +240,9 @@ test(
       );
       const sitemap = await readFile(join(out, "sitemap.xml"), "utf8");
       assert.ok(!sitemap.includes("chatcircle"));
-      assert.ok(
-        !sitemap.includes("/case-test/") &&
-          !sitemap.includes("/coverage-test/"),
-      );
+      assert.ok(sitemap.includes("/cases/case-test/"));
+      assert.ok(sitemap.includes("/cases/case-no-image/"));
+      assert.ok(!sitemap.includes("/coverage-test/"));
     } finally {
       await rm(temporary, { recursive: true, force: true });
     }

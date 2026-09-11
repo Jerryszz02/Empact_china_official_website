@@ -7,7 +7,8 @@ import { spawn, execFile } from "node:child_process";
 import { promisify } from "node:util";
 import sharp from "sharp";
 import { previewSnapshot } from "@empact/content/fixtures";
-import { createPublicServer } from "../scripts/public-server.js";
+import { verifyCmsUI } from "./cms-ui-scenarios.js";
+import { verifyBusinessWorkflow } from "./business-cms-scenarios.js";
 const execute = promisify(execFile),
   repository = resolve("."),
   cms = join(repository, "apps/cms");
@@ -16,19 +17,13 @@ const runtime = join(directory, "site"),
   media = join(directory, "media");
 await mkdir(media);
 await mkdir(runtime);
-const website = createPublicServer({
-  root: join(runtime, "current"),
-  origin: "https://empact.cn",
-});
-website.listen(0, "127.0.0.1");
-await new Promise<void>((done) => website.once("listening", done));
-const publicURL = `http://127.0.0.1:${(website.address() as { port: number }).port}`;
-const base = "http://127.0.0.1:3001";
+const base = "http://127.0.0.1:4321";
+const publicURL = base;
 const email = "isolated-test@example.invalid",
   password = randomBytes(24).toString("base64url");
 const env = {
   ...process.env,
-  NODE_ENV: "production",
+  NODE_ENV: "production" as const,
   PAYLOAD_SECRET: randomBytes(48).toString("hex"),
   DATABASE_URL: `file:${join(directory, "cms.db")}`,
   MEDIA_DIR: media,
@@ -70,15 +65,8 @@ try {
   );
   child = spawn(
     process.execPath,
-    [
-      join(repository, "node_modules/next/dist/bin/next"),
-      "start",
-      "--hostname",
-      "127.0.0.1",
-      "--port",
-      "3001",
-    ],
-    { cwd: cms, env, stdio: ["ignore", "pipe", "pipe"] },
+    ["--import", "tsx", join(repository, "scripts/serve-workspace.ts")],
+    { cwd: repository, env, stdio: ["ignore", "pipe", "pipe"] },
   );
   child.stdout?.on("data", (data) => {
     logs = (logs + data).slice(-6000);
@@ -495,6 +483,16 @@ try {
     await (await fetch(publicURL + "/news/operations-news/")).text(),
     /新闻原版正文/,
   );
+  await verifyBusinessWorkflow({
+    base,
+    publicURL,
+    cookies,
+    businessId: String(business.id),
+    coverId: uploaded.doc.id,
+    request,
+    lexical,
+  });
+  await verifyCmsUI({ base, email, password, request });
   console.log(
     "PASS: migrated fresh SQLite, login, private drafts/media, image upload, protected preview, publish, edit isolation, project association, unpublish, and exact rollback.",
   );
@@ -508,6 +506,5 @@ try {
         done();
       }, 5000).unref();
     });
-  await new Promise<void>((done) => website.close(() => done()));
   await rm(directory, { recursive: true, force: true });
 }
