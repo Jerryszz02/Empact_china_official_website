@@ -1,8 +1,16 @@
 ---
-import { snapshot, projects, news, pathFor } from "@/lib/content";
+import { snapshot, news, pathFor } from "@/lib/content";
 const updates = [...news].sort((a, b) =>
   (b.publishedAt ?? "").localeCompare(a.publishedAt ?? ""),
 );
+const company = snapshot.company;
+const socials = [
+  { name: "小红书", href: "https://xhslink.cn/o/A6Nv4ftO0Td" },
+  {
+    name: "微信公众号",
+    href: "https://weixin.qq.com/r/mp/YBDv99XEyYi2rZGU90Vy",
+  },
+];
 ---
 
 <footer class="site-footer">
@@ -15,71 +23,248 @@ const updates = [...news].sort((a, b) =>
         height="483"
       />
     </a>
-    <p>{snapshot.company.description}</p>
   </div>
-  <div class="footer-links">
-    <a href="/about/">关于我们</a>
-    <a href="/contact/">联系 Empact</a>
-    <a href="/privacy/">隐私政策</a>
-    <a href="/terms/">使用条款</a>
-  </div>
-  {(projects.length > 0 || updates.length > 0) && (
-    <nav class="footer-content" aria-label="项目与新闻">
-      {projects.length > 0 && (
-        <div>
-          <span>项目</span>
-          {projects.map((item) => (
-            <a href={pathFor(item)}>{item.title}</a>
-          ))}
-        </div>
+
+  {company.approved && (
+    <div class="footer-office footer-office-china">
+      <span class="footer-office-label">中国 · 上海</span>
+      {company.address && (
+        <span class="footer-office-address">{company.address}</span>
       )}
-      {updates.length > 0 && (
-        <div>
-          <span>新闻</span>
-          {updates.map((item) => (
-            <a href={pathFor(item)}>{item.title}</a>
-          ))}
-        </div>
-      )}
-    </nav>
-  )}
-  <p class="footer-meta">
-    © {new Date().getFullYear()} {snapshot.company.name}
-  </p>
-  {snapshot.company.approved && (
-    <div class="footer-legal">
-      <span>{snapshot.company.legalName}</span>
-      {snapshot.company.icp && (
-        <a href="https://beian.miit.gov.cn/" rel="noopener noreferrer">
-          {snapshot.company.icp}
-        </a>
-      )}
-      {snapshot.company.publicSecurityRecord && (
-        <a href="https://beian.mps.gov.cn/" rel="noopener noreferrer">
-          {snapshot.company.publicSecurityRecord}
-        </a>
-      )}
+      {company.email && <a href={`mailto:${company.email}`}>{company.email}</a>}
     </div>
   )}
+
+  <div class="footer-office footer-office-singapore">
+    <span class="footer-office-label">新加坡</span>
+    <span class="footer-office-address">
+      Enabling Village
+      <br />
+      20 Lengkok Bahru, <span class="footer-address-unit">Vista #04-02</span>
+      <br />
+      Singapore 159053
+    </span>
+    <a href="mailto:enquiries@empact.sg">enquiries@empact.sg</a>
+  </div>
+
+  <nav class="footer-socials" aria-label="社交媒体">
+    {socials.map((social) => (
+      <a href={social.href} target="_blank" rel="noopener noreferrer">
+        {social.name === "小红书" ? (
+          <img
+            class="footer-social-icon"
+            src="/brand/xiaohongshu.svg"
+            alt=""
+            aria-hidden="true"
+            width="24"
+            height="24"
+          />
+        ) : (
+          <svg
+            class="footer-social-icon"
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+            focusable="false"
+          >
+            <path
+              d="M10 3C5.58 3 2 5.91 2 9.5c0 2.08 1.2 3.94 3.09 5.13L4.3 17l2.83-1.42c.91.27 1.87.42 2.87.42 4.42 0 8-2.91 8-6.5S14.42 3 10 3Z"
+              fill="currentColor"
+            />
+            <circle cx="7" cy="8" r="1" fill="var(--blue)" />
+            <circle cx="12" cy="8" r="1" fill="var(--blue)" />
+            <path
+              d="M16 10c-3.6 0-6.5 2.35-6.5 5.25S12.4 20.5 16 20.5c.8 0 1.58-.12 2.3-.33l2.3 1.13-.65-1.9c1.55-.96 2.55-2.48 2.55-4.15C22.5 12.35 19.6 10 16 10Z"
+              fill="currentColor"
+              stroke="var(--blue)"
+              stroke-width="1"
+            />
+            <circle cx="13.5" cy="14" r=".85" fill="var(--blue)" />
+            <circle cx="18" cy="14" r=".85" fill="var(--blue)" />
+          </svg>
+        )}
+        <span>{social.name}</span>
+      </a>
+    ))}
+  </nav>
+
+  {updates.length > 0 && (
+    <nav class="footer-content" aria-label="新闻">
+      <span>新闻</span>
+      {updates.map((item) => (
+        <a href={pathFor(item)}>{item.title}</a>
+      ))}
+    </nav>
+  )}
+
+  <div class="footer-bottom">
+    <nav class="footer-links" aria-label="页脚导航">
+      <a href="/about/">关于我们</a>
+      <a href="/contact/">联系 Empact</a>
+      <a href="/privacy/">隐私政策</a>
+      <a href="/terms/">使用条款</a>
+    </nav>
+    <p class="footer-meta">
+      © {new Date().getFullYear()} {company.name}
+    </p>
+    {company.approved && (
+      <div class="footer-legal">
+        <span>{company.legalName}</span>
+        {company.icp && (
+          <a href="https://beian.miit.gov.cn/" rel="noopener noreferrer">
+            {company.icp}
+          </a>
+        )}
+        {company.publicSecurityRecord && (
+          <a href="https://beian.mps.gov.cn/" rel="noopener noreferrer">
+            {company.publicSecurityRecord}
+          </a>
+        )}
+      </div>
+    )}
+  </div>
 </footer>
 
 <style>
-  .footer-content {
-    grid-column: 1 / -1;
+  .site-footer {
     display: grid;
-    gap: 0.75rem;
+    grid-template-columns: auto minmax(0, 0.8fr) minmax(0, 1fr) auto;
+    grid-template-areas:
+      "brand china singapore socials"
+      "news news news news"
+      "bottom bottom bottom bottom";
+    align-items: start;
+    gap: 0.4rem 1.6rem;
+    min-height: 216px;
+    padding-block: 1.25rem;
+    border-top: 1px solid var(--line);
+    background: var(--blue);
+    color: #fff;
     font-size: 0.875rem;
+    line-height: 1.45;
   }
-  .footer-content div {
+  .footer-brand {
+    grid-area: brand;
+  }
+  .footer-brand img {
+    display: block;
+    width: 11rem;
+    height: auto;
+  }
+  .footer-office {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+  .footer-office-china {
+    grid-area: china;
+  }
+  .footer-office-singapore {
+    grid-area: singapore;
+  }
+  .footer-address-unit {
+    white-space: nowrap;
+  }
+  .footer-office-label {
+    font-weight: 700;
+    letter-spacing: 0.02em;
+  }
+  .footer-office a {
+    text-decoration: underline;
+  }
+  .footer-socials {
+    grid-area: socials;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.3rem;
+  }
+  .footer-socials a {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-height: 1.5rem;
+    text-decoration: none;
+  }
+  .footer-social-icon {
+    width: 1.5rem;
+    height: 1.5rem;
+    flex: 0 0 auto;
+  }
+  .footer-content {
+    grid-area: news;
     display: flex;
     flex-wrap: wrap;
-    gap: 0.5rem 1.25rem;
     align-items: baseline;
+    gap: 0.25rem 1rem;
+    min-width: 0;
+  }
+  .footer-content a {
+    overflow-wrap: anywhere;
   }
   .footer-content span {
     opacity: 0.7;
   }
-  .footer-content a {
-    overflow-wrap: anywhere;
+  .footer-bottom {
+    grid-area: bottom;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.25rem 1.5rem;
+    border-top: 1px solid var(--line);
+    padding-top: 0.5rem;
+    font-size: 0.6875rem;
+    line-height: 1.45;
+  }
+  .footer-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 1rem;
+  }
+  .footer-links a,
+  .footer-legal a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 1.6rem;
+  }
+  .footer-meta {
+    margin: 0;
+  }
+  .footer-legal {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 0.9rem;
+  }
+  @media (max-width: 56em) {
+    .site-footer {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      grid-template-areas:
+        "brand socials"
+        "china singapore"
+        "news news"
+        "bottom bottom";
+      gap: 0.5rem 0.85rem;
+      min-height: 268px;
+      padding-block: 0.75rem;
+      font-size: 0.75rem;
+    }
+    .footer-brand img {
+      width: clamp(5rem, 27vw, 8.5rem);
+    }
+    .footer-socials {
+      align-items: flex-end;
+      gap: 0.2rem;
+    }
+    .footer-bottom {
+      align-items: flex-start;
+      gap: 0.2rem 0.8rem;
+      padding-top: 0.4rem;
+    }
+    .footer-links a,
+    .footer-legal a {
+      min-height: 1.4rem;
+    }
   }
 </style>

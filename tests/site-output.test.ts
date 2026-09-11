@@ -162,7 +162,11 @@ test(
       assert.ok(business("main").text().includes("无图片的已审核案例"));
       assert.equal(home(".motion-directory").length, 0);
       // The compact homepage keeps published work discoverable outside its three scenes.
-      assert.ok(home(`footer a[href="/projects/${project.slug}/"]`).length);
+      // Projects intentionally no longer render in the footer; news still does.
+      assert.equal(
+        home(`footer a[href="/projects/${project.slug}/"]`).length,
+        0,
+      );
       assert.ok(home('footer a[href="/news/news-test/"]').length);
       assert.equal(home(".motion-home > section").length, 3);
       assert.equal(business("#case-no-image .case-image").length, 0);
@@ -200,7 +204,10 @@ test(
         `/${parent.segment}/${parent.slug}/`,
       );
       const caseNoImage = load(
-        await readFile(join(out, "cases", "case-no-image", "index.html"), "utf8"),
+        await readFile(
+          join(out, "cases", "case-no-image", "index.html"),
+          "utf8",
+        ),
       );
       assert.match(caseNoImage("main").text(), /已审核案例摘要/);
       assert.equal(caseNoImage(".article-body .case-image").length, 0);

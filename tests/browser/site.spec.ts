@@ -324,7 +324,9 @@ test("footer is compact and uses the transparent white logo", async ({
 }, testInfo) => {
   await page.goto("/");
   const footer = page.locator(".site-footer");
-  const logo = footer.locator("img");
+  const logo = footer.locator(
+    'img[src="/brand/empact-logo-tagline-white.png"]',
+  );
   await expect(logo).toHaveAttribute(
     "src",
     "/brand/empact-logo-tagline-white.png",
@@ -333,15 +335,87 @@ test("footer is compact and uses the transparent white logo", async ({
   expect(await logo.evaluate((img: HTMLImageElement) => img.naturalWidth)).toBe(
     1080,
   );
+  await expect(footer).toHaveCSS("background-color", "rgb(18, 82, 132)");
+  await expect(footer).toHaveCSS("color", "rgb(255, 255, 255)");
+
+  // Two static office blocks; the China block is gated by the approved fixture.
+  const china = footer.locator(".footer-office-china");
+  await expect(china).toContainText("中国 · 上海");
+  await expect(china).toContainText("上海市虹漕路88号越虹广场B座1609");
+  await expect(
+    china.locator('a[href="mailto:empactsg@126.com"]'),
+  ).toBeVisible();
+  const singapore = footer.locator(".footer-office-singapore");
+  await expect(singapore).toContainText("新加坡");
+  await expect(singapore).toContainText("Enabling Village");
+  await expect(singapore).toContainText("20 Lengkok Bahru");
+  await expect(singapore).toContainText("Singapore 159053");
+  await expect(
+    singapore.locator('a[href="mailto:enquiries@empact.sg"]'),
+  ).toBeVisible();
+
+  // Utility navigation, legal name and ICP link stay under the offices.
+  for (const href of ["/about/", "/contact/", "/privacy/", "/terms/"])
+    await expect(footer.locator(`a[href="${href}"]`)).toHaveCount(1);
+  await expect(footer).toContainText("上海井畅企业管理咨询有限公司");
+  await expect(
+    footer.getByRole("link", { name: "沪ICP备2026002363号-2" }),
+  ).toHaveAttribute("href", "https://beian.miit.gov.cn/");
+
+  // China-only social links open the official accounts in a safe new tab.
+  for (const [name, href] of [
+    ["小红书", "https://xhslink.cn/o/A6Nv4ftO0Td"],
+    ["微信公众号", "https://weixin.qq.com/r/mp/YBDv99XEyYi2rZGU90Vy"],
+  ] as const) {
+    const link = footer.getByRole("link", { name });
+    await expect(link).toBeVisible();
+    await expect(link).toHaveAttribute("href", href);
+    await expect(link).toHaveAttribute("target", "_blank");
+    await expect(link).toHaveAttribute("rel", /noopener noreferrer/);
+    await expect(link.locator(".footer-social-icon")).toHaveAttribute(
+      "aria-hidden",
+      "true",
+    );
+  }
+
+  // Removed rows stay removed and no telephone link is reintroduced.
+  await expect(footer.locator(".footer-brand p")).toHaveCount(0);
+  await expect(footer.locator('a[href^="/projects/"]')).toHaveCount(0);
+  await expect(footer.locator('a[href^="tel:"]')).toHaveCount(0);
+  await expect(footer).not.toContainText("ChatCircle");
+
+  // No clipping: the rendered content fits inside the footer's own box.
+  expect(
+    await footer.evaluate(
+      (element) =>
+        element.scrollHeight <= element.clientHeight + 1 &&
+        element.scrollWidth <= element.clientWidth + 1,
+    ),
+  ).toBe(true);
+
   const bounds = await footer.boundingBox();
-  const content = await footer.locator(".footer-content").boundingBox();
-  // Published links add their natural height; the original footer stays compact.
-  expect(bounds!.height - (content?.height ?? 0)).toBeLessThan(
-    testInfo.project.name === "mobile" ? 340 : 210,
+  expect(bounds!.height).toBeLessThan(
+    testInfo.project.name === "mobile" ? 272 : 220,
   );
+
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth,
+    ),
+  ).toBe(true);
+
   await footer.screenshot({
     path: `test-results/footer-${testInfo.project.name}.png`,
   });
+
+  // Narrow phones must not introduce horizontal overflow either.
+  await page.setViewportSize({ width: 320, height: 900 });
+  await page.goto("/");
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth,
+    ),
+  ).toBe(true);
 });
 
 test("hybrid pointers reveal dropdowns on touch before following parent links", async ({
