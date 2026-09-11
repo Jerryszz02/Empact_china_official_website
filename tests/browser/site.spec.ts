@@ -7,10 +7,9 @@ test("homepage paths, dropdowns, mobile navigation and draft boundary", async ({
   page.on("pageerror", (error) => errors.push(error.message));
   await page.goto("/");
   await expect(page.locator("h1")).toBeVisible();
-  await expect(page.locator(".pathways")).toHaveCSS(
-    "background-color",
-    "rgb(243, 240, 231)",
-  );
+  // The middle scene colour is owned by the shared motion overlay now, so the
+  // static color assertion moved to tests/browser/motion.spec.ts.
+  await expect(page.locator(".pathways")).toBeVisible();
   await expect(
     page.locator('.site-nav a[href="https://chatcircle.empact.cn"]'),
   ).toHaveCount(1);

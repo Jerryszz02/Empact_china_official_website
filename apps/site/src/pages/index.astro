@@ -10,6 +10,11 @@ const home = pageBySlug("home");
   bodyClass="motion-home"
 >
   <div class="motion-stage motion-home" data-motion-stage>
+    <div
+      class="motion-background"
+      data-motion-background
+      aria-hidden="true"
+    ></div>
     <canvas
       class="motion-canvas"
       data-motion-canvas
@@ -20,21 +25,21 @@ const home = pageBySlug("home");
       class="motion-scene motion-scene-brand"
       data-motion-scene
     >
-      <img
+      <span
         class="motion-logo motion-logo-brand"
-        src="/brand/empact-logo-tagline-white.png"
-        alt="Empact China"
-        width="1080"
-        height="483"
-      />
+        data-motion-logo
+        aria-hidden="true"
+      >
+        <img
+          src="/brand/empact-logo-tagline-white.png"
+          alt=""
+          width="1080"
+          height="483"
+        />
+      </span>
       <div class="motion-scene-content">
-        <p class="eyebrow">Empact China / Social innovation</p>
-        <h1>
-          赋能更大的
-          <br />
-          影响力
-        </h1>
-        <p class="motion-lede">Empowering Greater Empact.</p>
+        <p class="motion-tagline">empowering greater impact</p>
+        <h1>赋能更大的影响力</h1>
       </div>
       <span class="motion-scene-index" aria-hidden="true">
         01 / 03
@@ -50,17 +55,45 @@ const home = pageBySlug("home");
         <h2>从你的关注出发</h2>
         <div class="motion-pathways">
           <a class="motion-pathway" href="/youth/">
-            <span class="eyebrow">For youth, families & schools</span>
-            <strong>青少年项目</strong>
-            <span class="motion-arrow" aria-hidden="true">
-              ↗
+            <span class="motion-pathway-turn">
+              <span class="motion-pathway-face motion-pathway-front">
+                <span class="eyebrow">For youth, families & schools</span>
+                <strong>青少年项目</strong>
+                <span class="motion-arrow" aria-hidden="true">
+                  ↗
+                </span>
+              </span>
+              <span
+                class="motion-pathway-face motion-pathway-back"
+                aria-hidden="true"
+              >
+                <span class="eyebrow">For youth, families & schools</span>
+                <strong>青少年项目</strong>
+                <span class="motion-arrow" aria-hidden="true">
+                  ↗
+                </span>
+              </span>
             </span>
           </a>
           <a class="motion-pathway" href="/corporate/">
-            <span class="eyebrow">For organisations</span>
-            <strong>企业服务</strong>
-            <span class="motion-arrow" aria-hidden="true">
-              ↗
+            <span class="motion-pathway-turn">
+              <span class="motion-pathway-face motion-pathway-front">
+                <span class="eyebrow">For organisations</span>
+                <strong>企业服务</strong>
+                <span class="motion-arrow" aria-hidden="true">
+                  ↗
+                </span>
+              </span>
+              <span
+                class="motion-pathway-face motion-pathway-back"
+                aria-hidden="true"
+              >
+                <span class="eyebrow">For organisations</span>
+                <strong>企业服务</strong>
+                <span class="motion-arrow" aria-hidden="true">
+                  ↗
+                </span>
+              </span>
             </span>
           </a>
         </div>
@@ -74,13 +107,18 @@ const home = pageBySlug("home");
       class="motion-scene motion-scene-conversation"
       data-motion-scene
     >
-      <img
+      <span
         class="motion-logo motion-logo-conversation"
-        src="/brand/empact-logo-tagline-white.png"
-        alt="Empact China"
-        width="1080"
-        height="483"
-      />
+        data-motion-logo
+        aria-hidden="true"
+      >
+        <img
+          src="/brand/empact-logo-tagline-white.png"
+          alt=""
+          width="1080"
+          height="483"
+        />
+      </span>
       <div class="motion-scene-content">
         <p class="eyebrow">Start a conversation</p>
         <h2>从一次交流开始</h2>
@@ -115,30 +153,44 @@ const home = pageBySlug("home");
     width: min(88rem, calc(100% - 3rem));
     margin: 0;
   }
-  :global(html.motion-snap-ready) {
-    scroll-snap-type: y mandatory;
-    scroll-behavior: smooth;
-  }
-  :global(html.motion-overflow),
-  :global(html.motion-menu-open),
-  :global(html.motion-reduced) {
-    scroll-snap-type: none;
+  :global(body.motion-home.motion-js .preview-bar) {
+    position: fixed;
+    top: 0;
+    width: 100%;
+    z-index: 7;
   }
   .motion-stage {
     position: relative;
     min-height: 300svh;
   }
+
+  /* Shared fixed blue background with a paper layer driven by scroll. */
+  .motion-background {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    display: none;
+    background: var(--motion-paper);
+    opacity: 0;
+    pointer-events: none;
+  }
+  :global(html.motion-live) .motion-background {
+    display: block;
+  }
+
   .motion-scene {
     min-height: 100svh;
     min-height: 100dvh;
     position: relative;
-    scroll-snap-align: start;
-    scroll-snap-stop: always;
     display: flex;
-    align-items: flex-end;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: clamp(1rem, 3vh, 2.5rem);
     padding: max(8rem, var(--motion-header-space, 6rem))
       clamp(1.5rem, 6vw, 6rem) clamp(3rem, 8vh, 7rem);
     overflow: visible;
+    text-align: center;
   }
   .motion-scene-brand,
   .motion-scene-conversation {
@@ -149,15 +201,75 @@ const home = pageBySlug("home");
     background-color: var(--motion-paper);
     color: var(--motion-blue);
     align-items: flex-start;
+    justify-content: flex-start;
+    text-align: left;
     padding-top: clamp(8rem, 23vh, 14rem);
   }
+  :global(html.motion-live) .motion-scene {
+    background-color: transparent;
+  }
+
   .motion-scene-content {
-    max-width: 70rem;
-    min-width: 0;
     position: relative;
     z-index: 3;
+    width: 100%;
+    max-width: 70rem;
+    min-width: 0;
+    opacity: var(--scene-fade, 1);
+    transition: opacity 140ms linear;
   }
-  .motion-scene h1,
+  .motion-scene-index {
+    position: absolute;
+    z-index: 3;
+    right: clamp(1.5rem, 6vw, 6rem);
+    bottom: clamp(3rem, 8vh, 7rem);
+    font:
+      0.75rem/1.5 Arial,
+      sans-serif;
+    letter-spacing: 0.12em;
+    opacity: var(--scene-fade, 1);
+    transition: opacity 140ms linear;
+  }
+  .motion-scene:focus-within .motion-scene-content,
+  .motion-scene:focus-within .motion-scene-index {
+    opacity: 1 !important;
+  }
+
+  /* Real brand mark, cropped to remove the baked-in tagline. */
+  .motion-logo {
+    position: relative;
+    z-index: 3;
+    display: block;
+    flex: 0 0 auto;
+    aspect-ratio: 1080 / 373;
+    overflow: hidden;
+    opacity: 1;
+    transition: opacity 200ms linear;
+  }
+  .motion-logo img {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+  .motion-logo-brand {
+    width: 70vw;
+  }
+  .motion-logo-conversation {
+    width: min(46vw, 34rem);
+  }
+  :global(html.motion-live) .motion-logo {
+    opacity: 0;
+  }
+
+  .motion-scene h1 {
+    font:
+      400 clamp(0.9rem, 1.2vw, 1.05rem)/1.6 Arial,
+      "PingFang SC",
+      sans-serif;
+    margin: 0.65rem 0 0;
+    letter-spacing: 0.02em;
+    overflow-wrap: anywhere;
+  }
   .motion-scene h2 {
     font:
       400 clamp(2.4rem, 5.5vw, 6rem)/1.18 Arial,
@@ -165,15 +277,19 @@ const home = pageBySlug("home");
       sans-serif;
     margin: 0.2em 0 0.3em;
     overflow-wrap: anywhere;
-    word-break: normal;
+  }
+  .motion-tagline {
+    margin: 0 auto;
+    font:
+      400 clamp(1rem, 1.5vw, 1.25rem)/1.6 Arial,
+      sans-serif;
+    letter-spacing: 0.16em;
+    text-transform: none;
   }
   .motion-scene p {
     max-width: 42rem;
   }
-  .motion-lede {
-    font-size: 1rem;
-    line-height: 1.8;
-  }
+
   .motion-canvas {
     position: fixed;
     inset: 0;
@@ -185,63 +301,79 @@ const home = pageBySlug("home");
   .motion-canvas[hidden] {
     display: none;
   }
-  .motion-logo {
-    position: absolute;
-    z-index: 3;
-    height: auto;
-    opacity: 1;
-  }
-  .motion-logo-brand {
-    width: min(59vw, 46rem);
-    left: 62%;
-    top: 36%;
-    transform: translate(-50%, -50%);
-  }
-  .motion-logo-conversation {
-    width: min(43vw, 34rem);
-    left: 50%;
-    top: 30%;
-    transform: translate(-50%, -50%);
-  }
-  :global(html.motion-canvas-ready) .motion-logo {
-    opacity: 0;
-  }
-  .motion-scene-index {
-    position: absolute;
-    z-index: 3;
-    right: clamp(1.5rem, 6vw, 6rem);
-    bottom: clamp(3rem, 8vh, 7rem);
-    font:
-      0.75rem/1.5 Arial,
-      sans-serif;
-    letter-spacing: 0.12em;
-  }
+
   .motion-pathways {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: clamp(1.5rem, 6vw, 6rem);
     margin-top: 2.2rem;
+    width: 100%;
     max-width: 70rem;
   }
   .motion-pathway {
-    border-top: 1px solid currentColor;
-    padding: 1rem 0 1.2rem;
-    display: grid;
-    gap: 0.45rem;
-    text-decoration: none;
+    --pathway-height: 11rem;
+    --pathway-depth: calc(var(--pathway-height) / 2);
     position: relative;
-    min-height: 10rem;
+    display: block;
+    min-width: 0;
+    min-height: var(--pathway-height);
+    border-top: 1px solid currentColor;
+    color: inherit;
+    text-decoration: none;
+    perspective: 60rem;
+    perspective-origin: center center;
+  }
+  .motion-pathway-turn {
+    position: absolute;
+    inset: 0;
+    display: block;
+    transform-style: preserve-3d;
+    transform: translateZ(calc(-1 * var(--pathway-depth)));
+    transition: transform 400ms cubic-bezier(0.4, 0, 0.2, 1);
+    will-change: transform;
+  }
+  .motion-pathway-face {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    align-content: start;
+    gap: 0.45rem;
+    padding: 1.1rem 1.25rem;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+  }
+  .motion-pathway-front {
+    transform: rotateX(0deg) translateZ(var(--pathway-depth));
+    background: var(--motion-paper);
+    color: var(--motion-blue);
+  }
+  .motion-pathway-back {
+    transform: rotateX(90deg) translateZ(var(--pathway-depth));
+    background: var(--motion-blue);
+    color: var(--motion-paper);
   }
   .motion-pathway strong {
     font-size: clamp(1.8rem, 3.4vw, 3.2rem);
     font-weight: 400;
   }
+  .motion-pathway .eyebrow {
+    overflow-wrap: anywhere;
+  }
   .motion-arrow {
     position: absolute;
-    right: 0;
-    top: calc(0.75rem + var(--motion-banner-space, 0px));
+    right: 1.1rem;
+    top: 1rem;
     font-size: 1.6rem;
   }
+  @media (hover: hover) and (pointer: fine) {
+    .motion-pathway:hover .motion-pathway-turn {
+      transform: translateZ(calc(-1 * var(--pathway-depth))) rotateX(-90deg);
+    }
+  }
+  .motion-pathway:focus-visible .motion-pathway-turn {
+    transform: translateZ(calc(-1 * var(--pathway-depth))) rotateX(-90deg);
+  }
+
   .motion-button {
     margin-top: 1.4rem;
     background: var(--motion-paper);
@@ -250,18 +382,33 @@ const home = pageBySlug("home");
     border-radius: 3rem;
   }
   .motion-scene-conversation {
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-    padding-top: max(8rem, var(--motion-header-space, 6rem));
     padding-bottom: 13vh;
-    align-items: flex-end;
   }
   .motion-scene-conversation .motion-scene-content {
     display: flex;
     flex-direction: column;
     align-items: center;
   }
+
+  :global(body.motion-home .site-footer) {
+    position: relative;
+    z-index: 3;
+    background: var(--blue);
+  }
+  :global(html.motion-overflow) .motion-logo {
+    position: static;
+    transform: none;
+    width: min(75%, 28rem);
+    margin: 1rem auto 2rem;
+  }
+  :global(html.motion-overflow) .motion-scene {
+    justify-content: center;
+    gap: 1rem;
+  }
+  :global(html.motion-overflow) .motion-scene-conversation {
+    align-items: center;
+  }
+
   @media (max-width: 600px) {
     :global(body.motion-home.motion-js .site-header) {
       top: calc(0.5rem + var(--motion-banner-space, 0px));
@@ -274,30 +421,32 @@ const home = pageBySlug("home");
       padding-top: max(23vh, var(--motion-header-space, 6rem));
     }
     .motion-logo-brand {
-      width: 92vw;
-      left: 50%;
-      top: 32%;
+      width: min(92vw, 30rem);
     }
     .motion-logo-conversation {
-      width: 72vw;
-      left: 50%;
-      top: 30%;
+      width: min(76vw, 22rem);
     }
     .motion-pathways {
       grid-template-columns: 1fr;
       gap: 1.5rem;
     }
     .motion-pathway {
-      min-height: 8rem;
+      --pathway-height: 9rem;
     }
     .motion-scene-index {
       right: 1.5rem;
       bottom: 1.5rem;
     }
     .motion-scene-conversation {
-      padding-top: max(7rem, var(--motion-header-space, 6rem));
       padding-bottom: 17vh;
-      align-items: flex-end;
+    }
+    .motion-scene h2 {
+      font-size: clamp(2.4rem, 11vw, 2.9rem);
+    }
+  }
+  @media (max-width: 600px) {
+    :global(body.motion-home .wordmark img) {
+      width: min(9.4rem, 38vw);
     }
   }
   @media (prefers-reduced-motion: reduce) {
@@ -307,56 +456,12 @@ const home = pageBySlug("home");
     .motion-canvas {
       display: none;
     }
-    :global(html.motion-canvas-ready) .motion-logo,
-    :global(html.motion-reduced) .motion-logo {
+    .motion-pathway-turn {
+      transform: translateZ(calc(-1 * var(--pathway-depth))) !important;
+      transition: none;
+    }
+    :global(html.motion-live) .motion-logo {
       opacity: 1;
-    }
-  }
-
-  .motion-pathway {
-    min-width: 0;
-    padding-right: 1.8rem;
-  }
-  .motion-pathway .eyebrow {
-    overflow-wrap: anywhere;
-  }
-  :global(body.motion-home .site-footer) {
-    scroll-snap-align: end;
-    position: relative;
-    z-index: 3;
-    background: var(--blue);
-  }
-  :global(html.motion-overflow) .motion-logo {
-    opacity: 1;
-    position: static;
-    transform: none;
-    width: min(75%, 28rem);
-    margin: 1rem auto 2rem;
-  }
-  :global(html.motion-overflow) .motion-scene {
-    flex-direction: column;
-    justify-content: center;
-    align-items: stretch;
-    gap: 1rem;
-  }
-  :global(html.motion-overflow) .motion-scene-conversation {
-    align-items: center;
-  }
-  @media (max-width: 600px) {
-    .motion-scene h1,
-    .motion-scene h2 {
-      font-size: clamp(2.4rem, 11vw, 2.9rem);
-    }
-  }
-  :global(body.motion-home.motion-js .preview-bar) {
-    position: fixed;
-    top: 0;
-    width: 100%;
-    z-index: 7;
-  }
-  @media (max-width: 600px) {
-    :global(body.motion-home .wordmark img) {
-      width: min(9.4rem, 38vw);
     }
   }
 </style>
