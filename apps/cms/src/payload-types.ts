@@ -13,53 +13,53 @@
  * via the `definition` "supportedTimezones".
  */
 export type SupportedTimezones =
-  | "Pacific/Midway"
-  | "Pacific/Niue"
-  | "Pacific/Honolulu"
-  | "Pacific/Rarotonga"
-  | "America/Anchorage"
-  | "Pacific/Gambier"
-  | "America/Los_Angeles"
-  | "America/Tijuana"
-  | "America/Denver"
-  | "America/Phoenix"
-  | "America/Chicago"
-  | "America/Guatemala"
-  | "America/New_York"
-  | "America/Bogota"
-  | "America/Caracas"
-  | "America/Santiago"
-  | "America/Buenos_Aires"
-  | "America/Sao_Paulo"
-  | "Atlantic/South_Georgia"
-  | "Atlantic/Azores"
-  | "Atlantic/Cape_Verde"
-  | "Europe/London"
-  | "Europe/Berlin"
-  | "Africa/Lagos"
-  | "Europe/Athens"
-  | "Africa/Cairo"
-  | "Europe/Moscow"
-  | "Asia/Riyadh"
-  | "Asia/Dubai"
-  | "Asia/Baku"
-  | "Asia/Karachi"
-  | "Asia/Tashkent"
-  | "Asia/Calcutta"
-  | "Asia/Dhaka"
-  | "Asia/Almaty"
-  | "Asia/Jakarta"
-  | "Asia/Bangkok"
-  | "Asia/Shanghai"
-  | "Asia/Singapore"
-  | "Asia/Tokyo"
-  | "Asia/Seoul"
-  | "Australia/Brisbane"
-  | "Australia/Sydney"
-  | "Pacific/Guam"
-  | "Pacific/Noumea"
-  | "Pacific/Auckland"
-  | "Pacific/Fiji";
+  | 'Pacific/Midway'
+  | 'Pacific/Niue'
+  | 'Pacific/Honolulu'
+  | 'Pacific/Rarotonga'
+  | 'America/Anchorage'
+  | 'Pacific/Gambier'
+  | 'America/Los_Angeles'
+  | 'America/Tijuana'
+  | 'America/Denver'
+  | 'America/Phoenix'
+  | 'America/Chicago'
+  | 'America/Guatemala'
+  | 'America/New_York'
+  | 'America/Bogota'
+  | 'America/Caracas'
+  | 'America/Santiago'
+  | 'America/Buenos_Aires'
+  | 'America/Sao_Paulo'
+  | 'Atlantic/South_Georgia'
+  | 'Atlantic/Azores'
+  | 'Atlantic/Cape_Verde'
+  | 'Europe/London'
+  | 'Europe/Berlin'
+  | 'Africa/Lagos'
+  | 'Europe/Athens'
+  | 'Africa/Cairo'
+  | 'Europe/Moscow'
+  | 'Asia/Riyadh'
+  | 'Asia/Dubai'
+  | 'Asia/Baku'
+  | 'Asia/Karachi'
+  | 'Asia/Tashkent'
+  | 'Asia/Calcutta'
+  | 'Asia/Dhaka'
+  | 'Asia/Almaty'
+  | 'Asia/Jakarta'
+  | 'Asia/Bangkok'
+  | 'Asia/Shanghai'
+  | 'Asia/Singapore'
+  | 'Asia/Tokyo'
+  | 'Asia/Seoul'
+  | 'Australia/Brisbane'
+  | 'Australia/Sydney'
+  | 'Pacific/Guam'
+  | 'Pacific/Noumea'
+  | 'Pacific/Auckland'
+  | 'Pacific/Fiji';
 
 export interface Config {
   auth: {
@@ -71,10 +71,10 @@ export interface Config {
     content: Content;
     media: Media;
     publications: Publication;
-    "payload-kv": PayloadKv;
-    "payload-locked-documents": PayloadLockedDocument;
-    "payload-preferences": PayloadPreference;
-    "payload-migrations": PayloadMigration;
+    'payload-kv': PayloadKv;
+    'payload-locked-documents': PayloadLockedDocument;
+    'payload-preferences': PayloadPreference;
+    'payload-migrations': PayloadMigration;
   };
   collectionsJoins: {};
   collectionsSelect: {
@@ -82,13 +82,10 @@ export interface Config {
     content: ContentSelect<false> | ContentSelect<true>;
     media: MediaSelect<false> | MediaSelect<true>;
     publications: PublicationsSelect<false> | PublicationsSelect<true>;
-    "payload-kv": PayloadKvSelect<false> | PayloadKvSelect<true>;
-    "payload-locked-documents":
-      PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
-    "payload-preferences":
-      PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
-    "payload-migrations":
-      PayloadMigrationsSelect<false> | PayloadMigrationsSelect<true>;
+    'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
+    'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
+    'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
+    'payload-migrations': PayloadMigrationsSelect<false> | PayloadMigrationsSelect<true>;
   };
   db: {
     defaultIDType: number;
@@ -134,7 +131,7 @@ export interface UserAuthOperations {
  */
 export interface User {
   id: number;
-  role?: "admin" | null;
+  role?: 'admin' | null;
   updatedAt: string;
   createdAt: string;
   email: string;
@@ -152,7 +149,7 @@ export interface User {
       }[]
     | null;
   password?: string | null;
-  collection: "users";
+  collection: 'users';
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -160,10 +157,12 @@ export interface User {
  */
 export interface Content {
   id: number;
-  kind: "page" | "business" | "project" | "news" | "coverage" | "case";
-  title: string;
-  slug: string;
-  summary: string;
+  title?: string | null;
+  summary?: string | null;
+  segment?: ('youth' | 'corporate') | null;
+  parent?: (number | null) | Content;
+  order?: number | null;
+  image?: (number | null) | Media;
   body?: {
     root: {
       type: string;
@@ -172,20 +171,20 @@ export interface Content {
         version: number;
         [k: string]: unknown;
       }[];
-      direction: ("ltr" | "rtl") | null;
-      format: "left" | "start" | "center" | "right" | "end" | "justify" | "";
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
       indent: number;
       version: number;
     };
     [k: string]: unknown;
   } | null;
+  sourceName?: string | null;
+  sourceUrl?: string | null;
+  kind: 'page' | 'business' | 'project' | 'news' | 'coverage' | 'case';
+  slug: string;
   approved?: boolean | null;
   featured?: boolean | null;
-  order?: number | null;
-  image?: (number | null) | Media;
-  segment?: ("youth" | "corporate") | null;
-  parent?: (number | null) | Content;
-  projectStatus?: ("upcoming" | "open" | "ended" | "consultation") | null;
+  projectStatus?: ('upcoming' | 'open' | 'ended' | 'consultation') | null;
   audience?: string | null;
   operator?: string | null;
   location?: string | null;
@@ -193,10 +192,7 @@ export interface Content {
   deadline?: string | null;
   registrationUrl?: string | null;
   publishedAt?: string | null;
-  sourceName?: string | null;
-  sourceUrl?: string | null;
-  sourceType?:
-    ("media" | "partner" | "official" | "company" | "sponsored") | null;
+  sourceType?: ('media' | 'partner' | 'official' | 'company' | 'sponsored') | null;
   eventDate?: string | null;
   related?: (number | Content)[] | null;
   faqs?:
@@ -217,7 +213,7 @@ export interface Content {
 export interface Media {
   id: number;
   alt: string;
-  usageApproval: string;
+  usageApproval?: string | null;
   approved?: boolean | null;
   updatedAt: string;
   createdAt: string;
@@ -248,9 +244,7 @@ export interface Media {
 export interface Publication {
   id: number;
   version: string;
-  state?:
-    | ("publishing" | "published" | "failed" | "unpublished" | "rolled_back")
-    | null;
+  state?: ('publishing' | 'published' | 'failed' | 'unpublished' | 'rolled_back') | null;
   selectedIds?: (number | Content)[] | null;
   startedAt?: string | null;
   finishedAt?: string | null;
@@ -284,24 +278,24 @@ export interface PayloadLockedDocument {
   id: number;
   document?:
     | ({
-        relationTo: "users";
+        relationTo: 'users';
         value: number | User;
       } | null)
     | ({
-        relationTo: "content";
+        relationTo: 'content';
         value: number | Content;
       } | null)
     | ({
-        relationTo: "media";
+        relationTo: 'media';
         value: number | Media;
       } | null)
     | ({
-        relationTo: "publications";
+        relationTo: 'publications';
         value: number | Publication;
       } | null);
   globalSlug?: string | null;
   user: {
-    relationTo: "users";
+    relationTo: 'users';
     value: number | User;
   };
   updatedAt: string;
@@ -314,7 +308,7 @@ export interface PayloadLockedDocument {
 export interface PayloadPreference {
   id: number;
   user: {
-    relationTo: "users";
+    relationTo: 'users';
     value: number | User;
   };
   key?: string | null;
@@ -369,17 +363,19 @@ export interface UsersSelect<T extends boolean = true> {
  * via the `definition` "content_select".
  */
 export interface ContentSelect<T extends boolean = true> {
-  kind?: T;
   title?: T;
-  slug?: T;
   summary?: T;
-  body?: T;
-  approved?: T;
-  featured?: T;
-  order?: T;
-  image?: T;
   segment?: T;
   parent?: T;
+  order?: T;
+  image?: T;
+  body?: T;
+  sourceName?: T;
+  sourceUrl?: T;
+  kind?: T;
+  slug?: T;
+  approved?: T;
+  featured?: T;
   projectStatus?: T;
   audience?: T;
   operator?: T;
@@ -388,8 +384,6 @@ export interface ContentSelect<T extends boolean = true> {
   deadline?: T;
   registrationUrl?: T;
   publishedAt?: T;
-  sourceName?: T;
-  sourceUrl?: T;
   sourceType?: T;
   eventDate?: T;
   related?: T;
@@ -543,7 +537,7 @@ export interface CollectionsWidget {
   data?: {
     [k: string]: unknown;
   };
-  width: "full";
+  width: 'full';
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -553,6 +547,7 @@ export interface Auth {
   [k: string]: unknown;
 }
 
-declare module "payload" {
+
+declare module 'payload' {
   export interface GeneratedTypes extends Config {}
 }

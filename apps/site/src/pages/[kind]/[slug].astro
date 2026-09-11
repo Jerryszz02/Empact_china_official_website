@@ -2,7 +2,14 @@
 import BaseLayout from "@/layouts/BaseLayout.astro";
 import CaseImage from "@/components/CaseImage.astro";
 import { effectiveProjectStatus } from "@empact/content/schema";
-import { entries, pathFor, mediaById, byId } from "@/lib/content";
+import {
+  entries,
+  pathFor,
+  mediaById,
+  byId,
+  sortByPublishedAt,
+  sourceTypeLabel,
+} from "@/lib/content";
 export function getStaticPaths() {
   return entries
     .filter(
@@ -32,12 +39,13 @@ const related = (entry.relatedIds ?? [])
   .map((id) => entries.find((item) => item.id === id))
   .filter(Boolean);
 const children = entries.filter((item) => item.parentId === entry.id);
-const embeddedCases = children.filter((item) => item.kind === "case");
-const embeddedCoverage = entries.filter(
-  (item) =>
-    item.kind === "coverage" &&
-    (item.parentId === entry.id ||
-      embeddedCases.some((record) => record.id === item.parentId)),
+const entryCases = sortByPublishedAt(
+  children.filter((item) => item.kind === "case"),
+);
+// Coverage that belongs directly to this entry stays here; coverage attached to
+// a case now lives on that case's article page instead of being duplicated.
+const directCoverage = entries.filter(
+  (item) => item.kind === "coverage" && item.parentId === entry.id,
 );
 const crossCases = entries.filter(
   (item) =>
@@ -46,6 +54,13 @@ const crossCases = entries.filter(
     item.relatedIds?.includes(entry.id) &&
     byId(item.parentId),
 );
+const relatedCases = [
+  ...new Map(
+    [...related.filter((item) => item?.kind === "case"), ...crossCases].map(
+      (item) => [item!.id, item!],
+    ),
+  ).values(),
+];
 const relatedWork = [
   ...new Map(
     [
@@ -119,40 +134,42 @@ const media = mediaById(entry.imageId);
           </a>
         </p>
       )}
-    {embeddedCases.length > 0 && (
-      <section id="cases" class="embedded-section">
+    {(entry.kind === "business" || entryCases.length > 0) && (
+      <section id="cases" class="embedded-section case-section">
         <h2>相关案例</h2>
-        {embeddedCases.map((item) => (
-          <article id={item.slug} class="embedded-item">
-            <h3>{item.title}</h3>
-            <p>{item.summary}</p>
-            <div class="case-editorial">
-              <CaseImage entry={item} />
-              <div class="prose" set:html={item.bodyHtml} />
-            </div>
-          </article>
-        ))}
+        {entryCases.length > 0 ? (
+          <div class="case-grid">
+            {entryCases.map((item) => (
+              <a id={item.slug} class="case-card" href={pathFor(item)}>
+                <CaseImage entry={item} linkImage={false} />
+                <div class="case-card-copy">
+                  <h3>{item.title}</h3>
+                  <p>{item.summary}</p>
+                  <span class="case-card-more" aria-hidden="true">
+                    阅读案例 ↗
+                  </span>
+                </div>
+              </a>
+            ))}
+          </div>
+        ) : (
+          <p class="empty-state">
+            该方向的公开案例正在整理中。如果你想了解相近的实践，欢迎直接与我们沟通。
+          </p>
+        )}
       </section>
     )}
-    {embeddedCoverage.length > 0 && (
+    {directCoverage.length > 0 && (
       <section id="coverage" class="embedded-section">
         <h2>报道与合作记录</h2>
-        {embeddedCoverage.map((item) => (
+        {directCoverage.map((item) => (
           <article class="embedded-item">
             <h3>{item.title}</h3>
             <p>{item.summary}</p>
             <p class="detail-meta">
               {item.sourceName && <span>{item.sourceName}</span>}
-              {item.sourceType && (
-                <span>
-                  {{
-                    media: "独立媒体报道",
-                    partner: "合作方记录",
-                    official: "官方公开信息",
-                    company: "公司自述",
-                    sponsored: "合作稿",
-                  }[item.sourceType] ?? item.sourceType}
-                </span>
+              {sourceTypeLabel(item.sourceType) && (
+                <span>{sourceTypeLabel(item.sourceType)}</span>
               )}
               {item.eventDate && <span>{item.eventDate}</span>}
               {item.sourceUrl && <a href={item.sourceUrl}>查看原文 ↗</a>}
@@ -186,13 +203,12 @@ const media = mediaById(entry.imageId);
         )}
       </div>
     )}
-    {crossCases.length > 0 && (
+    {relatedCases.length > 0 && (
       <section class="embedded-section">
         <h2>相关实践</h2>
-        {crossCases.map((item) => (
+        {relatedCases.map((item) => (
           <p>
-            <a href={`${pathFor(byId(item.parentId)!)}#cases`}>{item.title}</a>{" "}
-            · {item.summary}
+            <a href={pathFor(item)}>{item.title}</a> · {item.summary}
           </p>
         ))}
       </section>

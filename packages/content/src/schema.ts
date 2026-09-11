@@ -13,6 +13,7 @@ export type Entry = {
   title: string;
   summary: string;
   bodyHtml: string;
+  bodyMediaIds?: string[];
   segment?: Segment;
   parentId?: string;
   relatedIds?: string[];
@@ -71,7 +72,10 @@ export type Snapshot = {
 const slug = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const placeholder = /(?:lorem ipsum|待补充|占位|placeholder|tbd|xxx)/i;
 
-export function sanitizeBodyHtml(value: string): string {
+export function sanitizeBodyHtml(
+  value: string,
+  options: { mediaFilenames?: Iterable<string> } = {},
+): string {
   const cleaned = sanitizeHtml(value, {
     allowedTags: [
       "a",
@@ -85,8 +89,15 @@ export function sanitizeBodyHtml(value: string): string {
       "p",
       "strong",
       "ul",
+      "img",
+      "figure",
+      "figcaption",
+      "blockquote",
     ],
-    allowedAttributes: { a: ["href"] },
+    allowedAttributes: {
+      a: ["href"],
+      img: ["src", "alt", "width", "height", "loading"],
+    },
     allowedSchemes: ["http", "https"],
     disallowedTagsMode: "discard",
   });
@@ -96,6 +107,16 @@ export function sanitizeBodyHtml(value: string): string {
     )
   )
     throw new Error("bodyHtml contains unsafe HTML");
+  const allowed = new Set(options.mediaFilenames ?? []);
+  for (const match of cleaned.matchAll(/<img\b[^>]*>/gi)) {
+    const src = match[0].match(/\bsrc=["']([^"']+)["']/i)?.[1];
+    if (!src || !/^\/media\/[a-zA-Z0-9_-]+\.(png|jpe?g|webp)$/i.test(src))
+      throw new Error("bodyHtml contains an unsafe media URL");
+    const filename = src.slice("/media/".length);
+    if (!allowed.has(filename))
+      throw new Error(`unknown body media: ${filename}`);
+  }
+
   return cleaned;
 }
 
@@ -110,6 +131,7 @@ const entrySchema = z.object({
   title: z.string(),
   summary: z.string(),
   bodyHtml: z.string(),
+  bodyMediaIds: z.array(z.string()).optional(),
   segment: z.enum(["youth", "corporate"]).optional(),
   parentId: z.string().optional(),
   relatedIds: z.array(z.string()).optional(),
@@ -193,6 +215,7 @@ export function entryPath(entry: Entry): string {
     return `/${entry.segment ?? "youth"}/${entry.slug}/`;
   if (entry.kind === "project") return `/projects/${entry.slug}/`;
   if (entry.kind === "news") return `/news/${entry.slug}/`;
+  if (entry.kind === "case") return `/cases/${entry.slug}/`;
   return "";
 }
 
@@ -244,7 +267,16 @@ export function validateSnapshot(
       placeholder.test(`${e.title} ${e.summary}`)
     )
       throw new Error(`invalid placeholder content: ${e.id}`);
-    e.bodyHtml = sanitizeBodyHtml(e.bodyHtml);
+    e.bodyHtml = sanitizeBodyHtml(e.bodyHtml, {
+      mediaFilenames: input.media.map((media) => media.filename),
+    });
+    for (const match of e.bodyHtml.matchAll(
+      /<img\b[^>]*\bsrc="\/media\/([^"]+)"/gi,
+    )) {
+      const media = input.media.find((item) => item.filename === match[1]);
+      if (!media || !e.bodyMediaIds?.includes(media.id))
+        throw new Error(`missing body media reference: ${e.id}`);
+    }
     const path = entryPath(e);
     if (path && routes.has(path))
       throw new Error(`duplicate public route: ${path}`);
@@ -300,6 +332,8 @@ export function validateSnapshot(
     }
     if (e.imageId && !mediaIds.has(e.imageId))
       throw new Error(`unknown image: ${e.imageId}`);
+    for (const id of e.bodyMediaIds ?? [])
+      if (!mediaIds.has(id)) throw new Error(`unknown body media: ${id}`);
     for (const url of [e.registrationUrl, e.sourceUrl])
       if (url && !/^https?:\/\//i.test(url))
         throw new Error(`unsafe URL: ${url}`);

@@ -7,7 +7,8 @@ import { spawn, execFile } from "node:child_process";
 import { promisify } from "node:util";
 import sharp from "sharp";
 import { previewSnapshot } from "@empact/content/fixtures";
-import { createPublicServer } from "../scripts/public-server.js";
+import { verifyCmsUI } from "./cms-ui-scenarios.js";
+import { verifyBusinessWorkflow } from "./business-cms-scenarios.js";
 const execute = promisify(execFile),
   repository = resolve("."),
   cms = join(repository, "apps/cms");
@@ -16,19 +17,13 @@ const runtime = join(directory, "site"),
   media = join(directory, "media");
 await mkdir(media);
 await mkdir(runtime);
-const website = createPublicServer({
-  root: join(runtime, "current"),
-  origin: "https://empact.cn",
-});
-website.listen(0, "127.0.0.1");
-await new Promise<void>((done) => website.once("listening", done));
-const publicURL = `http://127.0.0.1:${(website.address() as { port: number }).port}`;
-const base = "http://127.0.0.1:3001";
+const base = "http://127.0.0.1:4321";
+const publicURL = base;
 const email = "isolated-test@example.invalid",
   password = randomBytes(24).toString("base64url");
 const env = {
   ...process.env,
-  NODE_ENV: "production",
+  NODE_ENV: "production" as const,
   PAYLOAD_SECRET: randomBytes(48).toString("hex"),
   DATABASE_URL: `file:${join(directory, "cms.db")}`,
   MEDIA_DIR: media,
@@ -40,9 +35,56 @@ const env = {
   ADMIN_PASSWORD: password,
   NEXT_TELEMETRY_DISABLED: "1",
 };
+const portOwner = async (): Promise<
+  { pid: number; cwd?: string } | undefined
+> => {
+  try {
+    const { stdout } = await execute(
+      "lsof",
+      ["-nP", "-t", "-iTCP:4321", "-sTCP:LISTEN"],
+      {
+        cwd: repository,
+        timeout: 5_000,
+      },
+    );
+    const pid = Number(stdout.trim().split(/\s+/)[0]);
+    if (!Number.isInteger(pid) || pid <= 0)
+      throw new Error("Invalid listener PID from lsof");
+    try {
+      const { stdout: cwdOutput } = await execute(
+        "lsof",
+        ["-a", "-p", String(pid), "-d", "cwd", "-Fn"],
+        { cwd: repository, timeout: 5_000 },
+      );
+      return { pid, cwd: cwdOutput.match(/^n(.+)$/m)?.[1] };
+    } catch {
+      return { pid };
+    }
+  } catch (error) {
+    const details = error as {
+      code?: string | number;
+      stdout?: string;
+      stderr?: string;
+    };
+    if (
+      details.code === 1 &&
+      !details.stdout?.trim() &&
+      !details.stderr?.trim()
+    )
+      return undefined;
+    throw error;
+  }
+};
 let child: ReturnType<typeof spawn> | undefined,
-  logs = "";
+  logs = "",
+  childExit: { code: number | null; signal: NodeJS.Signals | null } | undefined;
 try {
+  const occupied = await portOwner();
+  assert.equal(
+    occupied,
+    undefined,
+    `Refusing CMS live test: 127.0.0.1:4321 is already owned by PID ${occupied?.pid ?? "unknown"} (cwd ${occupied?.cwd ?? "unknown"}).`,
+  );
   await execute(
     process.execPath,
     [
@@ -70,15 +112,8 @@ try {
   );
   child = spawn(
     process.execPath,
-    [
-      join(repository, "node_modules/next/dist/bin/next"),
-      "start",
-      "--hostname",
-      "127.0.0.1",
-      "--port",
-      "3001",
-    ],
-    { cwd: cms, env, stdio: ["ignore", "pipe", "pipe"] },
+    ["--import", "tsx", join(repository, "scripts/serve-workspace.ts")],
+    { cwd: repository, env, stdio: ["ignore", "pipe", "pipe"] },
   );
   child.stdout?.on("data", (data) => {
     logs = (logs + data).slice(-6000);
@@ -86,18 +121,30 @@ try {
   child.stderr?.on("data", (data) => {
     logs = (logs + data).slice(-6000);
   });
+  child.once("exit", (code, signal) => {
+    childExit = { code, signal };
+  });
   let ready = false;
   for (let i = 0; i < 60; i++) {
+    if (child.exitCode !== null || child.signalCode) break;
     try {
-      const response = await fetch(`${base}/admin/login`);
+      const response = await fetch(`${base}/admin/login`, {
+        signal: AbortSignal.timeout(3000),
+      });
       if (response.status === 200) {
-        ready = true;
-        break;
+        const owner = await portOwner();
+        ready = owner?.pid === child.pid && child.exitCode === null;
+        if (ready) break;
       }
     } catch {}
     await new Promise((done) => setTimeout(done, 500));
   }
-  assert.ok(ready, `CMS did not become ready: ${logs}`);
+  assert.ok(
+    ready,
+    `CMS did not become ready under isolated child ${child.pid}: ${
+      childExit ? `exit ${childExit.code ?? childExit.signal}; ` : ""
+    }${logs}`,
+  );
   for (const path of [
     "/api/content",
     "/api/media",
@@ -497,6 +544,16 @@ try {
     await (await fetch(publicURL + "/news/operations-news/")).text(),
     /新闻原版正文/,
   );
+  await verifyBusinessWorkflow({
+    base,
+    publicURL,
+    cookies,
+    businessId: String(business.id),
+    coverId: uploaded.doc.id,
+    request,
+    lexical,
+  });
+  await verifyCmsUI({ base, email, password, request });
   console.log(
     "PASS: migrated fresh SQLite, login, private drafts/media, image upload, protected preview, publish, edit isolation, project association, unpublish, and exact rollback.",
   );
@@ -510,6 +567,5 @@ try {
         done();
       }, 5000).unref();
     });
-  await new Promise<void>((done) => website.close(() => done()));
   await rm(directory, { recursive: true, force: true });
 }

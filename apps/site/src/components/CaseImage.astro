@@ -5,9 +5,11 @@ import { isPreviewMode, mediaById } from "@/lib/content";
 interface Props {
   entry: Entry;
   class?: string;
+  linkImage?: boolean;
 }
 
-const { entry, class: className = "" } = Astro.props;
+const { entry, class: className = "", linkImage = true } = Astro.props;
+const ImageWrapper = linkImage ? "a" : "div";
 const media = mediaById(entry.imageId);
 const localImage =
   !media && isPreviewMode()
@@ -27,11 +29,15 @@ const localImage =
   </figure>
 ) : localImage ? (
   <figure class={`case-image case-image-supplied ${className}`}>
-    <a
-      href={localImage.image.src}
-      target="_blank"
-      rel="noopener"
-      aria-label={`${localImage.alt}（打开完整图片）`}
+    <ImageWrapper
+      {...(linkImage
+        ? {
+            href: localImage.image.src,
+            target: "_blank",
+            rel: "noopener",
+            "aria-label": `${localImage.alt}（打开完整图片）`,
+          }
+        : {})}
     >
       <img
         src={localImage.image.src}
@@ -40,7 +46,7 @@ const localImage =
         height={localImage.image.height}
         loading="lazy"
       />
-    </a>
+    </ImageWrapper>
     {localImage.caption && <figcaption>{localImage.caption}</figcaption>}
   </figure>
 ) : null}

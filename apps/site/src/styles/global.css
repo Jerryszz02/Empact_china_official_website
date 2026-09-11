@@ -382,18 +382,43 @@ h3 {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 1.5rem;
+  margin-top: 1.5rem;
 }
 .case-card {
+  display: flex;
+  flex-direction: column;
   border-top: 1px solid var(--line);
+  color: inherit;
+  text-decoration: none;
+}
+.content-wrap .case-card {
+  border-color: var(--dark-line);
+}
+.case-card .case-image img {
+  transition: transform 200ms ease;
+}
+.case-card:hover .case-image img,
+.case-card:focus-visible .case-image img {
+  transform: scale(1.03);
+}
+.case-card:focus-visible {
+  outline: 3px solid currentColor;
+  outline-offset: 4px;
 }
 .case-card-copy {
   padding: 1rem 0;
 }
-.case-card h3 {
+.case-card-copy h3 {
   font-size: 1.25rem;
+  margin: 0 0 0.4rem;
 }
-.case-card p {
-  margin-bottom: 0;
+.case-card-copy p {
+  margin-bottom: 0.5rem;
+}
+.case-card-more {
+  display: inline-block;
+  font-weight: 700;
+  color: var(--blue);
 }
 .case-image {
   aspect-ratio: 16/10;
@@ -444,6 +469,59 @@ h3 {
 .content-wrap .service-list,
 .content-wrap .service-item {
   border-color: var(--dark-line);
+}
+.content-wrap .case-section {
+  max-width: 100%;
+}
+.empty-state {
+  max-width: 40rem;
+  color: var(--secondary);
+}
+.article-hero .back-link {
+  display: flex;
+  width: fit-content;
+  align-items: center;
+  gap: 0.35rem;
+  min-height: 2.75rem;
+  margin-bottom: 0.4rem;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+.article-cover {
+  width: 100%;
+  aspect-ratio: auto;
+  margin: 0 0 2rem;
+}
+.article-cover img {
+  height: auto;
+  max-height: 48rem;
+  object-fit: contain;
+}
+.article-source {
+  border-top: 1px solid var(--dark-line);
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+}
+.article-source h2 {
+  font-size: 1.25rem;
+}
+.article-source .detail-meta a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.75rem;
+}
+.prose figure {
+  margin: 2rem 0;
+}
+.prose figure img {
+  width: 100%;
+  height: auto;
+}
+.prose figcaption {
+  margin-top: 0.6rem;
+  color: var(--secondary);
+  font-size: 0.85rem;
+  line-height: 1.6;
 }
 .prose {
   overflow-wrap: anywhere;

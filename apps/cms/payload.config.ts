@@ -35,7 +35,13 @@ export default buildConfig({
   admin: {
     user: "users",
     components: {
-      beforeDashboard: ["@/components/PublicationPanel#PublicationPanel"],
+      Nav: "@/components/BusinessAdminNav#BusinessAdminNav",
+      views: {
+        dashboard: {
+          Component:
+            "@/components/BusinessAdminDashboard#BusinessAdminDashboard",
+        },
+      },
     },
     meta: { titleSuffix: " | Empact 内容后台" },
   },
