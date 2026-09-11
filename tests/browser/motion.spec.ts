@@ -437,6 +437,23 @@ test("ambient particles keep redrawing while idle and pause when hidden, offscre
     })
     .toBe(true);
 
+  // The closing logo is static; its visible and faded states need one paint,
+  // then no idle redraws. Scrolling back must restart ambient motion.
+  const closing = await sceneTop(page, "conversation");
+  for (const target of [closing, closing + 200]) {
+    await page.evaluate(
+      (top) => window.scrollTo({ top, behavior: "instant" }),
+      target,
+    );
+    await page.waitForTimeout(160);
+    const staticStart = await draws();
+    await page.waitForTimeout(260);
+    expect(await draws()).toBe(staticStart);
+  }
+  const stopped = await draws();
+  await settleAt(page, "pathways");
+  await expect.poll(draws).toBeGreaterThan(stopped + 3);
+
   await page.evaluate(() => {
     (window as unknown as { motionHidden: boolean }).motionHidden = true;
     document.dispatchEvent(new Event("visibilitychange"));

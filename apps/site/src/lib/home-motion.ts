@@ -139,8 +139,8 @@ function tick(now: number) {
     running = false;
     return;
   }
-  draw(now);
-  frame = requestAnimationFrame(tick);
+  if (draw(now)) frame = requestAnimationFrame(tick);
+  else running = false;
 }
 
 function boxOf(element: Element | null): Box | null {
@@ -347,8 +347,8 @@ function applyLive(force = false) {
   schedule();
 }
 
-function draw(now: number) {
-  if (!context || !stage) return;
+function draw(now: number): boolean {
+  if (!context || !stage) return false;
   const width = innerWidth;
   const height = innerHeight;
   updateBackground();
@@ -415,6 +415,8 @@ function draw(now: number) {
   const spreadSin = Math.sin(spreadAngle);
 
   context.clearRect(0, 0, width, height);
+  // Clear the final image once, then leave fully transparent particles idle.
+  if (exitOpacity === 0) return false;
   context.globalAlpha = exitOpacity;
   let lastFill = "";
   for (let i = 0; i < particleCount; i += 1) {
@@ -485,6 +487,8 @@ function draw(now: number) {
     context.fill();
   }
   context.globalAlpha = 1;
+  // Scroll and layout listeners schedule the next paint for static scenes.
+  return spread > 0 || heroWeight > 0;
 }
 
 /* ------------------------------------------------------------------ */
