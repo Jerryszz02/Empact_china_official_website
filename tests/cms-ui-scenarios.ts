@@ -96,6 +96,14 @@ export async function verifyCmsUI({
       true,
       "mobile editor overflows",
     );
+    const actionsBox = await page
+      .locator(".content-document-actions")
+      .boundingBox();
+    const titleBox = await page.locator('input[name="title"]').boundingBox();
+    assert.ok(
+      actionsBox && titleBox && actionsBox.y + actionsBox.height < titleBox.y,
+      "publication controls must remain above fields without covering them",
+    );
     await page.screenshot({
       path: "test-results/cms-editor-mobile.png",
       fullPage: true,

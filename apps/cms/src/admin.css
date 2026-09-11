@@ -410,7 +410,9 @@
   border: 1px solid #c5d7e4;
   border-radius: 12px;
   background: #f4f9fd;
-  max-width: 560px;
+  width: 100%;
+  box-sizing: border-box;
+  margin-bottom: 28px;
 }
 .content-document-actions p {
   margin: 10px 0 0;

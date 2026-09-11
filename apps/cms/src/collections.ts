@@ -274,6 +274,15 @@ const visible = [
   "sourceUrl",
 ];
 const businessContentFields: Field[] = [
+  {
+    name: "businessActions",
+    type: "ui",
+    admin: {
+      components: {
+        Field: "@/components/ContentDocumentActions#ContentDocumentActions",
+      },
+    },
+  },
   ...visible.map((name) => {
     const field = flattened.find(
       (field) => "name" in field && field.name === name,
@@ -360,11 +369,6 @@ export const Content: CollectionConfig = {
           Component:
             "@/components/BusinessAdminDashboard#BusinessAdminDashboard",
         },
-      },
-      edit: {
-        beforeDocumentControls: [
-          "@/components/ContentDocumentActions#ContentDocumentActions",
-        ],
       },
     },
   },
