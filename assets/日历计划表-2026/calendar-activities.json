@@ -1,0 +1,714 @@
+[
+  {
+    "month": 1,
+    "day": 3,
+    "date": "2026-01-03",
+    "name": "CTB 活动",
+    "seq": 1,
+    "status": "",
+    "owners": [
+      "Maggie(Maggie)"
+    ],
+    "placeholder": false
+  },
+  {
+    "month": 1,
+    "day": 4,
+    "date": "2026-01-04",
+    "name": "Empact中国战略会",
+    "seq": 3,
+    "status": "●",
+    "owners": [
+      "Maggie(Maggie)"
+    ],
+    "placeholder": false
+  },
+  {
+    "month": 1,
+    "day": 22,
+    "date": "2026-01-22",
+    "name": "凯德战略会workshop",
+    "seq": 2,
+    "status": "",
+    "owners": [
+      "Maggie(Maggie)"
+    ],
+    "placeholder": false
+  },
+  {
+    "month": 1,
+    "day": 31,
+    "date": "2026-01-31",
+    "name": "1月月月营",
+    "seq": 2,
+    "status": "○",
+    "owners": [
+      "小E(小E)",
+      "Tina(周超Tina)"
+    ],
+    "placeholder": false
+  },
+  {
+    "month": 2,
+    "day": 1,
+    "date": "2026-02-01",
+    "name": "香港研学营",
+    "seq": 1,
+    "status": "",
+    "owners": [
+      "Tracy安超"
+    ],
+    "placeholder": false
+  },
+  {
+    "month": 2,
+    "day": 8,
+    "date": "2026-02-08",
+    "name": "DJ研学营",
+    "seq": null,
+    "status": "",
+    "owners": [
+      "Jennini(Jennini)"
+    ],
+    "placeholder": false
+  },
+  {
+    "month": 2,
+    "day": 8,
+    "date": "2026-02-08",
+    "name": "新加坡研学营",
+    "seq": null,
+    "status": "",
+    "owners": [
+      "Tina(周超Tina)"
+    ],
+    "placeholder": false
+  },
+  {
+    "month": 2,
+    "day": 23,
+    "date": "2026-02-23",
+    "name": "AI+思辨营",
+    "seq": null,
+    "status": "",
+    "owners": [
+      "何潮航",
+      "小E(小E)"
+    ],
+    "placeholder": false
+  },
+  {
+    "month": 3,
+    "day": 8,
+    "date": "2026-03-08",
+    "name": "3 月月月营-辅导学校",
+    "seq": null,
+    "status": "",
+    "owners": [
+      "Joyce(Joyce)"
+    ],
+    "placeholder": false
+  },
+  {
+    "month": 3,
+    "day": 28,
+    "date": "2026-03-28",
+    "name": "少年说杨浦双语（彩排）",
+    "seq": null,
+    "status": "",
+    "owners": [
+      "Tracy安超"
+    ],
+    "placeholder": false
+  },
+  {
+    "month": 3,
+    "day": 29,
+    "date": "2026-03-29",
+    "name": "少年说杨浦双语",
+    "seq": null,
+    "status": "",
+    "owners": [
+      "Tracy安超"
+    ],
+    "placeholder": false
+  },
+  {
+    "month": 4,
+    "day": 6,
+    "date": "2026-04-06",
+    "name": "艾尔建云南团建",
+    "seq": null,
+    "status": "",
+    "owners": [
+      "Jennini(Jennini)"
+    ],
+    "placeholder": false
+  },
+  {
+    "month": 4,
+    "day": 26,
+    "date": "2026-04-26",
+    "name": "4 月月月营",
+    "seq": null,
+    "status": "",
+    "owners": [],
+    "placeholder": false
+  },
+  {
+    "month": 5,
+    "day": 9,
+    "date": "2026-05-09",
+    "name": "AI 常规课",
+    "seq": null,
+    "status": "",
+    "owners": [
+      "Tina(Tina)"
+    ],
+    "placeholder": false
+  },
+  {
+    "month": 5,
+    "day": 10,
+    "date": "2026-05-10",
+    "name": "研学营+黑客松直播",
+    "seq": null,
+    "status": "",
+    "owners": [
+      "Tracy安超"
+    ],
+    "placeholder": false
+  },
+  {
+    "month": 5,
+    "day": 12,
+    "date": "2026-05-12",
+    "name": "华盛怀少课程",
+    "seq": null,
+    "status": "",
+    "owners": [
+      "Tracy安超"
+    ],
+    "placeholder": false
+  },
+  {
+    "month": 5,
+    "day": 14,
+    "date": "2026-05-14",
+    "name": "凯德长期成效报告交付凯德",
+    "seq": null,
+    "status": "",
+    "owners": [
+      "何潮航"
+    ],
+    "placeholder": false
+  },
+  {
+    "month": 5,
+    "day": 15,
+    "date": "2026-05-15",
+    "name": "AI 备赛营",
+    "seq": null,
+    "status": "",
+    "owners": [
+      "何潮航"
+    ],
+    "placeholder": false
+  },
+  {
+    "month": 5,
+    "day": 16,
+    "date": "2026-05-16",
+    "name": "AI 常规课",
+    "seq": null,
+    "status": "",
+    "owners": [
+      "Tina(Tina)"
+    ],
+    "placeholder": false
+  },
+  {
+    "month": 5,
+    "day": 11,
+    "date": "2026-05-11",
+    "name": "艾尔建茶马古道团建 探路@Maggie",
+    "seq": null,
+    "status": "",
+    "owners": [],
+    "placeholder": false
+  },
+  {
+    "month": 5,
+    "day": 14,
+    "date": "2026-05-14",
+    "name": "嘉悦@Maggie",
+    "seq": null,
+    "status": "",
+    "owners": [],
+    "placeholder": false
+  },
+  {
+    "month": 5,
+    "day": 17,
+    "date": "2026-05-17",
+    "name": "可口可乐月月营",
+    "seq": null,
+    "status": "",
+    "owners": [
+      "Tracy安超"
+    ],
+    "placeholder": false
+  },
+  {
+    "month": 5,
+    "day": 19,
+    "date": "2026-05-19",
+    "name": "华盛怀少课程",
+    "seq": null,
+    "status": "",
+    "owners": [
+      "Tracy安超"
+    ],
+    "placeholder": false
+  },
+  {
+    "month": 5,
+    "day": 20,
+    "date": "2026-05-20",
+    "name": "朝夕有爱直播",
+    "seq": null,
+    "status": "",
+    "owners": [
+      "小E"
+    ],
+    "placeholder": false
+  },
+  {
+    "month": 5,
+    "day": 21,
+    "date": "2026-05-21",
+    "name": "预设：凯德长期志愿者项目\n总结会议（大会+小会）",
+    "seq": null,
+    "status": "",
+    "owners": [
+      "何潮航"
+    ],
+    "placeholder": false
+  },
+  {
+    "month": 5,
+    "day": 22,
+    "date": "2026-05-22",
+    "name": "AI 备赛营",
+    "seq": null,
+    "status": "",
+    "owners": [
+      "何潮航"
+    ],
+    "placeholder": false
+  },
+  {
+    "month": 5,
+    "day": 23,
+    "date": "2026-05-23",
+    "name": "AI 常规课",
+    "seq": null,
+    "status": "",
+    "owners": [
+      "Tina(Tina)"
+    ],
+    "placeholder": false
+  },
+  {
+    "month": 5,
+    "day": 24,
+    "date": "2026-05-24",
+    "name": "新加坡 AI 中国 Learning Journey之旅",
+    "seq": null,
+    "status": "",
+    "owners": [
+      "Maggie"
+    ],
+    "placeholder": false
+  },
+  {
+    "month": 5,
+    "day": 30,
+    "date": "2026-05-30",
+    "name": "AI 常规课",
+    "seq": null,
+    "status": "",
+    "owners": [
+      "Tina(Tina)"
+    ],
+    "placeholder": false
+  },
+  {
+    "month": 5,
+    "day": 29,
+    "date": "2026-05-29",
+    "name": "AI 备赛营",
+    "seq": null,
+    "status": "",
+    "owners": [
+      "何潮航"
+    ],
+    "placeholder": false
+  },
+  {
+    "month": 5,
+    "day": 26,
+    "date": "2026-05-26",
+    "name": "华盛怀少课程",
+    "seq": null,
+    "status": "",
+    "owners": [
+      "Tracy安超"
+    ],
+    "placeholder": false
+  },
+  {
+    "month": 5,
+    "day": 31,
+    "date": "2026-05-31",
+    "name": "朝夕有爱敬老院活动",
+    "seq": null,
+    "status": "",
+    "owners": [
+      "小E(小E)"
+    ],
+    "placeholder": false
+  },
+  {
+    "month": 6,
+    "day": 1,
+    "date": "2026-06-01",
+    "name": "艾尔建茶马古道团建活动",
+    "seq": null,
+    "status": "",
+    "owners": [],
+    "placeholder": false
+  },
+  {
+    "month": 6,
+    "day": 2,
+    "date": "2026-06-02",
+    "name": "华盛怀少课程",
+    "seq": null,
+    "status": "",
+    "owners": [
+      "Tracy安超"
+    ],
+    "placeholder": false
+  },
+  {
+    "month": 6,
+    "day": 8,
+    "date": "2026-06-08",
+    "name": "凯德Chat Circles培训（TBD）",
+    "seq": null,
+    "status": "",
+    "owners": [],
+    "placeholder": false
+  },
+  {
+    "month": 6,
+    "day": 11,
+    "date": "2026-06-11",
+    "name": "凯德Chat Circles活动（TBD）",
+    "seq": null,
+    "status": "",
+    "owners": [],
+    "placeholder": false
+  },
+  {
+    "month": 6,
+    "day": 9,
+    "date": "2026-06-09",
+    "name": "华盛怀少课程",
+    "seq": null,
+    "status": "",
+    "owners": [
+      "Tracy安超"
+    ],
+    "placeholder": false
+  },
+  {
+    "month": 6,
+    "day": 15,
+    "date": "2026-06-15",
+    "name": "abbvie 台湾活动",
+    "seq": null,
+    "status": "",
+    "owners": [
+      "尤丹"
+    ],
+    "placeholder": false
+  },
+  {
+    "month": 6,
+    "day": 27,
+    "date": "2026-06-27",
+    "name": "6 月月月营",
+    "seq": null,
+    "status": "",
+    "owners": [],
+    "placeholder": false
+  },
+  {
+    "month": 7,
+    "day": 1,
+    "date": "2026-07-01",
+    "name": "暑托班",
+    "seq": null,
+    "status": "",
+    "owners": [],
+    "placeholder": false
+  },
+  {
+    "month": 7,
+    "day": 7,
+    "date": "2026-07-07",
+    "name": "演讲赋能营",
+    "seq": 2,
+    "status": "",
+    "owners": [
+      "Tina(周超Tina)"
+    ],
+    "placeholder": false
+  },
+  {
+    "month": 7,
+    "day": 5,
+    "date": "2026-07-05",
+    "name": "德国/法国亲子游（Maggie 带队）",
+    "seq": null,
+    "status": "",
+    "owners": [],
+    "placeholder": false
+  },
+  {
+    "month": 7,
+    "day": 6,
+    "date": "2026-07-06",
+    "name": "暑托班",
+    "seq": null,
+    "status": "",
+    "owners": [],
+    "placeholder": false
+  },
+  {
+    "month": 7,
+    "day": 12,
+    "date": "2026-07-12",
+    "name": "德国/法国亲子游（Maggie 带队）",
+    "seq": null,
+    "status": "",
+    "owners": [],
+    "placeholder": false
+  },
+  {
+    "month": 7,
+    "day": 18,
+    "date": "2026-07-18",
+    "name": "青戈赛",
+    "seq": 1,
+    "status": "",
+    "owners": [
+      "Maggie"
+    ],
+    "placeholder": false
+  },
+  {
+    "month": 7,
+    "day": 19,
+    "date": "2026-07-19",
+    "name": "未来领袖青戈 6-中欧亲子及 Empact 共同组队",
+    "seq": 1,
+    "status": "",
+    "owners": [
+      "Maggie(Maggie)"
+    ],
+    "placeholder": false
+  },
+  {
+    "month": 7,
+    "day": 20,
+    "date": "2026-07-20",
+    "name": "暑托班",
+    "seq": null,
+    "status": "",
+    "owners": [],
+    "placeholder": false
+  },
+  {
+    "month": 7,
+    "day": 26,
+    "date": "2026-07-26",
+    "name": "香港研学营（精品小团）",
+    "seq": 3,
+    "status": "",
+    "owners": [
+      "Tracy安超"
+    ],
+    "placeholder": false
+  },
+  {
+    "month": 7,
+    "day": 27,
+    "date": "2026-07-27",
+    "name": "暑托班",
+    "seq": null,
+    "status": "",
+    "owners": [],
+    "placeholder": false
+  },
+  {
+    "month": 7,
+    "day": 26,
+    "date": "2026-07-26",
+    "name": "英国剑桥大学官方学术项目",
+    "seq": null,
+    "status": "",
+    "owners": [],
+    "placeholder": false
+  },
+  {
+    "month": 8,
+    "day": 1,
+    "date": "2026-08-01",
+    "name": "英国剑桥大学官方学术项目",
+    "seq": null,
+    "status": "",
+    "owners": [],
+    "placeholder": false
+  },
+  {
+    "month": 8,
+    "day": 2,
+    "date": "2026-08-02",
+    "name": "英国剑桥大学官方学术项目",
+    "seq": null,
+    "status": "",
+    "owners": [],
+    "placeholder": false
+  },
+  {
+    "month": 8,
+    "day": 4,
+    "date": "2026-08-04",
+    "name": "演讲赋能营（低年龄）",
+    "seq": 2,
+    "status": "",
+    "owners": [
+      "Tina(周超Tina)"
+    ],
+    "placeholder": false
+  },
+  {
+    "month": 8,
+    "day": 4,
+    "date": "2026-08-04",
+    "name": "暑托班",
+    "seq": null,
+    "status": "",
+    "owners": [],
+    "placeholder": false
+  },
+  {
+    "month": 8,
+    "day": 9,
+    "date": "2026-08-09",
+    "name": "新加坡研学营香港研学营（精品小团）",
+    "seq": null,
+    "status": "",
+    "owners": [
+      "Tracy安超"
+    ],
+    "placeholder": false
+  },
+  {
+    "month": 8,
+    "day": 10,
+    "date": "2026-08-10",
+    "name": "暑托班",
+    "seq": null,
+    "status": "",
+    "owners": [],
+    "placeholder": false
+  },
+  {
+    "month": 8,
+    "day": 17,
+    "date": "2026-08-17",
+    "name": "暑托班",
+    "seq": null,
+    "status": "",
+    "owners": [],
+    "placeholder": false
+  },
+  {
+    "month": 8,
+    "day": 28,
+    "date": "2026-08-28",
+    "name": "年卡少年聚会-Peter 申时茶会",
+    "seq": null,
+    "status": "",
+    "owners": [
+      "Tracy安超"
+    ],
+    "placeholder": false
+  },
+  {
+    "month": 8,
+    "day": 24,
+    "date": "2026-08-24",
+    "name": "暑托班",
+    "seq": null,
+    "status": "",
+    "owners": [],
+    "placeholder": false
+  },
+  {
+    "month": 11,
+    "day": 6,
+    "date": "2026-11-06",
+    "name": "审核U项目",
+    "seq": 1,
+    "status": "√",
+    "owners": [],
+    "placeholder": true
+  },
+  {
+    "month": 11,
+    "day": 6,
+    "date": "2026-11-06",
+    "name": "采购W项目",
+    "seq": 2,
+    "status": "●",
+    "owners": [],
+    "placeholder": true
+  },
+  {
+    "month": 11,
+    "day": 6,
+    "date": "2026-11-06",
+    "name": "P项目预算",
+    "seq": 3,
+    "status": "○",
+    "owners": [],
+    "placeholder": true
+  },
+  {
+    "month": 12,
+    "day": 2,
+    "date": "2026-12-02",
+    "name": "台湾荣田精机团建项目",
+    "seq": null,
+    "status": "",
+    "owners": [
+      "Maggie(Maggie)"
+    ],
+    "placeholder": false
+  }
+]

@@ -5,7 +5,7 @@
 Node.js 22.12+（22 系列）和 npm 10。先 `npm ci`、`npm run setup:local`。该命令只首次生成权限为 600 的本地 `.env`，不打印密钥；已有文件不会被覆盖。
 
 - `npm run dev`：仅监听 127.0.0.1:4321 的结构预览，不需要 CMS 或生产资料。
-- `npm run dev:cms`：内容管理后台；初始账号通过本机初始化命令建立，不能在公网抢注。
+- `CMS_URL=http://127.0.0.1:4321 npm run dev -w @empact/cms -- --port 4321`：单独启动内容管理后台前，先停止占用 4321 的本项目服务；初始账号通过本机初始化命令建立，不能在公网抢注。其他服务的切换及完整发布演练限制见 [README 本机启动](../README.md#本机启动)。
 - `npm run build:preview`：明确生成不可索引的结构预览；不要上传到公开托管。
 - `npm run build`：生产构建，必须提供 `SNAPSHOT_PATH` 指向审批快照。无输入时失败是预期行为。
 - `npm run verify`：类型、业务测试、预览构建、HTML/链接/SEO 检查及 CMS 生产构建。

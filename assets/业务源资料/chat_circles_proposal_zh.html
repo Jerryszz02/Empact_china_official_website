@@ -1,0 +1,809 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chat Circles — 资助申请书</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&family=Nunito+Sans:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --blue:#125284;--blue-dark:#0d3d63;--blue-light:#e8f1f8;
+  --red:#fb394d;--teal:#2cb3b9;--teal-light:#e8f7f7;
+  --purple:#8d64a3;--purple-light:#f2eef6;
+  --white:#ffffff;--off-white:#f8f9fb;--text:#1a2a3a;--text-muted:#5a6a7a;--border:#dde4ec;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{font-family:'Nunito Sans',sans-serif;color:var(--text);background:var(--white);line-height:1.7;}
+h1,h2,h3,h4{font-family:'Poppins',sans-serif;}
+
+nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(18,82,132,0.97);backdrop-filter:blur(8px);padding:0 2rem;height:60px;display:flex;align-items:center;justify-content:space-between;}
+.nav-logo{font-family:'Poppins',sans-serif;font-weight:700;color:#fff;font-size:1.1rem;}
+.nav-logo span{color:var(--red);}
+.nav-links{display:flex;gap:1.5rem;}
+.nav-links a{color:rgba(255,255,255,0.8);text-decoration:none;font-size:0.78rem;font-family:'Poppins',sans-serif;font-weight:600;letter-spacing:0.04em;text-transform:uppercase;transition:color 0.2s;}
+.nav-links a:hover{color:#fff;}
+
+.hero{background:var(--blue);分钟-height:100vh;padding-top:60px;display:flex;flex-direction:column;justify-content:center;position:relative;overflow:hidden;}
+.hero-bg{position:absolute;inset:0;background:radial-gradient(ellipse at 70% 50%,rgba(44,179,185,0.15) 0%,transparent 60%),radial-gradient(ellipse at 20% 80%,rgba(141,100,163,0.1) 0%,transparent 50%);}
+.hero-grid{position:absolute;inset:0;opacity:0.04;background-image:linear-gradient(var(--white) 1px,transparent 1px),linear-gradient(90deg,var(--white) 1px,transparent 1px);background-size:40px 40px;}
+.hero-content{position:relative;z-index:1;max-width:900px;margin:0 auto;padding:5rem 2rem 4rem;}
+.hero-tag{display:inline-block;background:rgba(251,57,77,0.15);border:1px solid rgba(251,57,77,0.4);color:#ff8a94;font-size:0.75rem;font-family:'Poppins',sans-serif;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;padding:6px 14px;border-radius:20px;margin-bottom:1.5rem;}
+.hero h1{font-size:clamp(2.2rem,5vw,4.2rem);font-weight:700;color:#fff;line-height:1.15;margin-bottom:1.2rem;letter-spacing:-0.02em;}
+.hero h1 em{color:var(--teal);font-style:normal;}
+.hero-sub{font-size:1.15rem;color:rgba(255,255,255,0.75);max-width:600px;line-height:1.8;margin-bottom:2.5rem;}
+.hero-partners{display:flex;align-items:center;gap:0.6rem;flex-wrap:nowrap;overflow-x:auto;padding-bottom:4px;}
+.hero-partners span{font-size:0.75rem;color:rgba(255,255,255,0.4);font-family:'Poppins',sans-serif;text-transform:uppercase;letter-spacing:0.08em;}
+.partner-pill{background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);color:rgba(255,255,255,0.8);font-size:0.78rem;font-family:'Poppins',sans-serif;font-weight:600;padding:5px 12px;border-radius:20px;white-space:nowrap;}
+.hero-scroll{position:absolute;bottom:2.5rem;left:50%;transform:translateX(-50%);color:rgba(255,255,255,0.4);font-size:0.7rem;font-family:'Poppins',sans-serif;text-transform:uppercase;letter-spacing:0.1em;text-align:center;}
+.scroll-line{width:1px;height:40px;background:rgba(255,255,255,0.2);margin:8px auto 0;animation:scrollPulse 2s ease-in-out infinite;}
+@keyframes scrollPulse{0%,100%{opacity:0.2}50%{opacity:0.7}}
+
+section{padding:5rem 2rem;}
+.container{max-width:960px;margin:0 auto;}
+.section-label{font-family:'Poppins',sans-serif;font-weight:600;font-size:0.7rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--teal);margin-bottom:0.75rem;}
+.section-title{font-size:clamp(1.8rem,3.5vw,2.6rem);font-weight:700;color:var(--blue);line-height:1.2;margin-bottom:1rem;letter-spacing:-0.01em;}
+.section-intro{font-size:1.05rem;color:var(--text-muted);max-width:680px;line-height:1.8;margin-bottom:3rem;}
+.section-divider{width:48px;height:3px;background:var(--red);border-radius:2px;margin:1rem 0 2rem;}
+
+.problem-section{background:var(--off-white);}
+.problem-grid{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin-bottom:3rem;}
+.problem-card{background:var(--white);border-radius:12px;padding:1.75rem;border:1px solid var(--border);position:relative;overflow:hidden;}
+.problem-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--teal);}
+.problem-card.accent::before{background:var(--red);}
+.problem-card.accent2::before{background:var(--purple);}
+.problem-card.accent3::before{background:var(--blue);}
+.problem-label{font-family:'Poppins',sans-serif;font-weight:600;font-size:0.7rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--teal);margin-bottom:0.75rem;}
+.problem-card.accent .problem-label{color:var(--red);}
+.problem-card.accent2 .problem-label{color:var(--purple);}
+.problem-card.accent3 .problem-label{color:var(--blue);}
+.problem-card h3{font-size:1.05rem;font-weight:600;color:var(--text);margin-bottom:0.6rem;}
+.problem-card p{font-size:0.9rem;color:var(--text-muted);line-height:1.7;}
+
+.transition-strip{background:var(--blue);border-radius:12px;padding:2.5rem;display:grid;grid-template-columns:1fr 1fr 1fr;gap:1.5rem;}
+.transition-item{text-align:center;}
+.transition-icon{width:48px;height:48px;background:rgba(44,179,185,0.2);border-radius:50%;margin:0 auto 1rem;display:flex;align-items:center;justify-content:center;}
+.transition-icon svg{width:22px;height:22px;stroke:var(--teal);fill:none;stroke-width:2;}
+.transition-item h4{font-size:0.95rem;font-weight:600;color:#fff;margin-bottom:0.4rem;}
+.transition-item p{font-size:0.82rem;color:rgba(255,255,255,0.65);line-height:1.6;}
+
+.programme-section{background:var(--white);}
+.package-strip{display:grid;grid-template-columns:1fr auto 1fr auto 1fr;gap:0;align-items:stretch;margin-bottom:3rem;}
+.pkg-card{border-radius:12px;padding:1.5rem;border:1px solid var(--border);display:flex;gap:1rem;align-items:flex-start;}
+.pkg-training{background:var(--purple-light);border-color:rgba(141,100,163,0.3);}
+.pkg-session{background:var(--teal-light);border-color:rgba(44,179,185,0.3);}
+.pkg-outcome{background:var(--blue-light);border-color:rgba(18,82,132,0.2);}
+.pkg-num{font-family:'Poppins',sans-serif;font-weight:700;font-size:1.4rem;flex-shrink:0;line-height:1;}
+.pkg-training .pkg-num{color:#5d3f72;}
+.pkg-session .pkg-num{color:#085041;}
+.pkg-outcome .pkg-num{color:#0c447c;}
+.pkg-title{font-family:'Poppins',sans-serif;font-weight:700;font-size:0.92rem;margin-bottom:2px;}
+.pkg-training .pkg-title{color:#3c3489;}
+.pkg-session .pkg-title{color:#085041;}
+.pkg-outcome .pkg-title{color:#0c447c;}
+.pkg-sub{font-size:0.72rem;font-family:'Poppins',sans-serif;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;margin-bottom:0.6rem;}
+.pkg-training .pkg-sub{color:rgba(93,63,114,0.6);}
+.pkg-session .pkg-sub{color:rgba(8,80,65,0.6);}
+.pkg-outcome .pkg-sub{color:rgba(12,68,124,0.6);}
+.pkg-desc{font-size:0.8rem;color:var(--text-muted);line-height:1.6;margin-bottom:0.6rem;}
+.pkg-who{font-size:0.7rem;font-family:'Poppins',sans-serif;font-weight:600;padding:2px 8px;border-radius:10px;display:inline-block;}
+.pkg-training .pkg-who{background:rgba(141,100,163,0.15);color:#3c3489;}
+.pkg-session .pkg-who{background:rgba(44,179,185,0.15);color:#085041;}
+.pkg-outcome .pkg-who{background:rgba(18,82,132,0.15);color:#0c447c;}
+.pkg-arrow{display:flex;align-items:center;justify-content:center;padding:0 0.75rem;font-size:1.5rem;font-weight:700;color:var(--red);flex-shrink:0;}
+.prog-sub-label{font-family:'Poppins',sans-serif;font-weight:700;font-size:0.72rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--blue);margin-bottom:1.25rem;padding-bottom:0.6rem;border-bottom:2px solid var(--red);display:inline-block;}
+@media(max-width:700px){.package-strip{grid-template-columns:1fr;}.pkg-arrow{padding:0.5rem 0;text-align:center;}}
+.programme-hero{background:linear-gradient(135deg,var(--blue) 0%,#1a6a9e 100%);border-radius:16px;padding:3rem;margin-bottom:2rem;display:grid;grid-template-columns:1fr 1fr;gap:3rem;align-items:center;}
+.programme-hero-text h3{font-size:1.5rem;font-weight:700;color:#fff;margin-bottom:1rem;}
+.programme-hero-text p{font-size:0.9rem;color:rgba(255,255,255,0.8);line-height:1.8;}
+.programme-pillars{display:flex;flex-direction:column;gap:0.75rem;}
+.pillar{background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:0.9rem 1.1rem;display:flex;align-items:center;gap:0.9rem;}
+.pillar-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.pillar-text{font-size:0.85rem;color:#fff;font-family:'Poppins',sans-serif;font-weight:600;}
+.pillar-sub{font-size:0.78rem;color:rgba(255,255,255,0.6);}
+
+.session-flow{display:grid;grid-template-columns:repeat(5,1fr);gap:0;margin-bottom:2rem;border-radius:12px;overflow:hidden;border:1px solid var(--border);}
+.flow-step{padding:1.25rem 1rem;text-align:center;border-right:1px solid var(--border);}
+.flow-step:last-child{border-right:none;}
+.flow-step:nth-child(1){background:#e8f7f7;}
+.flow-step:nth-child(2){background:#eef5fb;}
+.flow-step:nth-child(3){background:var(--off-white);}
+.flow-step:nth-child(4){background:var(--purple-light);}
+.flow-step:nth-child(5){background:#fff0f1;}
+.flow-time{font-size:0.68rem;font-family:'Poppins',sans-serif;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:0.4rem;color:var(--text-muted);}
+.flow-name{font-size:0.82rem;font-family:'Poppins',sans-serif;font-weight:700;color:var(--text);margin-bottom:0.3rem;}
+.flow-desc{font-size:0.72rem;color:var(--text-muted);line-height:1.4;}
+
+.roles-grid{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;}
+.role-card{border-radius:12px;padding:1.75rem;border:1px solid var(--border);}
+.role-card.chatter{background:var(--teal-light);border-color:rgba(44,179,185,0.3);}
+.role-card.listener{background:var(--purple-light);border-color:rgba(141,100,163,0.3);}
+.role-title{font-family:'Poppins',sans-serif;font-weight:700;font-size:1.05rem;margin-bottom:0.3rem;}
+.chatter .role-title{color:#1a7a7e;}
+.listener .role-title{color:#5d3f72;}
+.role-sub{font-size:0.78rem;margin-bottom:1rem;}
+.chatter .role-sub{color:rgba(26,122,126,0.7);}
+.listener .role-sub{color:rgba(93,63,114,0.7);}
+.role-list{list-style:none;}
+.role-list li{font-size:0.85rem;padding:0.35rem 0;border-bottom:1px solid rgba(0,0,0,0.05);display:flex;gap:0.6rem;align-items:flex-start;color:var(--text);}
+.role-list li:last-child{border-bottom:none;}
+.role-list li::before{content:'→';font-family:'Poppins',sans-serif;font-weight:600;flex-shrink:0;margin-top:1px;}
+.chatter .role-list li::before{color:var(--teal);}
+.listener .role-list li::before{color:var(--purple);}
+
+.training-section{background:var(--off-white);}
+.training-blocks{display:flex;flex-direction:column;gap:1rem;}
+.training-block{background:var(--white);border-radius:12px;border:1px solid var(--border);display:grid;grid-template-columns:100px 1fr;overflow:hidden;}
+.training-time{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:1.5rem 1rem;text-align:center;}
+.t1 .training-time{background:var(--teal-light);}
+.t2 .training-time{background:var(--blue-light);}
+.t3 .training-time{background:var(--purple-light);}
+.t4 .training-time{background:#fff3e0;}
+.t5 .training-time{background:#fff0f1;}
+.training-分钟s{font-family:'Poppins',sans-serif;font-weight:700;font-size:1.4rem;}
+.t1 .training-分钟s{color:var(--teal);}
+.t2 .training-分钟s{color:var(--blue);}
+.t3 .training-分钟s{color:var(--purple);}
+.t4 .training-分钟s{color:#e65100;}
+.t5 .training-分钟s{color:var(--red);}
+.training-分钟s-label{font-size:0.65rem;font-family:'Poppins',sans-serif;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:var(--text-muted);}
+.training-content{padding:1.25rem 1.5rem;}
+.training-content h4{font-size:0.95rem;font-weight:700;color:var(--text);margin-bottom:0.4rem;}
+.training-content p{font-size:0.85rem;color:var(--text-muted);line-height:1.6;margin-bottom:0.6rem;}
+.training-tags{display:flex;flex-wrap:wrap;gap:0.4rem;}
+.ttag{font-size:0.68rem;font-family:'Poppins',sans-serif;font-weight:600;padding:2px 8px;border-radius:10px;}
+.ttag-teal{background:var(--teal-light);color:#1a7a7e;}
+.ttag-blue{background:var(--blue-light);color:var(--blue);}
+.ttag-purple{background:var(--purple-light);color:#5d3f72;}
+.ttag-amber{background:#fff3e0;color:#e65100;}
+.ttag-red{background:#fff0f1;color:#c62333;}
+
+.connection-section{background:var(--blue);padding:5rem 2rem;}
+.connection-section .section-label{color:var(--teal);}
+.connection-section .section-title{color:#fff;}
+.connection-intro{font-size:1.05rem;color:rgba(255,255,255,0.7);max-width:680px;line-height:1.8;margin-bottom:3rem;}
+.connection-cards{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;}
+.conn-card{background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);border-radius:12px;padding:1.75rem;}
+.conn-card h3{font-size:1rem;font-weight:600;color:#fff;margin-bottom:0.6rem;}
+.conn-card p{font-size:0.85rem;color:rgba(255,255,255,0.65);line-height:1.7;}
+.conn-accent{border-top:3px solid var(--teal);}
+.conn-accent2{border-top:3px solid var(--red);}
+.conn-accent3{border-top:3px solid var(--purple);}
+.conn-accent4{border-top:3px solid rgba(255,255,255,0.3);}
+
+.impact-section{background:var(--white);}
+.impact-outcomes-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1.25rem;margin-bottom:3rem;}
+.impact-outcome-card{border-radius:12px;padding:1.75rem;border:1px solid var(--border);border-top:4px solid;}
+.ioc-teal{background:var(--teal-light);border-top-color:var(--teal);}
+.ioc-purple{background:var(--purple-light);border-top-color:var(--purple);}
+.ioc-blue{background:var(--blue-light);border-top-color:var(--blue);}
+.ioc-coral{background:#faece7;border-top-color:#d85a30;}
+.ioc-teal2{background:#eef7f0;border-top-color:#2e9e6b;}
+.ioc-amber{background:#faeeda;border-top-color:#ba7517;}
+.ioc-label{font-family:'Poppins',sans-serif;font-weight:600;font-size:0.68rem;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:0.5rem;}
+.ioc-teal .ioc-label{color:#0f6e56;}
+.ioc-purple .ioc-label{color:#5d3f72;}
+.ioc-blue .ioc-label{color:var(--blue);}
+.ioc-coral .ioc-label{color:#993c1d;}
+.ioc-teal2 .ioc-label{color:#1a6b47;}
+.ioc-amber .ioc-label{color:#854f0b;}
+.ioc-title{font-family:'Poppins',sans-serif;font-weight:700;font-size:0.98rem;margin-bottom:0.6rem;line-height:1.3;}
+.ioc-teal .ioc-title{color:#085041;}
+.ioc-purple .ioc-title{color:#3c3489;}
+.ioc-blue .ioc-title{color:#0c447c;}
+.ioc-coral .ioc-title{color:#711e13;}
+.ioc-teal2 .ioc-title{color:#0d4a2e;}
+.ioc-amber .ioc-title{color:#633806;}
+.ioc-desc{font-size:0.82rem;color:var(--text-muted);line-height:1.6;}
+.ioc-amber2{background:#fdf6ec;border-top-color:#ba7517;border-color:rgba(186,117,23,0.3);}
+.ioc-amber2 .ioc-label{color:#854f0b;}
+.ioc-amber2 .ioc-title{color:#633806;}
+.methodology-block{background:var(--off-white);border-radius:14px;padding:2rem;margin-bottom:2.5rem;border:1px solid var(--border);}
+.meth-title{font-family:'Poppins',sans-serif;font-weight:700;font-size:1rem;color:var(--blue);margin-bottom:0.5rem;}
+.meth-intro{font-size:0.85rem;color:var(--text-muted);line-height:1.7;margin-bottom:1.5rem;}
+.meth-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;margin-bottom:1.25rem;}
+.meth-card{border-radius:10px;padding:1.1rem 1.25rem;border:1px solid var(--border);}
+.meth-panas{background:var(--teal-light);border-color:rgba(44,179,185,0.3);}
+.meth-stress{background:#fff8f0;border-color:rgba(230,81,0,0.2);}
+.meth-hope{background:var(--purple-light);border-color:rgba(141,100,163,0.3);}
+.meth-tool-name{font-family:'Poppins',sans-serif;font-weight:700;font-size:0.88rem;margin-bottom:0.2rem;}
+.meth-panas .meth-tool-name{color:#085041;}
+.meth-stress .meth-tool-name{color:#bf4000;}
+.meth-hope .meth-tool-name{color:#3c3489;}
+.meth-tool-full{font-size:0.72rem;font-style:italic;margin-bottom:0.7rem;}
+.meth-panas .meth-tool-full{color:#0f6e56;}
+.meth-stress .meth-tool-full{color:#8a4500;}
+.meth-hope .meth-tool-full{color:#534ab7;}
+.meth-tool-desc{font-size:0.8rem;color:var(--text-muted);line-height:1.6;margin-bottom:0.75rem;}
+.meth-captures{font-size:0.72rem;line-height:1.5;}
+.meth-cap-label{font-family:'Poppins',sans-serif;font-weight:700;}
+.meth-panas .meth-captures{color:#0f6e56;}
+.meth-stress .meth-captures{color:#bf4000;}
+.meth-hope .meth-captures{color:#534ab7;}
+.meth-why{background:var(--white);border-radius:8px;padding:1rem 1.25rem;border:1px solid var(--border);}
+.meth-why-title{font-family:'Poppins',sans-serif;font-weight:700;font-size:0.82rem;color:var(--blue);margin-bottom:0.4rem;}
+.meth-why-body{font-size:0.82rem;color:var(--text-muted);line-height:1.7;}
+.meth-why-body em{color:var(--text);font-style:normal;font-weight:600;}
+@media(max-width:640px){.meth-grid{grid-template-columns:1fr;}}
+.ioc-measure{margin-top:1rem;padding-top:1rem;border-top:1px dashed rgba(0,0,0,0.1);}
+.ioc-measure-label{font-family:'Poppins',sans-serif;font-weight:700;font-size:0.65rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-muted);margin-bottom:0.5rem;}
+.ioc-measure-body{display:flex;flex-direction:column;gap:0.4rem;}
+.ioc-m-row{font-size:0.78rem;color:var(--text-muted);line-height:1.5;display:flex;gap:0.5rem;align-items:flex-start;}
+.ioc-m-tool{font-family:'Poppins',sans-serif;font-weight:700;font-size:0.68rem;white-space:nowrap;background:rgba(0,0,0,0.06);border-radius:4px;padding:1px 6px;color:var(--text);flex-shrink:0;margin-top:1px;}
+.ioc-m-tool-hope{background:#f2eef6;color:#3c3489;}
+.ioc-m-tool-stress{background:#fff3e0;color:#e65100;}
+.ioc-m-when{margin-top:0.5rem;display:flex;gap:6px;flex-wrap:wrap;}
+.outcome-group-label{font-family:'Poppins',sans-serif;font-weight:700;font-size:0.72rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--blue);margin-bottom:0.9rem;padding-left:2px;}
+.measurement-section{background:var(--off-white);}
+.measure-group-title{margin-bottom:0.75rem;margin-top:0;}
+.measure-group-title + .measure-group-title{margin-top:2rem;}
+.mgbadge{display:inline-block;font-family:'Poppins',sans-serif;font-weight:700;font-size:0.75rem;letter-spacing:0.06em;text-transform:uppercase;padding:5px 14px;border-radius:20px;}
+.mgb-chatter{background:var(--teal-light);color:#085041;border:1px solid rgba(44,179,185,0.4);}
+.mgb-listener{background:#faeeda;color:#633806;border:1px solid rgba(186,117,23,0.4);}
+.mgb-ecosystem{background:var(--purple-light);color:#3c3489;border:1px solid rgba(141,100,163,0.4);}
+.mgb-stories{background:var(--blue-light);color:#0c447c;border:1px solid rgba(18,82,132,0.3);}
+.mrow-chatter td{background:#f0faf7 !important;border-left:3px solid var(--teal);}
+.mrow-listener td{background:#fdf6ec !important;border-left:3px solid #ba7517;}
+.mrow-ecosystem td{background:#f5f0fa !important;border-left:3px solid var(--purple);}
+.mrow-stories td{background:var(--blue-light) !important;border-left:3px solid var(--blue);}
+.measurement-table tr:nth-child(even) td{filter:brightness(0.97);}
+.panas-explainer{background:var(--white);border:1px solid var(--border);border-left:4px solid var(--teal);border-radius:0 12px 12px 0;padding:1.5rem 1.75rem;margin-bottom:1.25rem;}
+.panas-header{margin-bottom:1.25rem;}
+.panas-title{font-family:'Poppins',sans-serif;font-weight:700;font-size:0.95rem;color:var(--blue);margin-bottom:0.25rem;}
+.panas-sub{font-size:0.78rem;color:var(--text-muted);font-style:italic;}
+.panas-body{display:flex;align-items:flex-start;gap:0.75rem;margin-bottom:1.25rem;flex-wrap:wrap;}
+.panas-step{flex:1;分钟-width:200px;background:var(--off-white);border-radius:8px;padding:1rem;}
+.panas-step-num{font-family:'Poppins',sans-serif;font-weight:700;font-size:1.1rem;color:var(--teal);margin-bottom:0.4rem;}
+.panas-step-text{font-size:0.82rem;color:var(--text-muted);line-height:1.6;}
+.panas-step-text strong{color:var(--text);}
+.panas-arrow{font-size:1.2rem;color:var(--teal);font-weight:700;padding-top:1.5rem;flex-shrink:0;}
+.panas-scale{border-top:1px solid var(--border);padding-top:1rem;}
+.panas-scale-label{font-size:0.78rem;font-family:'Poppins',sans-serif;font-weight:600;color:var(--text-muted);margin-bottom:0.6rem;text-transform:uppercase;letter-spacing:0.06em;}
+.panas-scale-items{display:flex;gap:6px;}
+.psi{flex:1;text-align:center;border-radius:8px;padding:8px 4px;border:1px solid var(--border);}
+.psi-1{background:#fcebeb;}.psi-2{background:#faeeda;}.psi-3{background:#f1efe8;}.psi-4{background:#e1f5ee;}.psi-5{background:#e6f1fb;}
+.psi-num{font-family:'Poppins',sans-serif;font-weight:700;font-size:1rem;margin-bottom:2px;}
+.psi-1 .psi-num{color:#a32d2d;}.psi-2 .psi-num{color:#633806;}.psi-3 .psi-num{color:#444441;}.psi-4 .psi-num{color:#085041;}.psi-5 .psi-num{color:#0c447c;}
+.psi-lbl{font-size:0.65rem;color:var(--text-muted);line-height:1.3;}
+.impact-narrative{background:var(--blue);border-radius:16px;padding:3rem;margin-bottom:3rem;position:relative;overflow:hidden;}
+.spark-block{background:var(--blue);border-radius:16px;padding:2.5rem;margin-bottom:3rem;position:relative;overflow:hidden;}
+.spark-block::after{content:'"';position:absolute;right:1.5rem;top:-1.5rem;font-size:12rem;font-family:'Poppins',sans-serif;font-weight:700;color:rgba(255,255,255,0.05);line-height:1;pointer-events:none;}
+.spark-headline{font-family:'Poppins',sans-serif;font-weight:700;font-size:1.3rem;color:#fff;margin-bottom:0.75rem;position:relative;z-index:1;}
+.spark-body{font-size:0.95rem;color:rgba(255,255,255,0.75);line-height:1.8;max-width:720px;margin-bottom:2rem;position:relative;z-index:1;}
+.spark-cards{display:grid;grid-template-columns:1fr 1fr;gap:1rem;position:relative;z-index:1;}
+.spark-card{background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);border-radius:10px;padding:1.25rem;}
+.spark-card:nth-child(1){border-top:3px solid var(--teal);}
+.spark-card:nth-child(2){border-top:3px solid var(--red);}
+.spark-card:nth-child(3){border-top:3px solid var(--purple);}
+.spark-card:nth-child(4){border-top:3px solid rgba(255,255,255,0.3);}
+.spark-card-title{font-family:'Poppins',sans-serif;font-weight:600;font-size:0.88rem;color:#fff;margin-bottom:0.5rem;}
+.spark-card-desc{font-size:0.8rem;color:rgba(255,255,255,0.65);line-height:1.6;}
+@media(max-width:560px){.spark-cards{grid-template-columns:1fr;}}
+.impact-narrative::after{content:'"';position:absolute;right:2rem;top:-1rem;font-size:14rem;font-family:'Poppins',sans-serif;font-weight:700;color:rgba(255,255,255,0.05);line-height:1;}
+.impact-narrative p{font-size:1.15rem;color:#fff;line-height:1.8;max-width:700px;position:relative;z-index:1;font-style:italic;}
+.impact-narrative cite{display:block;margin-top:1.2rem;font-size:0.8rem;color:rgba(255,255,255,0.5);font-style:normal;font-family:'Poppins',sans-serif;font-weight:600;letter-spacing:0.06em;}
+
+.impact-pillars{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1.5rem;margin-bottom:3rem;}
+.impact-pillar{border-radius:12px;padding:1.75rem;border:1px solid var(--border);}
+.ip-teal{background:var(--teal-light);border-color:rgba(44,179,185,0.3);}
+.ip-purple{background:var(--purple-light);border-color:rgba(141,100,163,0.3);}
+.ip-blue{background:var(--blue-light);border-color:rgba(18,82,132,0.2);}
+.impact-pillar h3{font-size:1rem;font-weight:700;margin-bottom:0.5rem;}
+.ip-teal h3{color:#1a7a7e;}
+.ip-purple h3{color:#5d3f72;}
+.ip-blue h3{color:var(--blue);}
+.impact-pillar p{font-size:0.85rem;color:var(--text-muted);line-height:1.6;}
+
+.measurement-table{width:100%;border-collapse:collapse;border-radius:12px;overflow:hidden;border:1px solid var(--border);}
+.measurement-table th{background:var(--blue);color:#fff;font-family:'Poppins',sans-serif;font-size:0.78rem;font-weight:600;letter-spacing:0.05em;text-transform:uppercase;padding:1rem 1.25rem;text-align:left;}
+.measurement-table td{padding:0.9rem 1.25rem;font-size:0.85rem;border-bottom:1px solid var(--border);vertical-align:top;line-height:1.6;}
+.measurement-table tr:last-child td{border-bottom:none;}
+.measurement-table tr:nth-child(even) td{background:var(--off-white);}
+.ti分钟g-pill{display:inline-block;font-size:0.68rem;font-family:'Poppins',sans-serif;font-weight:600;padding:2px 8px;border-radius:10px;white-space:nowrap;}
+.tp-now{background:var(--teal-light);color:#1a7a7e;}
+.tp-weeks{background:var(--purple-light);color:#5d3f72;}
+.tp-months{background:#fff3e0;color:#e65100;}
+
+.partners-section{background:var(--off-white);}
+.partners-grid{display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;}
+.partner-card{background:var(--white);border-radius:12px;padding:1.5rem;border:1px solid var(--border);display:flex;flex-direction:column;gap:0.5rem;}
+.partner-role{font-size:0.68rem;font-family:'Poppins',sans-serif;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--teal);}
+.partner-name{font-family:'Poppins',sans-serif;font-weight:700;font-size:1rem;color:var(--blue);}
+.partner-desc{font-size:0.83rem;color:var(--text-muted);line-height:1.6;}
+
+.cta-section{background:linear-gradient(135deg,var(--blue-dark) 0%,var(--blue) 60%,#1a7a7e 100%);padding:5rem 2rem;text-align:center;}
+.cta-section h2{font-size:clamp(1.8rem,3vw,2.8rem);color:#fff;margin-bottom:1rem;}
+.cta-section p{font-size:1rem;color:rgba(255,255,255,0.7);max-width:560px;margin:0 auto 2.5rem;line-height:1.8;}
+.cta-buttons{display:flex;gap:1rem;justify-content:center;flex-wrap:wrap;}
+.btn-primary{background:var(--red);color:#fff;border:none;font-family:'Poppins',sans-serif;font-weight:600;font-size:0.85rem;letter-spacing:0.04em;padding:14px 28px;border-radius:8px;cursor:pointer;text-decoration:none;display:inline-block;}
+.btn-outline{background:transparent;color:#fff;border:1px solid rgba(255,255,255,0.4);font-family:'Poppins',sans-serif;font-weight:600;font-size:0.85rem;letter-spacing:0.04em;padding:14px 28px;border-radius:8px;cursor:pointer;text-decoration:none;display:inline-block;}
+
+footer{background:var(--blue-dark);padding:2rem;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem;}
+footer p{font-size:0.8rem;color:rgba(255,255,255,0.4);}
+.footer-brand{font-family:'Poppins',sans-serif;font-weight:700;color:rgba(255,255,255,0.6);font-size:0.9rem;}
+.footer-brand span{color:var(--red);}
+
+@media(max-width:768px){
+  .problem-grid,.roles-grid,.connection-cards,.impact-pillars,.impact-outcomes-grid{grid-template-columns:1fr;}
+  .transition-strip{grid-template-columns:1fr;}
+  .programme-hero{grid-template-columns:1fr;gap:2rem;}
+  .session-flow{grid-template-columns:1fr 1fr;}
+  .partners-grid{grid-template-columns:1fr;}
+  .training-block{grid-template-columns:80px 1fr;}
+  .nav-links{display:none;}
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-logo">Chat<span>Circles</span></div>
+  <div class="nav-links">
+    <a href="#problem">挑战</a>
+    <a href="#programme">计划</a>
+    <a href="#impact">影响</a>
+    <a href="#measurement">成效评估</a>
+    <a href="#partners">合作伙伴</a>
+  </div>
+</nav>
+
+<section class="hero">
+  <div class="hero-bg"></div>
+  <div class="hero-grid"></div>
+  <div class="hero-content">
+    <div class="hero-tag">资助申请书 — 文化、社区及青年部（青年司）</div>
+    <h1>你上一次感到被真正聆听，是什么时候？</h1>
+    <p class="hero-sub">Chat Circles 是一个社区身心健康计划，通过一对一的结构性交流，为正经历人生重要转折期的青年创造真实的人际连结。</p>
+    <div class="hero-partners">
+      <span>由</span>
+      <div class="partner-pill">Empact.sg</div>
+      <span>携手</span>
+      <div class="partner-pill">Anagami 影响</div>
+      <div class="partner-pill">CapitaLand Hope Foundation</div>
+      <div class="partner-pill">Hush TeaBar</div>
+      <div class="partner-pill">TSPP</div>
+    </div>
+  </div>
+  <div class="hero-scroll">向下滚动探索<div class="scroll-line"></div></div>
+</section>
+
+<section class="problem-section" id="problem">
+  <div class="container">
+    <div class="section-label">挑战</div>
+    <h2 class="section-title">正处于过渡期的青年，比任何时候都更感压力与孤独</h2>
+    <div class="section-divider"></div>
+    <p class="section-intro">在最需要韧性的人生时刻，新加坡青年承受着巨大的压力。这些过渡阶段——转校、进入职场、适应新角色——正是年轻人最需要支持、却最不可能主动寻求帮助的时期。</p>
+
+    <div class="problem-grid">
+      <div class="problem-card">
+        <div class="problem-label">压力无处释放</div>
+        <h3>压力悄然积聚</h3>
+        <p>学业压力、父母期待、同辈竞争与对未来的迷茫，在人生过渡期同时涌现。然而许多青年缺乏一个安全、低门槛的空间去倾诉——一个不怕被评判、被建议、被追责的地方。</p>
+      </div>
+      <div class="problem-card accent">
+        <div class="problem-label">连结的缺失</div>
+        <h3>被人群包围，却无人真正看见</h3>
+        <p>数字联结制造了社交生活的假象，却缺乏其本质。许多新加坡年轻人拥有数百个网络联系人，却难以说出一个可以真正坦诚相待的人。</p>
+      </div>
+      <div class="problem-card accent2">
+        <div class="problem-label">污名化与资源获取</div>
+        <h3>寻求帮助并不容易</h3>
+        <p>即使青年意识到自己正在挣扎，寻求专业支持的门槛依然很高。污名化、费用以及现有服务的临床性质，使许多年轻人选择独自承受。</p>
+      </div>
+      <div class="problem-card accent3">
+        <div class="problem-label">体系中的缺口</div>
+        <h3>第一层支持严重不足</h3>
+        <p>新加坡心理健康策略将上游预防列为最高优先事项，然而面向青年的社区层面日常身心支持，与临床服务相比仍严重不足。差距最大之处，恰恰是最有可能预防问题的地方。</p>
+      </div>
+    </div>
+
+    <div class="transition-strip">
+      <div class="transition-item">
+        <div class="transition-icon">
+          <svg viewBox="0 0 24 24"><path d="M12 2v6M12 8l-3-3M12 8l3-3"/><rect x="4" y="9" width="16" height="12" rx="2"/><path d="M8 9V7a4 4 0 018 0v2"/></svg>
+        </div>
+        <h4>学校到学校</h4>
+        <p>每次转变都打散了原有的社交网络，要求青年迅速融入陌生的环境与同辈群体</p>
+      </div>
+      <div class="transition-item">
+        <div class="transition-icon">
+          <svg viewBox="0 0 24 24"><path d="M20 7H4a2 2 0 00-2 2v10a2 2 0 002 2h16a2 2 0 002-2V9a2 2 0 00-2-2z"/><path d="M16 3H8l-2 4h12l-2-4z"/></svg>
+        </div>
+        <h4>学校到职场</h4>
+        <p>踏入职场带来身份认同的转变、新的权力关系，以及失去学校所提供的结构性支持体系</p>
+      </div>
+      <div class="transition-item">
+        <div class="transition-icon">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+        </div>
+        <h4>角色到角色</h4>
+        <p>职业生涯初期的频繁转换，带来反复的适应循环、归属感焦虑，以及从头重建身份认同的需要</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="programme-section" id="programme">
+  <div class="container">
+    <div class="section-label">The 计划</div>
+    <h2 class="section-title">一套完整的计划——而非单次活动</h2>
+    <div class="section-divider"></div>
+    <p class="section-intro">Chat Circles 是一套经过精心设计的体系，由两个相互依存的组成部分构成：为青年提供的结构性交流活动，以及为志愿聆听者提供的身心健康对话技能培训。缺少任何一方，计划都无法运作。两者结合，同时为"倾诉者"与"聆听者"带来成果——使整个计划成为真正的社区投资，而非单次活动。</p>
+
+    <div class="package-strip">
+      <div class="pkg-card pkg-training">
+        <div class="pkg-num">1</div>
+        <div class="pkg-content">
+          <div class="pkg-title">聆听者培训</div>
+          <div class="pkg-sub">活动开始前</div>
+          <div class="pkg-desc">每位聆听者须完成一个3小时的身心健康对话技能工作坊，学习主动聆听、发掘优势和正向心理学，并通过结构性角色扮演进行实践，方可参与活动。</div>
+          <div class="pkg-who">受益对象：聆听者</div>
+        </div>
+      </div>
+      <div class="pkg-arrow">+</div>
+      <div class="pkg-card pkg-session">
+        <div class="pkg-num">2</div>
+        <div class="pkg-content">
+          <div class="pkg-title">Chat Circles 活动</div>
+          <div class="pkg-sub">活动本身</div>
+          <div class="pkg-desc">一个2小时的引导式体验——正念开场、在饮料陪伴下进行的一对一结构性对话、团体分享与结束环节。一个安全、温暖、非临床的真实人际连结空间。</div>
+          <div class="pkg-who">受益对象：倾诉者 + 聆听者</div>
+        </div>
+      </div>
+      <div class="pkg-arrow">=</div>
+      <div class="pkg-card pkg-outcome">
+        <div class="pkg-num">3</div>
+        <div class="pkg-content">
+          <div class="pkg-title">双向影响</div>
+          <div class="pkg-sub">综合成果</div>
+          <div class="pkg-desc">倾诉者体验被聆听、减轻压力、建立能动性；聆听者获得真实技能、找到成就感，并往往进一步追求自我发展。一个计划，两类受益者，成倍放大的影响力。</div>
+          <div class="pkg-who">受益对象：倾诉者 + 聆听者 + 生态系统</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="prog-sub-label">活动设计——当天发生的事</div>
+    <div class="programme-hero">
+      <div class="programme-hero-text">
+        <h3>Chat Circles 体验</h3>
+        <p>每次活动将青年参与者（倾诉者）与经过培训的志愿对话伙伴（聆听者）配对，共同进行一段60分钟、以正向心理学为引导的一对一结构性交流。对话聚焦于优势、有意义的时刻以及能振奋精神的事——而非问题或挑战。</p>
+        <p style="margin-top:1rem">环境温馨友好，刻意保持非临床氛围。一个舒适的场地，一杯饮料，一位愿意给予你全神贯注、不带评判的陌生人。</p>
+      </div>
+      <div class="programme-pillars">
+        <div class="pillar"><div class="pillar-dot" style="background:var(--teal)"></div><div><div class="pillar-text">正向心理学框架</div><div class="pillar-sub">以优势为本，而非聚焦问题</div></div></div>
+        <div class="pillar"><div class="pillar-dot" style="background:#fb6171"></div><div><div class="pillar-text">一对一，无旁观者</div><div class="pillar-sub">私密、安全、保密</div></div></div>
+        <div class="pillar"><div class="pillar-dot" style="background:var(--purple)"></div><div><div class="pillar-text">正念开场</div><div class="pillar-sub">Hush 聋人引导员，呼吸技巧</div></div></div>
+        <div class="pillar"><div class="pillar-dot" style="background:#ffd54f"></div><div><div class="pillar-text">由参与者主导的结束环节</div><div class="pillar-sub">一个收获，一个被点名的优势</div></div></div>
+        <div class="pillar"><div class="pillar-dot" style="background:var(--teal)"></div><div><div class="pillar-text">清晰的转介途径</div><div class="pillar-sub">有需要时提供进一步支持</div></div></div>
+      </div>
+    </div>
+
+    <div class="session-flow">
+      <div class="flow-step"><div class="flow-time">20分钟</div><div class="flow-name">到达</div><div class="flow-desc">倾诉者选择聆听者，饮料点好，氛围逐渐安定。</div></div>
+      <div class="flow-step"><div class="flow-time">10分钟</div><div class="flow-name">情境说明</div><div class="flow-desc">主持人热情欢迎，讲解对话礼仪，确保安全感。</div></div>
+      <div class="flow-step"><div class="flow-time">15分钟</div><div class="flow-name">安定身心</div><div class="flow-desc">Hush 引导员使用触感物品和呼吸练习带领正念活动。</div></div>
+      <div class="flow-step"><div class="flow-time">60分钟</div><div class="flow-name">对话</div><div class="flow-desc">活动的核心。由提示卡引导，聚焦于优势。</div></div>
+      <div class="flow-step"><div class="flow-time">15分钟</div><div class="flow-name">反思</div><div class="flow-desc">团体分享，说出一个收获，分享后续资源。</div></div>
+    </div>
+
+    <div class="roles-grid">
+      <div class="role-card chatter">
+        <div class="role-title">倾诉者</div>
+        <div class="role-sub">青年参与者——被服务的一方</div>
+        <ul class="role-list">
+          <li>根据第一印象选择聆听者——从一开始便拥有自主权</li>
+          <li>分享自己生命中有意义、有目的的时刻</li>
+          <li>借助触感提示物练习命名自身情绪</li>
+          <li>带着一个被点名的优势和一个有意义的收获离开</li>
+          <li>如需进一步支持，可获得转介信息</li>
+        </ul>
+      </div>
+      <div class="role-card listener">
+        <div class="role-title">聆听者</div>
+        <div class="role-sub">经过培训的志愿对话伙伴</div>
+        <ul class="role-list">
+          <li>在整整60分钟内给予全神贯注、不带评判的关注</li>
+          <li>以正向心理学为引导，提出开放性、向前看的问题</li>
+          <li>反映所听到的内容——从不给建议、修正或转移话题</li>
+          <li>在倾诉者的分享中点出一个优势或有意义的特质</li>
+          <li>能识别何时需要让主办方介入以提供更多支持</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="prog-sub-label" style="margin-top:3rem;">聆听者培训——活动前的准备</div>
+    <p style="font-size:0.95rem;color:var(--text-muted);line-height:1.8;margin-bottom:2rem;max-width:680px;">每位聆听者在参与活动前须完成一个三小时的身心健康对话技能工作坊。该培训由正向心理学学院合作设计与讲授，旨在赋予志愿者开展有意义、以优势为本的对话技能——而非诊断、修复或辅导。</p>
+    <div class="training-blocks">
+      <div class="training-block t1">
+        <div class="training-time"><div class="training-分钟s">30</div><div class="training-分钟s-label">分钟</div></div>
+        <div class="training-content">
+          <h4>欢迎、背景与自我觉察</h4>
+          <p>聆听者了解自身角色及其边界。他们从自身的情绪觉察练习开始——先亲身体验他们将为倾诉者创造的感受。完成培训前自信心调查。</p>
+          <div class="training-tags"><span class="ttag ttag-teal">自我反思</span><span class="ttag ttag-teal">角色清晰</span><span class="ttag ttag-blue">基线调查</span></div>
+        </div>
+      </div>
+      <div class="training-block t2">
+        <div class="training-time"><div class="training-分钟s">45</div><div class="training-分钟s-label">分钟</div></div>
+        <div class="training-content">
+          <h4>核心对话技能</h4>
+          <p>主动聆听、不带评判的临在，以及支持性提问。实际示范与配对练习，聚焦于聆听与建议之间的区别——这是新志愿者最常见的盲点。</p>
+          <div class="training-tags"><span class="ttag ttag-blue">主动聆听</span><span class="ttag ttag-blue">开放性问题</span><span class="ttag ttag-blue">配对练习</span></div>
+        </div>
+      </div>
+      <div class="training-block t3">
+        <div class="training-time"><div class="training-分钟s">30</div><div class="training-分钟s-label">分钟</div></div>
+        <div class="training-content">
+          <h4>正向心理学要领</h4>
+          <p>Chat Circles 背后的理念。发掘优势、有意义的时刻，以及成长型思维的语言。聆听者练习在他人的分享中识别并点名优势——这正是令本计划与众不同的核心技能。</p>
+          <div class="training-tags"><span class="ttag ttag-purple">发掘优势</span><span class="ttag ttag-purple">正向框架</span><span class="ttag ttag-purple">由 TSPP 引导</span></div>
+        </div>
+      </div>
+      <div class="training-block t4">
+        <div class="training-time"><div class="training-分钟s">50</div><div class="training-分钟s-label">分钟</div></div>
+        <div class="training-content">
+          <h4>角色扮演与场景练习</h4>
+          <p>使用实际提示卡进行完整的对话模拟。两轮结构性练习，由培训师观察并给予反馈。具体场景包括：对话陷入僵局、倾诉者出现情绪困扰迹象、如何温暖地结束对话。</p>
+          <div class="training-tags"><span class="ttag ttag-amber">角色扮演</span><span class="ttag ttag-amber">培训师观察</span><span class="ttag ttag-amber">场景卡片</span></div>
+        </div>
+      </div>
+      <div class="training-block t5">
+        <div class="training-time"><div class="training-分钟s">25</div><div class="training-分钟s-label">分钟</div></div>
+        <div class="training-content">
+          <h4>边界、转介途径与自我关怀</h4>
+          <p>当对话内容在脑海中挥之不去时该如何应对；如何识别何时需要为某人连接进一步支持；升级协议演练；完成培训后自信心调查。聆听者带着充分准备而非焦虑离开。</p>
+          <div class="training-tags"><span class="ttag ttag-red">边界</span><span class="ttag ttag-red">转介协议</span><span class="ttag ttag-blue">培训后调查</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="impact-section" id="impact">
+  <div class="container">
+    <div class="section-label">计划影响</div>
+    <h2 class="section-title">Chat Circles 为所有参与者创造的价值</h2>
+    <div class="section-divider"></div>
+    <p class="section-intro">Chat Circles 的影响同时向三个方向流动——流向参与的青年、流向聆听的志愿者，以及流向更广泛的社区生态系统。而这一切背后，只有一个核心理念：真实的人际连结，只要用心创造，就能改变一个人内心的某些东西。</p>
+
+    <div class="spark-block">
+      <div class="spark-headline">真实人际连结的火花</div>
+      <div class="spark-body">Chat Circles 并不声称能解决孤独问题。它所创造的，是更为精准的东西——一段经过精心设计的、真正被另一个人聆听的体验。在一座年轻人被人群包围、却鲜少被真正看见的城市里，这样的体验比听起来更稀有，也更有力量。</div>
+      <div class="spark-cards">
+        <div class="spark-card">
+          <div class="spark-card-title">现代连结的悖论</div>
+          <div class="spark-card-desc">当今青年是历史上数字连结程度最高的一代，却也是最孤独的一代之一。社交媒体制造了连结的外观，却缺乏其内涵。Chat Circles 提供的恰恰相反——没有屏幕，没有表演，没有观众，只有两个人和一段不匆忙的对话。</div>
+        </div>
+        <div class="spark-card">
+          <div class="spark-card-title">打破"隐形"的循环</div>
+          <div class="spark-card-desc">真正被聆听——没有打断，没有评判，没有预设议程——是一种身体力行的体验。对于许多处于过渡期的青年而言，被一个陌生人真诚看见和珍视这一简单行为，能从根本上改变他们对自己及前行能力的认知。</div>
+        </div>
+        <div class="spark-card">
+          <div class="spark-card-title">在关键时刻建立社交自信</div>
+          <div class="spark-card-desc">过渡期需要新的社交技能。Chat Circles 提供了一次与陌生人进行真实对话的安全、结构化体验——为"连结是什么感觉"建立新的参照点，并培养再次主动寻求连结的自信。</div>
+        </div>
+        <div class="spark-card">
+          <div class="spark-card-title">连结是双向的</div>
+          <div class="spark-card-desc">这段体验并非单向的。聆听者——往往是在高绩效、低脆弱性职场工作的企业员工——常常形容 Chat Circles 是他们数月以来最真实的人际交流之一。这份火花是相互的。</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="outcome-group-label">对倾诉者</div>
+    <div class="impact-outcomes-grid">
+      <div class="impact-outcome-card ioc-teal">
+        <div class="ioc-label">倾诉者成果 1</div>
+        <div class="ioc-title">一段被真正聆听的转化性体验</div>
+        <div class="ioc-desc">对于许多在不确定的过渡期中摸索前行的青年而言，拥有一位陌生人给予全神贯注、不带评判的临在，是真正难得的体验。在没有建议、没有打断、没有预设目的的情况下被聆听，会带来一种可感知的转变——一种积极的火花和焕新的自我价值感，远在活动结束后仍持续涌动。</div>
+      </div>
+      <div class="impact-outcome-card ioc-coral">
+        <div class="ioc-label">倾诉者成果 2</div>
+        <div class="ioc-title">压力与情绪负担的减轻</div>
+        <div class="ioc-desc">青年带着过渡期的重担来到 Chat Circles——学业压力、职业不确定性、社交焦虑。安定练习、正念开场，以及不匆忙、富有支持性的对话体验，共同作用以减轻这些压力。比来时轻松地离开，本身就是一个有意义的成果。</div>
+      </div>
+      <div class="impact-outcome-card ioc-blue">
+        <div class="ioc-label">倾诉者成果 3</div>
+        <div class="ioc-title">个人优势的被看见</div>
+        <div class="ioc-desc">通过引导性的正向心理学对话，每位倾诉者至少有一个个人优势被点名并反映回给他们。在一个不断用外部标准衡量青年的世界里，被看见"是谁"而非"做了什么"，既是一种肯定，也是一种心理扎根。</div>
+      </div>
+      <div class="impact-outcome-card ioc-purple">
+        <div class="ioc-label">倾诉者成果 4</div>
+        <div class="ioc-title">建立向前迈进的能动性与自信</div>
+        <div class="ioc-desc">被聆听、拥有被点名的优势、体验情感安全感，这些共同建立的不仅仅是好感觉——而是能动性。年轻人带着一种焕新的确信离开，相信自己有能力应对前方的路。这是与文化、社区及青年部对过渡期青年关注最直接相关的成果：不只是感觉好一些，而是感到自己有能力。</div>
+      </div>
+      <div class="impact-outcome-card ioc-teal2">
+        <div class="ioc-label">倾诉者成果 5</div>
+        <div class="ioc-title">对人际连结的焕新开放</div>
+        <div class="ioc-desc">通过在安全、结构化的环境中与陌生人进行有意义的对话，青年得以建立对自身社交能力的自信。这次活动成为一个参照点——证明真实的连结是可能的，值得再次追寻，直接对抗那种在人生过渡期往往会加深的孤立感。</div>
+      </div>
+      <div class="impact-outcome-card ioc-amber2">
+        <div class="ioc-label">倾诉者成果 6</div>
+        <div class="ioc-title">对社区资源与途径的认知</div>
+        <div class="ioc-desc">每位倾诉者离开时，都了解到可供自己使用的支持资源——辅导、导师计划、正向心理学课程、同伴支持网络。对于那些从不会主动寻求帮助的青年而言，一次温暖、无污名化的资源介绍，可能正是他们真正踏出那一步的开始。</div>
+      </div>
+    </div>
+
+    <div class="outcome-group-label" style="margin-top:2.5rem;">对聆听者</div>
+    <div class="impact-outcomes-grid">
+      <div class="impact-outcome-card ioc-amber">
+        <div class="ioc-label">聆听者成果 1</div>
+        <div class="ioc-title">在真实对话中学习并实践技能</div>
+        <div class="ioc-desc">聆听者培养并立即运用主动聆听、发掘优势、不带评判的临在以及支持性提问等技能。与大多数培训不同，这些技能并非停留在理论层面——它们在同一天的真实对话中接受检验。这种"学习+实践"于一次活动中完成的方式，加速了真正能力的形成。</div>
+      </div>
+      <div class="impact-outcome-card ioc-blue">
+        <div class="ioc-label">聆听者成果 2</div>
+        <div class="ioc-title">好奇心的火花与新的学习路径</div>
+        <div class="ioc-desc">对于初次接触正向心理学和教练技术的聆听者，这次培训打开了一扇门。许多人离开时渴望深入探索——报读 TSPP 课程、获取教练认证，或参与社区引导角色。Chat Circles 成为通往更广阔个人与职业发展生态系统的门户。</div>
+      </div>
+      <div class="impact-outcome-card ioc-teal">
+        <div class="ioc-label">聆听者成果 3</div>
+        <div class="ioc-title">通过有意义的贡献获得满足感</div>
+        <div class="ioc-desc">对于已具备教练、辅导或引导技能的聆听者，Chat Circles 提供了真正难得的机会——一个结构化、安全、有目的的情境，让他们将这些技能用于真正能从中受益的人。这种"给予得恰到好处，并看到它产生效果"的体验，带来深刻的满足感，并持续激励长期的志愿参与。</div>
+      </div>
+      <div class="impact-outcome-card ioc-teal2">
+        <div class="ioc-label">聆听者成果 4</div>
+        <div class="ioc-title">通过给予提升个人身心健康</div>
+        <div class="ioc-desc">全神贯注地聆听、为另一个人的故事留出空间，以及见证他们的成长，本身就是一种滋养。聆听者一致表示，活动结束后感到与他人更有连结、更有目标感、对自己更加积极。让倾诉者振奋的对话，同样也在提升聆听者。</div>
+      </div>
+    </div>
+
+    <div class="outcome-group-label" style="margin-top:2.5rem;">对生态系统</div>
+    <div class="impact-outcomes-grid" style="grid-template-columns:1fr 1fr;">
+      <div class="impact-outcome-card ioc-purple">
+        <div class="ioc-label">生态系统成果 1</div>
+        <div class="ioc-title">触达青年的有效社区外展渠道</div>
+        <div class="ioc-desc">那些绝不会打开政府邮件、参加讲座或致电求助热线的青年，却愿意与陌生人共饮、进行一段真实的对话。Chat Circles 创造了一个受信任、低门槛的接触点，让各类计划、资源和服务能够有机地触达青年——在一个他们放松、开放、易于接受的情境中。</div>
+      </div>
+      <div class="impact-outcome-card ioc-coral">
+        <div class="ioc-label">生态系统成果 2</div>
+        <div class="ioc-title">填补新加坡关怀体系中的第一层缺口</div>
+        <div class="ioc-desc">新加坡国家心理健康与身心健康策略依赖于强有力的上游预防层——然而社区层面的基础设施仍然薄弱。Chat Circles 直接回应这一需求，创建了一个可规模化、可复制的第一层支持模式，可被学校、慈善机构、企业和社区空间采用。它不是一次性活动，而是一套基础设施。</div>
+      </div>
+    </div>
+
+    <div class="impact-narrative">
+      <p>"Chat Circles 并不要求年轻人处于困境中才能从中受益。它只要求他们做一个普通的人——对自己抱有好奇，对连结保持开放，愿意花一个小时进行真实的对话。成功的衡量标准，不是痛苦的消失，而是某种更美好的东西的存在。"</p>
+      <cite>—— Chat Circles 计划理念，Empact.sg</cite>
+    </div>
+  </div>
+</section>
+
+<section class="measurement-section" id="measurement">
+  <div class="container">
+    <div class="section-label">成效评估</div>
+    <h2 class="section-title">我们如何衡量重要的事</h2>
+    <div class="section-divider"></div>
+    <p class="section-intro">我们的评估方式适度、低负担且具有可信度。我们使用三种经过验证的工具，共同构建多维度的证据体系——在单次活动中捕捉情绪提升、压力减轻和能动性建立的证据，并在四周后收集跟进证据。</p>
+
+    <div class="methodology-block">
+      <div class="meth-title">我们的评估工具</div>
+      <div class="meth-intro">每种工具捕捉影响力的一个独特且互补的维度。合计占用参与者不到6分钟的时间——轻量到不会让人感到像临床评估，却足够严谨，能为政府资助方生成可信的证据。</div>
+      <div class="meth-grid">
+        <div class="meth-card meth-panas">
+          <div class="meth-tool-name">PANAS-SF</div>
+          <div class="meth-tool-full">正负情感量表——简短版</div>
+          <div class="meth-tool-desc">测量情绪情感——具体而言，是正向情绪是否存在且活跃。五个情绪词（感兴趣、兴奋、强健、热情、自豪）各以1-5分评分。分别在活动开始前和结束时进行。前后得分的差异，是被聆听体验带来情绪提升的直接证据。</div>
+          <div class="meth-captures"><span class="meth-cap-label">捕捉：</span> 情绪提升 · 正向情感转变 · 心境改变</div>
+        </div>
+        <div class="meth-card meth-stress">
+          <div class="meth-tool-name">单题压力测量</div>
+          <div class="meth-tool-full">经验证的单题感知压力量表</div>
+          <div class="meth-tool-desc">"你现在感到多大压力？"以0-10分评分。简洁、普遍易懂，任何资助方或政策制定者都能立即理解。分别在活动前后进行。得分降低是最直观、最有说服力的影响力指标之一——对于文化、社区及青年部关注青年过渡期压力的议题尤为切题。</div>
+          <div class="meth-captures"><span class="meth-cap-label">捕捉：</span> 压力减轻 · 情绪调节 · 过渡期压力释放</div>
+        </div>
+        <div class="meth-card meth-hope">
+          <div class="meth-tool-name">状态希望量表</div>
+          <div class="meth-tool-full">改编自史奈德状态希望量表（能动性 + 路径思维分量表）</div>
+          <div class="meth-tool-desc">将希望衡量为一种认知能力而非情感——相信前进的路径存在（路径思维）以及追求这些路径的能量（能动性思维）。与测量稳定特质的特质版本不同，状态版本捕捉的是此刻的希望感，使其成为活动结束后即时测量的理想工具。三道改编题目仅在活动结束后作答。</div>
+          <div class="meth-captures"><span class="meth-cap-label">捕捉：</span> 能动性建立 · 路径思维 · 应对过渡期的自信</div>
+        </div>
+      </div>
+      <div class="meth-why">
+        <div class="meth-why-title">为何这三种工具结合使用能增强对文化、社区及青年部的申请说服力</div>
+        <div class="meth-why-body">PANAS-SF 回答：<em>活动提升了他们的心情吗？</em>压力测量回答：<em>活动缓解了他们的压力吗？</em>状态希望量表回答：<em>活动改变了他们对自身行动能力的看法吗？</em>第三个问题将 Chat Circles 从一种身心健康体验提升为一种能动性建构干预——这正是一个专注于青年如何应对人生最艰难过渡期的政府部门所关心的论点。</div>
+      </div>
+    </div>
+
+    <div class="outcome-group-label">对倾诉者</div>
+    <table class="measurement-table" style="margin-bottom:1.5rem;">
+      <thead><tr><th>成果</th><th>工具／方法</th><th>题目或测量内容</th><th>时间</th></tr></thead>
+      <tbody>
+        <tr class="mrow-chatter"><td><strong>真正被聆听</strong></td><td><span class="ioc-m-tool">PANAS-SF</span></td><td>活动前后各对5个情绪词以1-5分评分——得分变化显示情绪提升</td><td><span class="ti分钟g-pill tp-now">当天</span></td></tr>
+        <tr class="mrow-chatter"><td><strong>真正被聆听</strong></td><td><span class="ioc-m-tool">Exit survey</span></td><td>"今天的对话让我感到被真正聆听" — 1-5分</td><td><span class="ti分钟g-pill tp-now">当天</span></td></tr>
+        <tr class="mrow-chatter"><td><strong>压力减轻</strong></td><td><span class="ioc-m-tool" style="background:#fff3e0;color:#e65100;">Stress item</span></td><td>"你现在感到多大压力？" — 活动前后以0-10分评分</td><td><span class="ti分钟g-pill tp-now">当天</span></td></tr>
+        <tr class="mrow-chatter"><td><strong>压力减轻</strong></td><td><span class="ioc-m-tool">Exit survey</span></td><td>"比起到来时，我现在感到更平静、更安定" — 1-5分</td><td><span class="ti分钟g-pill tp-now">当天</span></td></tr>
+        <tr class="mrow-chatter"><td><strong>优势被看见</strong></td><td><span class="ioc-m-tool">Exit survey</span></td><td>"我带着对自己某个积极方面的认知离开" — 1-5分</td><td><span class="ti分钟g-pill tp-now">当天</span></td></tr>
+        <tr class="mrow-chatter"><td><strong>优势被看见</strong></td><td><span class="ioc-m-tool">Listener note</span></td><td>聆听者记录他们所点名的具体优势——质性证据</td><td><span class="ti分钟g-pill tp-now">当天</span></td></tr>
+        <tr class="mrow-chatter"><td><strong>能动性与自信</strong></td><td><span class="ioc-m-tool" style="background:#f2eef6;color:#3c3489;">State Hope</span></td><td>"我感到自己更有能力应对前方的挑战" — 1-5分（能动性分量表）</td><td><span class="ti分钟g-pill tp-now">当天</span></td></tr>
+        <tr class="mrow-chatter"><td><strong>能动性与自信</strong></td><td><span class="ioc-m-tool" style="background:#f2eef6;color:#3c3489;">State Hope</span></td><td>"我感到在面对挑战时更有自信" — 1-5分（能动性分量表）</td><td><span class="ti分钟g-pill tp-now">当天</span></td></tr>
+        <tr class="mrow-chatter"><td><strong>能动性与自信</strong></td><td><span class="ioc-m-tool" style="background:#f2eef6;color:#3c3489;">State Hope</span></td><td>"我能看到自己前进的方向" — 1-5分（路径思维分量表）</td><td><span class="ti分钟g-pill tp-now">当天</span></td></tr>
+        <tr class="mrow-chatter"><td><strong>对连结的开放</strong></td><td><span class="ioc-m-tool">Exit survey</span></td><td>"今天让我感到更愿意与身边的人建立连结" — 1-5分</td><td><span class="ti分钟g-pill tp-now">当天</span></td></tr>
+        <tr class="mrow-chatter"><td><strong>对连结的开放</strong></td><td><span class="ioc-m-tool">Follow-up survey</span></td><td>"自 Chat Circles 活动以来，你是否与新认识的人进行过一次有意义的对话？" — 是/否</td><td><span class="ti分钟g-pill tp-weeks">4周后</span></td></tr>
+        <tr class="mrow-chatter"><td><strong>资源认知</strong></td><td><span class="ioc-m-tool">Exit survey</span></td><td>"我现在知道如果需要进一步支持或了解更多，可以去哪里" — 1-5分</td><td><span class="ti分钟g-pill tp-now">当天</span></td></tr>
+        <tr class="mrow-chatter"><td><strong>资源认知</strong></td><td><span class="ioc-m-tool">Follow-up survey</span></td><td>"你是否了解或使用过 Chat Circles 活动分享的任何资源？" — 是/否 + 开放性回答</td><td><span class="ti分钟g-pill tp-weeks">4周后</span></td></tr>
+      </tbody>
+    </table>
+
+    <div class="outcome-group-label">对聆听者</div>
+    <table class="measurement-table" style="margin-bottom:1.5rem;">
+      <thead><tr><th>成果</th><th>工具／方法</th><th>题目或测量内容</th><th>时间</th></tr></thead>
+      <tbody>
+        <tr class="mrow-listener"><td><strong>技能学习与实践</strong></td><td><span class="ioc-m-tool">Self-efficacy scale</span></td><td>培训前、培训后及活动后各进行一次4题自信心调查——得分变化追踪成长</td><td><span class="ti分钟g-pill tp-now">三个时间点</span></td></tr>
+        <tr class="mrow-listener"><td><strong>技能学习与实践</strong></td><td><span class="ioc-m-tool">Trainer checklist</span></td><td>观察员在角色扮演中以3分制评估6项核心技能</td><td><span class="ti分钟g-pill tp-now">培训当天</span></td></tr>
+        <tr class="mrow-listener"><td><strong>好奇心的火花</strong></td><td><span class="ioc-m-tool">Post-event survey</span></td><td>"今天激发了我对正向心理学或教练技术进一步学习的兴趣" — 1-5分</td><td><span class="ti分钟g-pill tp-now">当天</span></td></tr>
+        <tr class="mrow-listener"><td><strong>好奇心的火花</strong></td><td><span class="ioc-m-tool">Post-event survey</span></td><td>"我希望了解更多进一步培训或志愿机会" — 是/否</td><td><span class="ti分钟g-pill tp-now">当天</span></td></tr>
+        <tr class="mrow-listener"><td><strong>通过贡献获得满足感</strong></td><td><span class="ioc-m-tool">Post-event survey</span></td><td>"我感到自己在今天的对话中真正发挥了积极作用" — 1-5分</td><td><span class="ti分钟g-pill tp-now">当天</span></td></tr>
+        <tr class="mrow-listener"><td><strong>通过贡献获得满足感</strong></td><td><span class="ioc-m-tool">Post-event survey</span></td><td>"我愿意再次作为聆听者参与志愿活动" — 是/否（追踪留任率）</td><td><span class="ti分钟g-pill tp-now">当天</span></td></tr>
+        <tr class="mrow-listener"><td><strong>个人身心健康提升</strong></td><td><span class="ioc-m-tool">Post-event survey</span></td><td>"与活动开始前相比，我现在感到更积极、更有活力" — 1-5分</td><td><span class="ti分钟g-pill tp-now">当天</span></td></tr>
+        <tr class="mrow-listener"><td><strong>个人身心健康提升</strong></td><td><span class="ioc-m-tool">Post-event survey</span></td><td>"今天的对话对我个人而言是有意义、有目的的" — 1-5分</td><td><span class="ti分钟g-pill tp-now">当天</span></td></tr>
+      </tbody>
+    </table>
+
+    <div class="outcome-group-label">对生态系统</div>
+    <table class="measurement-table" style="margin-bottom:1.5rem;">
+      <thead><tr><th>成果</th><th>工具／方法</th><th>追踪内容</th><th>时间</th></tr></thead>
+      <tbody>
+        <tr class="mrow-ecosystem"><td><strong>有效的外展渠道</strong></td><td><span class="ioc-m-tool">Partner survey</span></td><td>合作机构汇报 Chat Circles 是否触达了此前未使用其服务的青年</td><td><span class="ti分钟g-pill tp-weeks">持续进行</span></td></tr>
+        <tr class="mrow-ecosystem"><td><strong>有效的外展渠道</strong></td><td><span class="ioc-m-tool">Partner tracking</span></td><td>每次活动触达的首次接触青年人数；转介接受率</td><td><span class="ti分钟g-pill tp-weeks">持续进行</span></td></tr>
+      </tbody>
+    </table>
+
+    <div class="outcome-group-label">质性证据</div>
+    <table class="measurement-table">
+      <thead><tr><th>证据</th><th>方法</th><th>目的</th><th>时间</th></tr></thead>
+      <tbody>
+        <tr class="mrow-stories"><td><strong>连结与改变的故事</strong></td><td><span class="ioc-m-tool">Open reflection</span></td><td>"用一句话描述，今天的对话对你意味着什么？" — 在结束环节经同意后收集</td><td><span class="ti分钟g-pill tp-now">当天</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="partners-section" id="partners">
+  <div class="container">
+    <div class="section-label">主要合作伙伴</div>
+    <h2 class="section-title">为社区影响力而生的合作</h2>
+    <div class="section-divider"></div>
+    <p class="section-intro">Chat Circles 汇聚了一个独特的合作伙伴联盟——各方贡献独特的专业知识、网络与资源，共同打造一个整体大于各部分之和的计划。</p>
+    <div class="partners-grid">
+      <div class="partner-card">
+        <div class="partner-role">企业参与合作伙伴</div>
+        <div class="partner-name">Anagami 影响</div>
+        <div class="partner-desc">一家目的导向与系统设计工作室，协助领导者、企业和社区重塑思维方式与运作结构，以促进集体身心健康。负责联络企业合作伙伴和首席执行官，争取志愿者参与、认可，以及在试行阶段之后的计划采纳。</div>
+      </div>
+      <div class="partner-card">
+        <div class="partner-role">社区与场地合作伙伴</div>
+        <div class="partner-name">CapitaLand Hope Foundation</div>
+        <div class="partner-desc">凯德集团的慈善机构。通过其社区合作伙伴和餐饮租户网络，支持参与者招募和场地外展。是将本计划引入新加坡各处便捷、友好社区空间的关键合作者。</div>
+      </div>
+      <div class="partner-card">
+        <div class="partner-role">计划主导机构</div>
+        <div class="partner-name">Empact.sg</div>
+        <div class="partner-desc">具备跨界合作、计划设计、影响力评估和志愿者管理专业知识的社会企业。负责整体计划管理、志愿者协调和汇报工作。</div>
+      </div>
+      <div class="partner-card">
+        <div class="partner-role">体验合作伙伴</div>
+        <div class="partner-name">Hush TeaBar</div>
+        <div class="partner-desc">新加坡首家无声茶吧，由聋人社群成员共同领导。在每次活动中运用触感和呼吸技巧引导正念与安定身心环节，以亲身经历的视角诠释身心健康。</div>
+      </div>
+      <div class="partner-card" style="grid-column:1/-1;max-width:50%;margin:0 auto;width:100%;">
+        <div class="partner-role">培训合作伙伴</div>
+        <div class="partner-name">The School of Positive Psychology</div>
+        <div class="partner-desc">新加坡及亚洲正向心理学教育与培训的先驱机构。共同设计并讲授聆听者培训课程，提供志愿者外展和方法论支持。</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="cta-section">
+  <div class="container">
+    <h2>让我们携手共建</h2>
+    <p>Chat Circles 已准备好与新加坡青年一同试行。我们正在寻找一位资助与实施合作伙伴，与我们共同相信：真实的人际连结，值得投资。</p>
+    <div class="cta-buttons">
+      <a href="/cdn-cgi/l/email-protection#a4d4c1d0c1d68addc5cac3e4c1c9d4c5c7d08ad7c3" class="btn-primary">联系我们</a>
+      <a href="#problem" class="btn-outline">重新阅读申请书</a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="footer-brand">Chat<span>Circles</span> by Empact</div>
+  <p>Presented to MCCY Youth Division &middot; March 2026 &middot

@@ -18,3 +18,25 @@
 | 后台维护人、账号恢复责任人、备份保管位置 | 日常运营和故障恢复 | 管理入口不占主导航，初始化不公开注册 |
 
 TEDx、SDGs、国际组织、实习等名称/关系须依真实材料核实。所有内部证照、授权原件、名单和密钥保留在受控资料库，不上传公开代码仓库。
+
+## 公司介绍资料检索
+
+在项目根目录运行 `python3 assets/公司介绍-微盘检索.py`，会通过已授权的 `wecom-cli` 按脚本内关键词联网检索微盘，按文件 ID（缺失时用路径）去重，并覆盖 `assets/company-profile-index.json`。索引记录各关键词命中数、检索错误和文件元数据，不下载正文、不导入 CMS 或发布。部分关键词失败后仍会写出索引并正常结束，使用前须检查 `errors` 字段；检索命中不代表已读取内容或获得公开授权。
+
+## 案例配图整理
+
+在项目根目录运行 `python3 assets/cases-images/fetch-case-images.py --list` 可离线查看八个业务主题的配图映射；去掉 `--list` 才会通过已授权的 `wecom-cli` 检索和下载微盘图片。脚本按关键词检索、精确文件名匹配，将图片保存到脚本所在目录的主题子目录，跳过已存在的目标文件；有检索或下载失败时返回非零退出码。
+
+超过 2 MiB 的图片会调用 macOS `sips` 尝试限制最长边为 2000px 并压缩，仍超限的 PNG 会尝试转为 JPEG；转换成功且体积变小时删除原 PNG。压缩不保证最终大小达标，转成 `.jpg` 后也不会命中原 `.png` 目标名的跳过判断，重跑前需检查已有文件。
+
+此脚本仅整理本地素材，不会导入 CMS 或发布。出海主题映射的是新加坡团队和参访相关素材，具体用途仍待公司确认。下载后仍须核对案例归属、公开授权和图片质量，再在 CMS 上传、填写替代文字并完成审批。
+
+活动级归档使用 `python3 assets/cases-images/fetch-activity-photos.py --plan` 离线查看目录和下载计划；`--pending` 仅按本地文件生成 `assets/cases-images/待补图片清单.md`。不带参数时会建立活动子目录、移动映射中的现有图片，再通过 `wecom-cli` 按精确文件名和路径片段检索下载；收到可识别的配额错误码 `640459` 时中止下载并记录剩余目标，有未完成目标时返回非零退出码。脚本头部列出的 `--download-only` 尚无独立分支，传入后仍会建目录和移动图片。
+
+补图后运行 `python3 assets/cases-images/build-archive-overview.py`，按 `SECTIONS` 定义及活动目录内的实际图片离线重写 `assets/cases-images/归档总览.html` 和 `assets/cases-images/归档汇总.md`，使用 macOS `sips` 读取尺寸。归档数量只反映该清单及本地文件，不能证明活动已举办、图片已获公开授权或已导入 CMS。
+
+## 日历排期核对
+
+在项目根目录依次运行 `python3 assets/日历计划表-2026/parse-calendar.py` 和 `python3 assets/日历计划表-2026/build-calendar-report.py`，可离线将该目录的 `cal-2026-01.csv` 至 `cal-2026-12.csv` 解析为 `calendar-activities.json`，再重写 `assets/2026年活动台账.md`。缺失月份会被跳过；报告按名称相似度和月份与配图脚本的 `SECTIONS` 清单匹配，并按关键词单列内部事务，结果需要人工核对，不会调整活动目录、导入 CMS 或发布。
+
+`python3 assets/日历计划表-2026/merge-analysis.py` 离线读取已有 `microdisk-index.json`，按脚本内的活动关键词重写同目录的 `merge-analysis.md`。刷新原始资料的 `fetch-calendar.py` 和 `index-microdisk.py` 则会调用已授权的 `wecom-cli` 联网；后者的 `--probe` 也会联网并覆盖索引。日历排期、状态符号和检索命中均不能单独证明活动已举办，未命中也不能证明未举办，须结合实际执行材料确认。
