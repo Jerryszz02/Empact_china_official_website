@@ -152,6 +152,40 @@ test("wheel transition moves monotonically to one scene without rewind", async (
   }
 });
 
+test("one long inertial wheel gesture stays on the adjacent scene until input becomes idle", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await settleAt(page, "brand");
+  const height = await page.evaluate(() => innerHeight);
+  await page.mouse.wheel(0, height * 0.8);
+  // Continue well beyond both the animation and the former fixed cooldown.
+  await page.evaluate(async () => {
+    for (let i = 0; i < 40; i++) {
+      await new Promise((resolve) => setTimeout(resolve, 40));
+      window.dispatchEvent(
+        new WheelEvent("wheel", {
+          deltaY: 8,
+          cancelable: true,
+        }),
+      );
+    }
+  });
+  await page.waitForTimeout(900);
+  await expect
+    .poll(async () =>
+      Math.abs((await page.locator("#pathways").boundingBox())!.y),
+    )
+    .toBeLessThan(3);
+  // A fresh same-direction gesture must work once the previous input is idle.
+  await page.mouse.wheel(0, height * 0.8);
+  await expect
+    .poll(async () =>
+      Math.abs((await page.locator("#conversation").boundingBox())!.y),
+    )
+    .toBeLessThan(3);
+});
+
 test("line-mode wheel advances one scene and the closing scene still allows footer exit", async ({
   page,
 }) => {

@@ -234,7 +234,7 @@ type WheelState = {
   total: number;
   idle: number;
   animation: number;
-  cooldown: number;
+  waitingForIdle: boolean;
 };
 let wheelState: WheelState | null = null;
 let savedScrollStyles: { snap: string; behavior: string } | null = null;
@@ -286,8 +286,9 @@ function startWheelTransition(start: number, direction: number) {
         total: 0,
         idle: 0,
         animation: 0,
-        cooldown: performance.now() + 180,
+        waitingForIdle: true,
       };
+      wheelState.idle = window.setTimeout(clearWheelGesture, 180);
     }
   };
   wheelState = {
@@ -296,7 +297,7 @@ function startWheelTransition(start: number, direction: number) {
     total: 0,
     idle: 0,
     animation: requestAnimationFrame(animate),
-    cooldown: 0,
+    waitingForIdle: false,
   };
 }
 function noteWheel(event: WheelEvent) {
@@ -332,13 +333,20 @@ function noteWheel(event: WheelEvent) {
     total: 0,
     idle: 0,
     animation: 0,
-    cooldown: 0,
+    waitingForIdle: false,
   };
-  if (state.cooldown > performance.now() && state.direction === direction) {
+  if (state.waitingForIdle && state.direction === direction) {
     event.preventDefault();
+    // Inertia belongs to the same gesture however long it lasts. Rearm only
+    // after a quiet interval measured from the most recent wheel event.
+    if (state.idle) clearTimeout(state.idle);
+    state.idle = window.setTimeout(clearWheelGesture, 180);
     return;
   }
-  if (state.direction !== direction) state.total = 0;
+  if (state.direction !== direction) {
+    state.total = 0;
+    state.waitingForIdle = false;
+  }
   state.start = nearest;
   state.direction = direction;
   // Wheel devices may report pixels, text lines, or whole pages.
