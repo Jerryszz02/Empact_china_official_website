@@ -16,7 +16,7 @@ import {
   type Snapshot,
 } from "@empact/content/schema";
 import { readDraftSnapshot } from "./cms-data.js";
-import { mkdir, rename, rm, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
 export type BusinessAdminAction =
@@ -230,23 +230,74 @@ export async function businessAdminMutation(
           currentLive?.entries.find((item) => item.id === id)?.publishedAt ||
           currentEntry.publishedAt ||
           new Date().toISOString();
+        // A case re-publication restores the last live reports, never their drafts.
+        let restoredEntries: Entry[] = [];
+        let restoredMedia: Snapshot["media"] = [];
+        if (
+          currentEntry.kind === "case" &&
+          !currentLive?.entries.some((item) => item.id === id)
+        ) {
+          const receipts = await listReceipts(options.runtimeDir);
+          const withdrawal = receipts.find(
+            (receipt) =>
+              receipt.state === "unpublished" &&
+              receipt.selectedIds?.includes(id),
+          );
+          const base = withdrawal?.baseVersion
+            ? receipts.find(
+                (receipt) =>
+                  receipt.version === withdrawal.baseVersion &&
+                  ["published", "unpublished", "rolled_back"].includes(
+                    receipt.state,
+                  ) &&
+                  receipt.releasePath,
+              )
+            : undefined;
+          if (base?.releasePath) {
+            const historical = JSON.parse(
+              await readFile(join(base.releasePath, "snapshot.json"), "utf8"),
+            ) as Snapshot;
+            restoredEntries = historical.entries.filter(
+              (item) =>
+                item.kind === "coverage" &&
+                item.parentId === id &&
+                currentDraft.entries.some(
+                  (draftEntry) =>
+                    draftEntry.id === item.id &&
+                    draftEntry.kind === "coverage" &&
+                    draftEntry.parentId === id,
+                ),
+            );
+            const mediaIds = new Set(restoredEntries.flatMap(usedMedia));
+            restoredMedia = historical.media.filter((item) =>
+              mediaIds.has(item.id),
+            );
+          }
+        }
+        const selectedIds = [id, ...restoredEntries.map((item) => item.id)];
+        const caseMediaIds = new Set(usedMedia(currentEntry));
+        const media = new Map(
+          currentDraft.media.map((item) => [item.id, item]),
+        );
+        for (const item of restoredMedia) {
+          if (!caseMediaIds.has(item.id)) media.set(item.id, item);
+        }
         const publishDraft: Snapshot = {
           ...currentDraft,
           entries: currentDraft.entries.map((item) =>
             item.id === id
               ? { ...item, publishedAt: firstPublishedAt, approved: true }
-              : item,
+              : (restoredEntries.find((restored) => restored.id === item.id) ??
+                item),
           ),
-          media: currentDraft.media.map((item) =>
-            usedMedia(currentEntry).includes(item.id)
-              ? { ...item, approved: true }
-              : item,
+          media: [...media.values()].map((item) =>
+            caseMediaIds.has(item.id) ? { ...item, approved: true } : item,
           ),
         };
         const merged = mergeSelectedLive(
           currentLive,
           publishDraft,
-          [id],
+          selectedIds,
           false,
         );
         return {

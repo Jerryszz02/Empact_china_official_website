@@ -177,6 +177,103 @@ test("rejects incomplete cases and preserves live version and saved draft on bui
   }
 });
 
+test("case republishing restores live coverage without publishing drafts or rolling back later updates", async () => {
+  const f = await fixture();
+  try {
+    f.docs.push({
+      id: 100,
+      kind: "case",
+      slug: "article",
+      title: "案例",
+      summary: "案例摘要",
+      body,
+      parent: f.parent.id,
+      image: 1,
+      approved: false,
+    });
+    await businessAdminMutation(f.payload, "publish", "100", f.options);
+    const report = {
+      id: 200,
+      kind: "coverage",
+      slug: "report",
+      title: "原报道",
+      summary: "报道摘要",
+      body,
+      parent: 100,
+      approved: true,
+      sourceName: "报道来源",
+      sourceType: "media",
+      sourceUrl: "https://example.com/report",
+      eventDate: "2026-09-01",
+    };
+    f.docs.push(report);
+    const seeded = await readDraftSnapshot(f.payload);
+    assert.equal(
+      (
+        await publishSnapshot(
+          { ...seeded, version: "with-report", mode: "production" },
+          f.options,
+        )
+      ).state,
+      "published",
+    );
+    f.docs.push({
+      ...report,
+      id: 201,
+      slug: "draft-report",
+      title: "草稿报道",
+      approved: false,
+    });
+    await businessAdminMutation(f.payload, "unpublish", "100", f.options);
+    assert.equal(
+      (await readLiveSnapshot(f.options.runtimeDir))?.entries.some(
+        (e) => e.id === "200",
+      ),
+      false,
+    );
+    report.title = "尚未发布的报道修改";
+    report.approved = false;
+    await businessAdminMutation(f.payload, "publish", "100", f.options);
+    let live = (await readLiveSnapshot(f.options.runtimeDir))!;
+    assert.equal(live.entries.find((e) => e.id === "200")?.title, "原报道");
+    assert.equal(
+      live.entries.some((e) => e.id === "201"),
+      false,
+    );
+    assert.equal(report.title, "尚未发布的报道修改");
+    assert.equal(report.approved, false);
+    assert.equal(
+      (
+        await publishSnapshot(
+          {
+            ...live,
+            version: "updated-report",
+            entries: live.entries.map((e) =>
+              e.id === "200" ? { ...e, title: "新版报道" } : e,
+            ),
+          },
+          f.options,
+        )
+      ).state,
+      "published",
+    );
+    await businessAdminMutation(f.payload, "publish", "100", f.options);
+    live = (await readLiveSnapshot(f.options.runtimeDir))!;
+    assert.equal(live.entries.find((e) => e.id === "200")?.title, "新版报道");
+    await businessAdminMutation(f.payload, "unpublish", "100", f.options);
+    report.parent = f.parent.id;
+    await businessAdminMutation(f.payload, "publish", "100", f.options);
+    assert.equal(
+      (await readLiveSnapshot(f.options.runtimeDir))?.entries.some(
+        (e) => e.id === "200",
+      ),
+      false,
+    );
+  } finally {
+    await rm(f.root, { recursive: true, force: true });
+  }
+});
+
 test("body images require known local media and preserve safe captions", () => {
   assert.throws(
     () => sanitizeBodyHtml('<img src="https://example.invalid/private.png">'),

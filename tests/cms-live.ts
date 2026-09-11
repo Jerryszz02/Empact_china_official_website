@@ -35,9 +35,56 @@ const env = {
   ADMIN_PASSWORD: password,
   NEXT_TELEMETRY_DISABLED: "1",
 };
+const portOwner = async (): Promise<
+  { pid: number; cwd?: string } | undefined
+> => {
+  try {
+    const { stdout } = await execute(
+      "lsof",
+      ["-nP", "-t", "-iTCP:4321", "-sTCP:LISTEN"],
+      {
+        cwd: repository,
+        timeout: 5_000,
+      },
+    );
+    const pid = Number(stdout.trim().split(/\s+/)[0]);
+    if (!Number.isInteger(pid) || pid <= 0)
+      throw new Error("Invalid listener PID from lsof");
+    try {
+      const { stdout: cwdOutput } = await execute(
+        "lsof",
+        ["-a", "-p", String(pid), "-d", "cwd", "-Fn"],
+        { cwd: repository, timeout: 5_000 },
+      );
+      return { pid, cwd: cwdOutput.match(/^n(.+)$/m)?.[1] };
+    } catch {
+      return { pid };
+    }
+  } catch (error) {
+    const details = error as {
+      code?: string | number;
+      stdout?: string;
+      stderr?: string;
+    };
+    if (
+      details.code === 1 &&
+      !details.stdout?.trim() &&
+      !details.stderr?.trim()
+    )
+      return undefined;
+    throw error;
+  }
+};
 let child: ReturnType<typeof spawn> | undefined,
-  logs = "";
+  logs = "",
+  childExit: { code: number | null; signal: NodeJS.Signals | null } | undefined;
 try {
+  const occupied = await portOwner();
+  assert.equal(
+    occupied,
+    undefined,
+    `Refusing CMS live test: 127.0.0.1:4321 is already owned by PID ${occupied?.pid ?? "unknown"} (cwd ${occupied?.cwd ?? "unknown"}).`,
+  );
   await execute(
     process.execPath,
     [
@@ -74,18 +121,30 @@ try {
   child.stderr?.on("data", (data) => {
     logs = (logs + data).slice(-6000);
   });
+  child.once("exit", (code, signal) => {
+    childExit = { code, signal };
+  });
   let ready = false;
   for (let i = 0; i < 60; i++) {
+    if (child.exitCode !== null || child.signalCode) break;
     try {
-      const response = await fetch(`${base}/admin/login`);
+      const response = await fetch(`${base}/admin/login`, {
+        signal: AbortSignal.timeout(3000),
+      });
       if (response.status === 200) {
-        ready = true;
-        break;
+        const owner = await portOwner();
+        ready = owner?.pid === child.pid && child.exitCode === null;
+        if (ready) break;
       }
     } catch {}
     await new Promise((done) => setTimeout(done, 500));
   }
-  assert.ok(ready, `CMS did not become ready: ${logs}`);
+  assert.ok(
+    ready,
+    `CMS did not become ready under isolated child ${child.pid}: ${
+      childExit ? `exit ${childExit.code ?? childExit.signal}; ` : ""
+    }${logs}`,
+  );
   for (const path of [
     "/api/content",
     "/api/media",
