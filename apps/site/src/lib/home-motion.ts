@@ -1,40 +1,243 @@
-/** Progressive enhancement: all content and navigation already exist in HTML. */
+/**
+ * Progressive enhancement for the homepage.
+ *
+ * All content and navigation already exist in the HTML. This module only adds
+ * decorative canvas particles, a shared background transition and an optional
+ * proximity settle. Native wheel, touch and keyboard scrolling is never
+ * intercepted or accelerated.
+ */
+
 const root = document.documentElement;
+const body = document.body;
 const stage = document.querySelector<HTMLElement>("[data-motion-stage]");
 const canvas = document.querySelector<HTMLCanvasElement>(
   "[data-motion-canvas]",
 );
+const background = document.querySelector<HTMLElement>(
+  "[data-motion-background]",
+);
 const scenes = [
   ...document.querySelectorAll<HTMLElement>("[data-motion-scene]"),
 ];
+const logos = [...document.querySelectorAll<HTMLElement>("[data-motion-logo]")];
 const reduced = matchMedia("(prefers-reduced-motion: reduce)");
 const coarse = matchMedia("(pointer: coarse)");
+const fine = matchMedia("(hover: hover) and (pointer: fine)");
 const header = document.querySelector<HTMLElement>(".site-header");
 const nav = document.querySelector<HTMLElement>("#site-navigation");
 const preview = document.querySelector<HTMLElement>(".preview-bar");
+
 const clamp = (value: number) => Math.max(0, Math.min(1, value));
 const smooth = (value: number) => {
   const x = clamp(value);
   return x * x * (3 - 2 * x);
 };
+const lerp = (from: number, to: number, amount: number) =>
+  from + (to - from) * amount;
 
-type Particle = { x: number; y: number; seed: number; underline: boolean };
+type Box = { left: number; right: number; top: number; bottom: number };
+
+/* ------------------------------------------------------------------ */
+/* Particle palette (precomputed strings, no per-frame colour parsing) */
+/* ------------------------------------------------------------------ */
+
+const PALETTE_STEPS = 24;
+const palette: string[] = [];
+for (let step = 0; step <= PALETTE_STEPS; step += 1) {
+  const amount = step / PALETTE_STEPS;
+  const red = Math.round(255 + (18 - 255) * amount);
+  const green = Math.round(255 + (82 - 255) * amount);
+  const blue = Math.round(255 + (132 - 255) * amount);
+  palette.push(`rgb(${red},${green},${blue})`);
+}
+const UNDERLINE_COLOR = "rgb(251, 57, 77)";
+
+/* Idle motion is bucketed so no per-particle trigonometry is required. */
+const DRIFT_OMEGA = [9, 10.5, 12, 13.5].map((period) => (Math.PI * 2) / period);
+const SPIN_SPEEDS = [0, -0.12, 0.07, 0.12, -0.06];
+
+let particleCount = 0;
+let particleX = new Float32Array(0);
+let particleY = new Float32Array(0);
+let particleSeed = new Float32Array(0);
+let particleRadius = new Float32Array(0);
+let particleUnderline = new Uint8Array(0);
+let particlePhaseCos = new Float32Array(0);
+let particlePhaseSin = new Float32Array(0);
+let particleDriftBucket = new Uint8Array(0);
+let particleAmplitude = new Float32Array(0);
+let particleSpinBucket = new Uint8Array(0);
+
+const driftCos = new Float64Array(DRIFT_OMEGA.length);
+const driftSin = new Float64Array(DRIFT_OMEGA.length);
+const spinCos = new Float64Array(SPIN_SPEEDS.length);
+const spinSin = new Float64Array(SPIN_SPEEDS.length);
+
 let context: CanvasRenderingContext2D | null = null;
 try {
   context = canvas?.getContext("2d") ?? null;
 } catch {
-  /* Static logo remains available. */
+  /* The static brand logo remains available. */
 }
-let points: Particle[] = [];
-let frame = 0;
-let oversized = false;
-let hidden = document.hidden;
-let mobileSample = false;
-const logo = new Image();
 
-function stopFrame() {
+const logo = new Image();
+let frame = 0;
+let running = false;
+let oversized = false;
+let live = false;
+let mobileSample = false;
+
+/* Cached document-space layout. Never read layout inside the draw loop. */
+let anchors: number[] = [];
+let stageTop = 0;
+let stageBottom = 0;
+let heroBox: Box | null = null;
+let closingBox: Box | null = null;
+let textBoxes: Box[] = [];
+let sceneFades: number[] = [];
+let paperOpacity = -1;
+let lastClip = "";
+let pointerX = 0;
+let pointerY = 0;
+
+function stopLoop() {
   if (frame) cancelAnimationFrame(frame);
   frame = 0;
+  running = false;
+}
+
+function canRender() {
+  if (!stage || !canvas || !context || particleCount === 0) {
+    if (canvas) canvas.hidden = true;
+    return false;
+  }
+  if (reduced.matches || oversized || document.hidden) {
+    canvas.hidden = true;
+    return false;
+  }
+  const top = stageTop - scrollY;
+  const bottom = stageBottom - scrollY;
+  const visible = bottom > 0 && top < innerHeight;
+  canvas.hidden = !visible;
+  return visible;
+}
+
+function schedule() {
+  if (!canRender()) {
+    stopLoop();
+    return;
+  }
+  if (!running) {
+    running = true;
+    frame = requestAnimationFrame(tick);
+  }
+}
+
+function tick(now: number) {
+  frame = 0;
+  if (!canRender()) {
+    running = false;
+    return;
+  }
+  if (draw(now)) frame = requestAnimationFrame(tick);
+  else running = false;
+}
+
+function boxOf(element: Element | null): Box | null {
+  if (!element) return null;
+  const rect = element.getBoundingClientRect();
+  return {
+    left: rect.left,
+    right: rect.right,
+    top: rect.top + scrollY,
+    bottom: rect.bottom + scrollY,
+  };
+}
+
+function measureLayout() {
+  anchors = scenes.map((scene) => scene.getBoundingClientRect().top + scrollY);
+  const stageRect = stage?.getBoundingClientRect();
+  stageTop = stageRect ? stageRect.top + scrollY : 0;
+  stageBottom = stageRect ? stageRect.bottom + scrollY : innerHeight;
+  heroBox = boxOf(logos[0] ?? null);
+  closingBox = boxOf(logos[1] ?? null);
+  textBoxes = scenes
+    .map((scene) =>
+      boxOf(scene.querySelector<HTMLElement>(".motion-scene-content")),
+    )
+    .filter((box): box is Box => box !== null);
+  if (sceneFades.length !== scenes.length) sceneFades = scenes.map(() => -1);
+}
+
+function paperAt(y: number) {
+  const first = anchors[0];
+  const middle = anchors[1];
+  const last = anchors[2];
+  if (first === undefined || middle === undefined || last === undefined)
+    return 0;
+  if (y <= first) return 0;
+  if (y < middle)
+    return smooth(((y - first) / Math.max(1, middle - first) - 0.5) / 0.3);
+  if (y < last)
+    return 1 - smooth(((y - middle) / Math.max(1, last - middle) - 0.5) / 0.3);
+  return 0;
+}
+
+function updateBackground(force = false) {
+  const next = paperAt(scrollY);
+  if (!force && Math.abs(next - paperOpacity) < 0.002) return;
+  paperOpacity = next;
+  if (background) background.style.opacity = String(next);
+}
+
+function updateSceneFades(force = false) {
+  for (const [index, scene] of scenes.entries()) {
+    const anchor = anchors[index];
+    if (anchor === undefined) continue;
+    const distance = Math.abs(scrollY - anchor) / Math.max(1, innerHeight);
+    const fade = Math.round((1 - smooth((distance - 0.25) / 0.5)) * 100) / 100;
+    if (!force && Math.abs(fade - (sceneFades[index] ?? -1)) < 0.01) continue;
+    sceneFades[index] = fade;
+    scene.style.setProperty("--scene-fade", String(fade));
+  }
+}
+
+function updateCanvasClip() {
+  if (!canvas) return;
+  if (stageBottom - scrollY <= 0 || stageTop - scrollY >= innerHeight) {
+    if (lastClip === "inset(100% 0 0 0)") return;
+    lastClip = "inset(100% 0 0 0)";
+    canvas.style.clipPath = lastClip;
+    return;
+  }
+  const top = Math.max(0, stageTop - scrollY);
+  const bottom = Math.max(0, innerHeight - (stageBottom - scrollY));
+  const clip = `inset(${top.toFixed(1)}px 0 ${bottom.toFixed(1)}px 0)`;
+  if (clip === lastClip) return;
+  lastClip = clip;
+  canvas.style.clipPath = clip;
+}
+
+function updateCanvasSize() {
+  if (!canvas || !context) return;
+  const ratio = Math.min(
+    devicePixelRatio || 1,
+    innerWidth < 700 || coarse.matches ? 1.5 : 2,
+  );
+  const width = Math.round(innerWidth * ratio);
+  const height = Math.round(innerHeight * ratio);
+  if (canvas.width !== width || canvas.height !== height) {
+    canvas.width = width;
+    canvas.height = height;
+    context.setTransform(ratio, 0, 0, ratio, 0, 0);
+  }
+}
+
+function clearParticles() {
+  particleCount = 0;
+  sceneFades = [];
+  applyLive(true);
+  schedule();
 }
 
 function sampleLogo() {
@@ -46,157 +249,431 @@ function sampleLogo() {
     sample.height = Math.round(
       (sample.width * logo.naturalHeight) / logo.naturalWidth,
     );
-    const ctx = sample.getContext("2d");
-    if (!ctx) return;
-    ctx.drawImage(logo, 0, 0, sample.width, sample.height);
-    const pixels = ctx.getImageData(0, 0, sample.width, sample.height).data;
-    points = [];
+    const sampleContext = sample.getContext("2d");
+    if (!sampleContext) return;
+    sampleContext.drawImage(logo, 0, 0, sample.width, sample.height);
+    const pixels = sampleContext.getImageData(
+      0,
+      0,
+      sample.width,
+      sample.height,
+    ).data;
+    const xs: number[] = [];
+    const ys: number[] = [];
+    const seeds: number[] = [];
+    const radii: number[] = [];
+    const underlines: number[] = [];
+    const phaseCos: number[] = [];
+    const phaseSin: number[] = [];
+    const drift: number[] = [];
+    const amplitudes: number[] = [];
+    const spins: number[] = [];
+    const baseRadius = mobileSample ? 1.1 : 1.6;
+    let index = 0;
     for (let y = 0; y < sample.height; y += 3) {
       for (let x = 0; x < sample.width; x += 3) {
         const offset = (y * sample.width + x) * 4;
-        // The original main logo has an opaque white background.
+        // The source mark has an opaque white background. Only the red
+        // underline is coloured; the rest of the mark stays white.
         if (
           pixels[offset + 3] < 80 ||
           pixels[offset] + pixels[offset + 1] + pixels[offset + 2] >= 700
         )
           continue;
-        const index = points.length;
         const random = Math.sin(index * 127.1 + 311.7) * 43758.5453;
-        // The red underline is the only coloured part of the assembled mark.
-        // Its lower-left spatial region is stable across the source asset;
-        // the decorative flower in the upper-right remains white.
-        const underline = x / sample.width < 0.16 && y / sample.height > 0.8;
-        points.push({
-          x: x / sample.width - 0.5,
-          y: (y - sample.height / 2) / sample.width,
-          seed: random - Math.floor(random),
-          underline,
-        });
+        const seed = random - Math.floor(random);
+        const phase = seed * Math.PI * 2;
+        const underline =
+          x / sample.width < 0.16 && y / sample.height > 0.8 ? 1 : 0;
+        xs.push(x / sample.width - 0.5);
+        ys.push((y - sample.height / 2) / sample.width);
+        seeds.push(seed);
+        radii.push(baseRadius + seed * 0.4);
+        underlines.push(underline);
+        phaseCos.push(Math.cos(phase));
+        phaseSin.push(Math.sin(phase));
+        drift.push(
+          Math.min(
+            DRIFT_OMEGA.length - 1,
+            Math.floor(seed * DRIFT_OMEGA.length),
+          ),
+        );
+        amplitudes.push(6 + seed * 6);
+        // The brand underline stays crisp; only a subset of white points spin.
+        spins.push(
+          underline || seed < 0.42
+            ? 0
+            : 1 + (Math.floor(seed * 71) % (SPIN_SPEEDS.length - 1)),
+        );
+        index += 1;
       }
     }
-    root.classList.toggle("motion-canvas-ready", points.length > 0);
+    particleCount = xs.length;
+    particleX = Float32Array.from(xs);
+    particleY = Float32Array.from(ys);
+    particleSeed = Float32Array.from(seeds);
+    particleRadius = Float32Array.from(radii);
+    particleUnderline = Uint8Array.from(underlines);
+    particlePhaseCos = Float32Array.from(phaseCos);
+    particlePhaseSin = Float32Array.from(phaseSin);
+    particleDriftBucket = Uint8Array.from(drift);
+    particleAmplitude = Float32Array.from(amplitudes);
+    particleSpinBucket = Uint8Array.from(spins);
+    sceneFades = scenes.map(() => -1);
+    applyLive(true);
     schedule();
   } catch {
-    points = [];
-    root.classList.remove("motion-canvas-ready");
-    schedule();
+    clearParticles();
   }
 }
 
-function updateCanvasSize() {
-  if (!canvas || !context) return;
-  const ratio = Math.min(
-    devicePixelRatio || 1,
-    innerWidth < 700 || coarse.matches ? 1.5 : 2,
-  );
-  const width = Math.round(innerWidth * ratio),
-    height = Math.round(innerHeight * ratio);
-  if (canvas.width !== width || canvas.height !== height) {
-    canvas.width = width;
-    canvas.height = height;
-    context.setTransform(ratio, 0, 0, ratio, 0, 0);
+function applyLive(force = false) {
+  const next = particleCount > 0 && !reduced.matches && !oversized;
+  if (!force && next === live) return;
+  live = next;
+  root.classList.toggle("motion-live", live);
+  if (canvas) canvas.hidden = !live;
+  if (live) {
+    updateBackground(true);
+    updateSceneFades(true);
+  } else {
+    paperOpacity = -1;
+    sceneFades = scenes.map(() => -1);
+    if (background) background.style.opacity = "";
+    for (const scene of scenes) scene.style.removeProperty("--scene-fade");
+    lastClip = "";
+    if (canvas) canvas.style.clipPath = "";
   }
+  schedule();
 }
 
-function canRender() {
-  if (!stage || !canvas || !context) return false;
-  const bounds = stage.getBoundingClientRect();
-  const enabled =
-    points.length > 0 &&
-    !reduced.matches &&
-    !oversized &&
-    !hidden &&
-    bounds.bottom > 0 &&
-    bounds.top < innerHeight;
-  canvas.hidden = !enabled;
-  // A fixed canvas must never paint over the footer below its stage.
-  canvas.style.clipPath = `inset(${Math.max(0, bounds.top)}px 0 ${Math.max(0, innerHeight - bounds.bottom)}px 0)`;
-  return enabled;
-}
+function draw(now: number): boolean {
+  if (!context || !stage) return false;
+  const width = innerWidth;
+  const height = innerHeight;
+  updateBackground();
+  updateSceneFades();
+  updateCanvasClip();
 
-function draw() {
-  frame = 0;
-  if (!canRender() || !context || !stage) return;
-  const width = innerWidth,
-    height = innerHeight;
-  const start = scenes[0].getBoundingClientRect().top + scrollY;
-  const end = scenes[2].getBoundingClientRect().top + scrollY;
-  const progress = clamp((scrollY - start) / Math.max(1, end - start));
+  const first = anchors[0] ?? 0;
+  const last = anchors[2] ?? first + height * 2;
+  const progress = clamp((scrollY - first) / Math.max(1, last - first));
   const spread =
     smooth((progress - 0.1) / 0.32) * (1 - smooth((progress - 0.65) / 0.3));
   const finish = smooth((progress - 0.75) / 0.2);
   const exitOpacity =
-    1 - smooth(Math.max(0, scrollY - end) / Math.min(180, height * 0.2));
-  const mobile = width < 700;
-  const centerX = width * ((mobile ? 0.5 : 0.62) * (1 - finish) + 0.5 * finish);
-  const centerY =
-    height * ((mobile ? 0.32 : 0.36) * (1 - finish) + 0.32 * finish);
-  const size =
-    width *
-    ((mobile ? 0.92 : 0.59) * (1 - finish) + (mobile ? 0.72 : 0.43) * finish);
-  const headerBottom = header?.getBoundingClientRect().bottom ?? 96;
-  // Apply header clearance before letting the closing logo leave with its scene.
-  const safeCenterY =
-    Math.max(centerY, headerBottom + 12 + size * 0.19) -
-    Math.max(0, scrollY - end);
-  const textBounds = scenes.map((scene) =>
-    scene.querySelector(".motion-scene-content")!.getBoundingClientRect(),
-  );
-  const pathway = scenes[1].getBoundingClientRect();
-  const edge = 72;
+    1 - smooth(Math.max(0, scrollY - last) / Math.min(180, height * 0.2));
+  const paper = paperOpacity < 0 ? paperAt(scrollY) : paperOpacity;
+  const blend = smooth((paper - 0.4) / 0.2);
+  const fill = palette[Math.round(blend * PALETTE_STEPS)] ?? "rgb(255,255,255)";
+
+  let centerX: number;
+  let centerY: number;
+  let size: number;
+  if (heroBox && closingBox) {
+    centerX = lerp(
+      (heroBox.left + heroBox.right) / 2,
+      (closingBox.left + closingBox.right) / 2,
+      finish,
+    );
+    const heroCenterY = (heroBox.top + heroBox.bottom) / 2 - (anchors[0] ?? 0);
+    const closingCenterY =
+      (closingBox.top + closingBox.bottom) / 2 - (anchors[2] ?? 0);
+    centerY =
+      lerp(heroCenterY, closingCenterY, finish) - Math.max(0, scrollY - last);
+    size = lerp(
+      heroBox.right - heroBox.left,
+      closingBox.right - closingBox.left,
+      finish,
+    );
+  } else {
+    centerX = width * 0.5;
+    centerY = height * 0.36;
+    size = width * (mobileSample ? 0.92 : 0.59);
+  }
+
+  const time = now / 1000;
+  const heroWeight = 1 - smooth(progress / 0.3);
+  centerY += Math.sin(time * ((Math.PI * 2) / 7)) * 3 * heroWeight;
+  if (fine.matches) {
+    centerX += pointerX * 5 * heroWeight;
+    centerY += pointerY * 5 * heroWeight;
+  }
+
+  for (let i = 0; i < DRIFT_OMEGA.length; i += 1) {
+    const angle = time * (DRIFT_OMEGA[i] ?? 0);
+    driftCos[i] = Math.cos(angle);
+    driftSin[i] = Math.sin(angle);
+  }
+  for (let i = 0; i < SPIN_SPEEDS.length; i += 1) {
+    const angle = time * (SPIN_SPEEDS[i] ?? 0);
+    spinCos[i] = Math.cos(angle);
+    spinSin[i] = Math.sin(angle);
+  }
+  const spreadAngle = progress * 2.7;
+  const spreadCos = Math.cos(spreadAngle);
+  const spreadSin = Math.sin(spreadAngle);
+
   context.clearRect(0, 0, width, height);
-  for (const point of points) {
-    const distance = spread * (width * 0.4 + point.seed * height * 0.22);
-    const angle = point.seed * Math.PI * 2 + progress * 2.7;
-    const x = centerX + point.x * size + Math.cos(angle) * distance;
-    const y = safeCenterY + point.y * size + Math.sin(angle) * distance;
-    if (
-      textBounds.some(
-        (box) =>
-          x > box.left - 12 &&
-          x < box.right + 12 &&
-          y > box.top - 12 &&
-          y < box.bottom + 12,
-      )
-    )
-      continue;
-    const pathwayTop = pathway.top;
-    const pathwayBottom = pathway.bottom;
-    const paperWeight =
-      smooth((y - pathwayTop + edge) / (edge * 2)) *
-      (1 - smooth((y - pathwayBottom + edge) / (edge * 2)));
-    const blue = [18, 82, 132];
-    const white = [255, 255, 255];
-    const foreground = point.underline
-      ? [251, 57, 77]
-      : [
-          white[0] * (1 - paperWeight) + blue[0] * paperWeight,
-          white[1] * (1 - paperWeight) + blue[1] * paperWeight,
-          white[2] * (1 - paperWeight) + blue[2] * paperWeight,
-        ];
-    context.fillStyle = `rgb(${foreground.map((value) => Math.round(value)).join(",")})`;
-    context.globalAlpha = (0.9 + point.seed * 0.1) * exitOpacity;
-    const radius = (mobile ? 1.1 : 1.6) + point.seed * 0.4;
+  // Clear the final image once, then leave fully transparent particles idle.
+  if (exitOpacity === 0) return false;
+  context.globalAlpha = exitOpacity;
+  let lastFill = "";
+  for (let i = 0; i < particleCount; i += 1) {
+    const seed = particleSeed[i] ?? 0;
+    const phaseCos = particlePhaseCos[i] ?? 0;
+    const phaseSin = particlePhaseSin[i] ?? 0;
+    let x = centerX + (particleX[i] ?? 0) * size;
+    let y = centerY + (particleY[i] ?? 0) * size;
+    if (spread > 0) {
+      const distance = spread * (width * 0.4 + seed * height * 0.22);
+      const cosA = spreadCos * phaseCos - spreadSin * phaseSin;
+      const sinA = spreadSin * phaseCos + spreadCos * phaseSin;
+      x += cosA * distance;
+      y += sinA * distance;
+    }
+    if (spread > 0.01) {
+      const bucket = particleDriftBucket[i] ?? 0;
+      const dc = driftCos[bucket] ?? 0;
+      const ds = driftSin[bucket] ?? 0;
+      const amplitude = particleAmplitude[i] ?? 0;
+      x += (ds * phaseCos + dc * phaseSin) * amplitude * spread;
+      y += (dc * phaseCos - ds * phaseSin) * amplitude * spread;
+    }
+    if (x < -4 || x > width + 4 || y < -4 || y > height + 4) continue;
+    let blocked = false;
+    for (const box of textBoxes) {
+      if (
+        x > box.left - 12 &&
+        x < box.right + 12 &&
+        y > box.top - scrollY - 12 &&
+        y < box.bottom - scrollY + 12
+      ) {
+        blocked = true;
+        break;
+      }
+    }
+    if (blocked) continue;
+    const spinBucket = particleSpinBucket[i] ?? 0;
+    const spinC = spinCos[spinBucket] ?? 1;
+    const spinS = spinSin[spinBucket] ?? 0;
+    const scatteredCos = spinC * phaseCos - spinS * phaseSin;
+    const scatteredSin = spinS * phaseCos + spinC * phaseSin;
+    const rotationCos = particleUnderline[i]
+      ? 1
+      : lerp(1, scatteredCos, spread);
+    const rotationSin = particleUnderline[i]
+      ? 0
+      : lerp(0, scatteredSin, spread);
+    const radius = particleRadius[i] ?? 1;
+    const color = particleUnderline[i] ? UNDERLINE_COLOR : fill;
+    if (color !== lastFill) {
+      context.fillStyle = color;
+      lastFill = color;
+    }
+    // Tiny independent paths avoid the expensive tessellation of one large
+    // compound path while preserving the original triangular particles.
     context.beginPath();
-    context.moveTo(x, y - radius);
-    context.lineTo(x + radius, y + radius);
-    context.lineTo(x - radius, y + radius);
+    context.moveTo(x + radius * rotationSin, y - radius * rotationCos);
+    context.lineTo(
+      x + radius * rotationCos - radius * rotationSin,
+      y + radius * rotationSin + radius * rotationCos,
+    );
+    context.lineTo(
+      x - radius * rotationCos - radius * rotationSin,
+      y - radius * rotationSin + radius * rotationCos,
+    );
     context.closePath();
     context.fill();
   }
   context.globalAlpha = 1;
+  // Scroll and layout listeners schedule the next paint for static scenes.
+  return spread > 0 || heroWeight > 0;
 }
 
-function schedule() {
-  if (!canRender()) {
-    stopFrame();
+/* ------------------------------------------------------------------ */
+/* Proximity settle: one optional, cancellable alignment.             */
+/* ------------------------------------------------------------------ */
+
+let settleFrame = 0;
+let settleTimer = 0;
+let settling = false;
+let lastDirection = 0;
+let gesturePending = false;
+let suppressSettle = false;
+let touchActive = false;
+let scrollComplete = false;
+let latestInputAt = 0;
+let gestureStartY = 0;
+let gestureScrolled = false;
+const scrollEndSupported = "onscrollend" in window;
+const SETTLE_QUIET_MS = 60;
+
+function cancelAlignment() {
+  if (settleFrame) cancelAnimationFrame(settleFrame);
+  settleFrame = 0;
+  if (settleTimer) clearTimeout(settleTimer);
+  settleTimer = 0;
+  settling = false;
+}
+
+function clearGesture() {
+  gesturePending = false;
+  scrollComplete = false;
+  gestureScrolled = false;
+  latestInputAt = 0;
+}
+
+function armSettle(delay: number) {
+  if (settleFrame) return;
+  if (settleTimer) clearTimeout(settleTimer);
+  settleTimer = window.setTimeout(maybeSettle, delay);
+}
+
+function canSettle() {
+  if (!stage || !live || settling || suppressSettle) return false;
+  if (reduced.matches || oversized || document.hidden) return false;
+  if (nav?.classList.contains("is-open")) return false;
+  if (touchActive || (scrollEndSupported && !scrollComplete)) return false;
+  if (!gestureScrolled) return false;
+  return stageBottom - scrollY > 0 && stageTop - scrollY < innerHeight;
+}
+
+function startAlignment(target: number, from: number) {
+  settling = true;
+  const duration = 220;
+  const started = performance.now();
+  const step = (now: number) => {
+    settleFrame = 0;
+    if (!settling) return;
+    const amount = clamp((now - started) / duration);
+    scrollTo({
+      // Ease out immediately so docking connects to the native scroll.
+      top: from + (target - from) * (1 - (1 - amount) ** 3),
+      behavior: "instant",
+    });
+    if (amount < 1) settleFrame = requestAnimationFrame(step);
+    else settling = false;
+  };
+  settleFrame = requestAnimationFrame(step);
+}
+
+function maybeSettle() {
+  settleTimer = 0;
+  if (!gesturePending) return;
+  if (scrollEndSupported) {
+    const remaining = SETTLE_QUIET_MS - (performance.now() - latestInputAt);
+    if (!scrollComplete || remaining > 0 || touchActive) {
+      if (scrollComplete && !touchActive) armSettle(Math.max(1, remaining));
+      return;
+    }
+  }
+  gesturePending = false;
+  if (!canSettle()) return;
+  const y = scrollY;
+  let candidate: number | null = null;
+  // Never rewind the last gesture: only look for an anchor ahead of travel.
+  if (lastDirection > 0) {
+    for (const anchor of anchors) {
+      if (anchor >= y - 0.5) {
+        candidate = anchor;
+        break;
+      }
+    }
+  } else if (lastDirection < 0) {
+    for (const anchor of anchors) {
+      if (anchor <= y + 0.5) candidate = anchor;
+    }
+  }
+  if (candidate === null) return;
+  const delta = candidate - y;
+  // A perceptible approach zone, while keeping mid-scene stops free.
+  const captureDistance = Math.min(innerHeight * 0.32, 360);
+  if (Math.abs(delta) < 0.5 || Math.abs(delta) > captureDistance) return;
+  startAlignment(candidate, y);
+}
+
+function onWheel(event: WheelEvent) {
+  cancelAlignment();
+  if (event.ctrlKey || Math.abs(event.deltaX) > Math.abs(event.deltaY)) {
+    clearGesture();
     return;
   }
-  if (!frame) frame = requestAnimationFrame(draw);
+  const direction = Math.sign(event.deltaY);
+  if (direction === 0) return;
+  lastDirection = direction;
+  suppressSettle = false;
+  gesturePending = true;
+  scrollComplete = false;
+  gestureStartY = scrollY;
+  // Chromium may dispatch the final scroll event before the passive wheel
+  // listener. Native scrollend is the completion signal in that case.
+  gestureScrolled = scrollEndSupported;
+  latestInputAt = performance.now();
+  if (!scrollEndSupported) armSettle(200);
+}
+
+let touchY = 0;
+let touchMoved = false;
+function onTouchStart(event: TouchEvent) {
+  cancelAlignment();
+  suppressSettle = false;
+  touchActive = true;
+  clearGesture();
+  gestureStartY = scrollY;
+  touchMoved = false;
+  touchY = event.touches[0]?.clientY ?? touchY;
+}
+
+function onTouchMove(event: TouchEvent) {
+  const current = event.touches[0]?.clientY;
+  if (current === undefined) return;
+  const direction = Math.sign(touchY - current);
+  if (direction) lastDirection = direction;
+  touchY = current;
+  touchMoved = true;
+  cancelAlignment();
+  gesturePending = true;
+  scrollComplete = false;
+  latestInputAt = performance.now();
+  if (!scrollEndSupported) armSettle(200);
+}
+
+function onTouchEnd() {
+  cancelAlignment();
+  touchActive = false;
+  // A tap without travel should never provoke a snap.
+  if (!touchMoved) return;
+  gesturePending = true;
+  latestInputAt = performance.now();
+  if (!scrollEndSupported) armSettle(160);
+  else if (scrollComplete) armSettle(SETTLE_QUIET_MS);
+}
+
+function onPointerDown(event: PointerEvent) {
+  cancelAlignment();
+  if (event.pointerType === "touch") {
+    suppressSettle = false;
+    return;
+  }
+  suppressSettle = true;
+  clearGesture();
+}
+
+function onKeyboardInput() {
+  cancelAlignment();
+  suppressSettle = true;
+  clearGesture();
+}
+
+function onFocusIn() {
+  cancelAlignment();
+  suppressSettle = true;
+  clearGesture();
 }
 
 function updateLayout() {
-  // Measure the normal layout; fallback logos in flex flow inflate scrollHeight.
+  // Measure the natural layout; overflowing scenes grow and fall back.
   root.classList.remove("motion-overflow");
   const viewport = Math.min(
     innerHeight,
@@ -208,7 +685,6 @@ function updateLayout() {
     largeText ||
     scenes.some((scene) => scene.scrollHeight > viewport + 2);
   root.classList.toggle("motion-overflow", oversized);
-  root.classList.toggle("motion-snap-ready", !oversized);
   root.classList.toggle("motion-reduced", reduced.matches);
   const bannerSpace = preview?.offsetHeight ?? 0;
   root.style.setProperty("--motion-banner-space", `${bannerSpace}px`);
@@ -220,176 +696,99 @@ function updateLayout() {
   if (!nav?.classList.contains("is-open"))
     root.style.setProperty("--motion-header-space", `${headerSpace}px`);
   updateCanvasSize();
+  measureLayout();
   if (
     logo.naturalWidth &&
     mobileSample !== (innerWidth < 700 || coarse.matches)
   )
     sampleLogo();
+  applyLive();
   schedule();
 }
 
-type WheelState = {
-  start: number;
-  direction: number;
-  total: number;
-  idle: number;
-  animation: number;
-  waitingForIdle: boolean;
-};
-let wheelState: WheelState | null = null;
-let savedScrollStyles: { snap: string; behavior: string } | null = null;
-function clearWheelGesture() {
-  if (wheelState?.idle) clearTimeout(wheelState.idle);
-  wheelState = null;
-}
-function restoreScrollStyles() {
-  if (!savedScrollStyles) return;
-  root.style.scrollSnapType = savedScrollStyles.snap;
-  root.style.scrollBehavior = savedScrollStyles.behavior;
-  savedScrollStyles = null;
-}
-function cancelWheelTransition() {
-  if (wheelState?.animation) cancelAnimationFrame(wheelState.animation);
-  clearWheelGesture();
-  restoreScrollStyles();
-}
-function startWheelTransition(start: number, direction: number) {
-  if (start + direction < 0 || start + direction >= scenes.length) {
-    clearWheelGesture();
-    restoreScrollStyles();
-    return;
-  }
-  const target =
-    scenes[start + direction].getBoundingClientRect().top + scrollY;
-  const from = scrollY;
-  const duration = 800;
-  const started = performance.now();
-  if (wheelState?.idle) clearTimeout(wheelState.idle);
-  savedScrollStyles = {
-    snap: root.style.scrollSnapType,
-    behavior: root.style.scrollBehavior,
-  };
-  root.style.scrollSnapType = "none";
-  root.style.scrollBehavior = "auto";
-  const animate = (now: number) => {
-    if (!wheelState) return;
-    const t = clamp((now - started) / duration);
-    scrollTo({ top: from + (target - from) * smooth(t), behavior: "instant" });
-    if (t < 1) wheelState.animation = requestAnimationFrame(animate);
-    else {
-      scrollTo({ top: target, behavior: "instant" });
-      if (wheelState?.idle) clearTimeout(wheelState.idle);
-      restoreScrollStyles();
-      wheelState = {
-        start: start + direction,
-        direction,
-        total: 0,
-        idle: 0,
-        animation: 0,
-        waitingForIdle: true,
-      };
-      wheelState.idle = window.setTimeout(clearWheelGesture, 180);
-    }
-  };
-  wheelState = {
-    start,
-    direction,
-    total: 0,
-    idle: 0,
-    animation: requestAnimationFrame(animate),
-    waitingForIdle: false,
-  };
-}
-function noteWheel(event: WheelEvent) {
-  if (
-    event.ctrlKey ||
-    Math.abs(event.deltaY) <= Math.abs(event.deltaX) ||
-    oversized ||
-    reduced.matches ||
-    nav?.classList.contains("is-open")
-  )
-    return cancelWheelTransition();
-  const direction = Math.sign(event.deltaY);
-  if (!stage) return;
-  if (wheelState?.animation) {
-    event.preventDefault();
-    if (wheelState.direction !== direction) cancelWheelTransition();
-    else return;
-  }
-  const first = scenes[0].getBoundingClientRect().top + scrollY;
-  const last = scenes[2].getBoundingClientRect().top + scrollY;
-  if (scrollY < first - 3 || scrollY > last + 3) return;
-  const stops = scenes.map(
-    (scene) => scene.getBoundingClientRect().top + scrollY,
-  );
-  const nearest = stops.reduce(
-    (best, stop, index) =>
-      Math.abs(stop - scrollY) < Math.abs(stops[best] - scrollY) ? index : best,
-    0,
-  );
-  const state = wheelState ?? {
-    start: nearest,
-    direction,
-    total: 0,
-    idle: 0,
-    animation: 0,
-    waitingForIdle: false,
-  };
-  if (state.waitingForIdle && state.direction === direction) {
-    event.preventDefault();
-    // Inertia belongs to the same gesture however long it lasts. Rearm only
-    // after a quiet interval measured from the most recent wheel event.
-    if (state.idle) clearTimeout(state.idle);
-    state.idle = window.setTimeout(clearWheelGesture, 180);
-    return;
-  }
-  if (state.direction !== direction) {
-    state.total = 0;
-    state.waitingForIdle = false;
-  }
-  state.start = nearest;
-  state.direction = direction;
-  // Wheel devices may report pixels, text lines, or whole pages.
-  const deltaScale =
-    event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? innerHeight : 1;
-  state.total += Math.abs(event.deltaY) * deltaScale;
-  wheelState = state;
-  if (
-    state.start + state.direction < 0 ||
-    state.start + state.direction >= scenes.length
-  ) {
-    clearWheelGesture();
-    return;
-  }
-  event.preventDefault();
-  if (state.idle) clearTimeout(state.idle);
-  state.idle = window.setTimeout(clearWheelGesture, 140);
-  if (state.total >= 30) startWheelTransition(state.start, state.direction);
-}
-
 if (stage && scenes.length === 3) {
-  document.body.classList.add("motion-js");
+  body.classList.add("motion-js");
   const observer = new ResizeObserver(updateLayout);
   scenes.forEach((scene) => observer.observe(scene));
   if (header) observer.observe(header);
   if (preview) observer.observe(preview);
   if (nav)
     new MutationObserver(() => {
-      if (nav.classList.contains("is-open")) cancelWheelTransition();
+      if (nav.classList.contains("is-open")) cancelAlignment();
       root.classList.toggle(
         "motion-menu-open",
         nav.classList.contains("is-open"),
       );
+      updateLayout();
     }).observe(nav, { attributes: true, attributeFilter: ["class"] });
-  addEventListener("scroll", schedule, { passive: true });
-  addEventListener("wheel", noteWheel, { passive: false });
-  document.addEventListener("keydown", cancelWheelTransition);
-  document.addEventListener("focusin", cancelWheelTransition);
-  document.addEventListener("pointerdown", cancelWheelTransition);
+
+  addEventListener(
+    "scroll",
+    () => {
+      if (gesturePending && Math.abs(scrollY - gestureStartY) > 0.5)
+        gestureScrolled = true;
+      if (scrollEndSupported) scrollComplete = false;
+      schedule();
+      if (gesturePending && !scrollEndSupported) armSettle(160);
+    },
+    { passive: true },
+  );
+  if (scrollEndSupported)
+    addEventListener(
+      "scrollend",
+      () => {
+        if (!gesturePending) return;
+        scrollComplete = true;
+        if (!touchActive)
+          armSettle(
+            Math.max(1, SETTLE_QUIET_MS - (performance.now() - latestInputAt)),
+          );
+      },
+      { passive: true },
+    );
+  addEventListener("wheel", onWheel, { passive: true });
+  addEventListener("touchstart", onTouchStart, { passive: true });
+  addEventListener("touchmove", onTouchMove, { passive: true });
+  addEventListener("touchend", onTouchEnd, { passive: true });
+  addEventListener("touchcancel", onTouchEnd, { passive: true });
+  addEventListener("pointerdown", onPointerDown, { passive: true });
+  addEventListener(
+    "pointermove",
+    (event) => {
+      if (!fine.matches || event.pointerType === "touch") return;
+      pointerX = Math.max(
+        -1,
+        Math.min(1, (event.clientX / innerWidth - 0.5) * 2),
+      );
+      pointerY = Math.max(
+        -1,
+        Math.min(1, (event.clientY / innerHeight - 0.5) * 2),
+      );
+    },
+    { passive: true },
+  );
+  addEventListener(
+    "pointerleave",
+    () => {
+      pointerX = 0;
+      pointerY = 0;
+    },
+    { passive: true },
+  );
+  document.addEventListener("keydown", onKeyboardInput);
+  document.addEventListener("focusin", onFocusIn);
+  document.addEventListener("visibilitychange", () => {
+    cancelAlignment();
+    clearGesture();
+    schedule();
+  });
+  addEventListener("popstate", onKeyboardInput);
+  addEventListener("hashchange", onKeyboardInput);
   addEventListener(
     "resize",
     () => {
-      cancelWheelTransition();
+      cancelAlignment();
+      clearGesture();
       updateLayout();
     },
     { passive: true },
@@ -397,37 +796,37 @@ if (stage && scenes.length === 3) {
   window.visualViewport?.addEventListener(
     "resize",
     () => {
-      cancelWheelTransition();
+      cancelAlignment();
       updateLayout();
     },
-    {
-      passive: true,
-    },
+    { passive: true },
   );
   reduced.addEventListener("change", () => {
-    cancelWheelTransition();
+    cancelAlignment();
     updateLayout();
   });
   document.addEventListener("visibilitychange", () => {
-    hidden = document.hidden;
-    cancelWheelTransition();
+    cancelAlignment();
     schedule();
   });
   addEventListener("pagehide", () => {
-    hidden = true;
-    cancelWheelTransition();
-    stopFrame();
+    cancelAlignment();
+    stopLoop();
   });
   addEventListener("pageshow", () => {
-    hidden = document.hidden;
+    cancelAlignment();
     updateLayout();
   });
+  document.fonts?.ready
+    .then(() => {
+      measureLayout();
+      schedule();
+    })
+    .catch(() => {
+      /* Font metrics are not required. */
+    });
   logo.onload = sampleLogo;
-  logo.onerror = () => {
-    points = [];
-    root.classList.remove("motion-canvas-ready");
-    schedule();
-  };
+  logo.onerror = clearParticles;
   updateLayout();
   if (context) logo.src = "/brand/empact-logo-blue.png";
 }
