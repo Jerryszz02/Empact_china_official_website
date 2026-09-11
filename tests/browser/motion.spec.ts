@@ -86,6 +86,127 @@ test("three complete scenes retain real paths, colors and reversible native snap
   expect(errors).toEqual([]);
 });
 
+test("assembled mark keeps its white points and red underline without flower accents", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await expect.poll(() => canvasInk(page)).toBeGreaterThan(100);
+  const colors = await page
+    .locator("[data-motion-canvas]")
+    .evaluate((element) => {
+      const canvas = element as HTMLCanvasElement;
+      const data = canvas
+        .getContext("2d")!
+        .getImageData(0, 0, canvas.width, canvas.height).data;
+      let white = 0;
+      let red = 0;
+      let teal = 0;
+      for (let i = 0; i < data.length; i += 4) {
+        if (data[i + 3] < 80) continue;
+        if (data[i] > 220 && data[i + 1] > 220 && data[i + 2] > 220) white++;
+        if (data[i] > 210 && data[i + 1] < 100 && data[i + 2] < 120) red++;
+        if (data[i] < 100 && data[i + 1] > 130 && data[i + 2] > 130) teal++;
+      }
+      return { white, red, teal };
+    });
+  expect(colors.white).toBeGreaterThan(100);
+  expect(colors.red).toBeGreaterThan(1);
+  expect(colors.teal).toBe(0);
+});
+
+test("wheel transition moves monotonically to one scene without rewind", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await settleAt(page, "brand");
+  const height = await page.evaluate(() => innerHeight);
+  // A very large wheel event must pass through intermediate positions and
+  // stop at the adjacent scene, without compositor overshoot or a later rewind.
+  await page.evaluate(() => {
+    const probe = window as unknown as { wheelSamples: number[] };
+    probe.wheelSamples = [];
+    const until = performance.now() + 1300;
+    const record = () => {
+      probe.wheelSamples.push(scrollY);
+      if (performance.now() < until) requestAnimationFrame(record);
+    };
+    requestAnimationFrame(record);
+  });
+  await page.mouse.wheel(0, height * 3);
+  await expect
+    .poll(async () =>
+      Math.abs((await page.locator("#pathways").boundingBox())!.y),
+    )
+    .toBeLessThan(3);
+  await page.waitForTimeout(500);
+  const samples = await page.evaluate(
+    () => (window as unknown as { wheelSamples: number[] }).wheelSamples,
+  );
+  expect(
+    samples.filter((y) => y > height * 0.1 && y < height * 0.9).length,
+  ).toBeGreaterThan(5);
+  expect(Math.max(...samples)).toBeLessThanOrEqual(height + 3);
+  for (let i = 1; i < samples.length; i++) {
+    expect(samples[i] - samples[i - 1]).toBeGreaterThanOrEqual(-1);
+    expect(samples[i] - samples[i - 1]).toBeLessThan(height * 0.35);
+  }
+});
+
+test("one long inertial wheel gesture stays on the adjacent scene until input becomes idle", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await settleAt(page, "brand");
+  const height = await page.evaluate(() => innerHeight);
+  await page.mouse.wheel(0, height * 0.8);
+  // Continue well beyond both the animation and the former fixed cooldown.
+  await page.evaluate(async () => {
+    for (let i = 0; i < 40; i++) {
+      await new Promise((resolve) => setTimeout(resolve, 40));
+      window.dispatchEvent(
+        new WheelEvent("wheel", {
+          deltaY: 8,
+          cancelable: true,
+        }),
+      );
+    }
+  });
+  await page.waitForTimeout(900);
+  await expect
+    .poll(async () =>
+      Math.abs((await page.locator("#pathways").boundingBox())!.y),
+    )
+    .toBeLessThan(3);
+  // A fresh same-direction gesture must work once the previous input is idle.
+  await page.mouse.wheel(0, height * 0.8);
+  await expect
+    .poll(async () =>
+      Math.abs((await page.locator("#conversation").boundingBox())!.y),
+    )
+    .toBeLessThan(3);
+});
+
+test("line-mode wheel advances one scene and the closing scene still allows footer exit", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await settleAt(page, "brand");
+  await page.evaluate(() => {
+    window.dispatchEvent(
+      new WheelEvent("wheel", { deltaY: 3, deltaMode: 1, cancelable: true }),
+    );
+  });
+  await expect
+    .poll(async () =>
+      Math.abs((await page.locator("#pathways").boundingBox())!.y),
+    )
+    .toBeLessThan(3);
+  await settleAt(page, "conversation");
+  await page.waitForTimeout(250);
+  await page.mouse.wheel(0, 900);
+  await expect(page.locator('.site-footer a[href="/terms/"]')).toBeInViewport();
+});
+
 test("particle drawing stops when idle and hidden, and resumes on demand", async ({
   page,
 }) => {
