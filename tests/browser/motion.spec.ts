@@ -325,6 +325,9 @@ test("proximity snapping aligns a near-anchor stop from both directions", async 
     })
     .toBeLessThan(3);
   expect(Date.now() - started).toBeLessThan(650);
+  // The ease-out can enter the 3px tolerance before its final animation frame.
+  // Let it finish before the test teleports to the other side.
+  await page.waitForTimeout(100);
   // Approach from below, moving up, and settle on the same anchor.
   await settleAt(page, "conversation");
   await wheelTo(page, pathways + Math.round(pathways * 0.28));
