@@ -503,7 +503,7 @@ let latestInputAt = 0;
 let gestureStartY = 0;
 let gestureScrolled = false;
 const scrollEndSupported = "onscrollend" in window;
-const SETTLE_QUIET_MS = 140;
+const SETTLE_QUIET_MS = 60;
 
 function cancelAlignment() {
   if (settleFrame) cancelAnimationFrame(settleFrame);
@@ -537,14 +537,15 @@ function canSettle() {
 
 function startAlignment(target: number, from: number) {
   settling = true;
-  const duration = 260;
+  const duration = 220;
   const started = performance.now();
   const step = (now: number) => {
     settleFrame = 0;
     if (!settling) return;
     const amount = clamp((now - started) / duration);
     scrollTo({
-      top: from + (target - from) * smooth(amount),
+      // Ease out immediately so docking connects to the native scroll.
+      top: from + (target - from) * (1 - (1 - amount) ** 3),
       behavior: "instant",
     });
     if (amount < 1) settleFrame = requestAnimationFrame(step);

@@ -324,7 +324,7 @@ test("proximity snapping aligns a near-anchor stop from both directions", async 
       intervals: [50],
     })
     .toBeLessThan(3);
-  expect(Date.now() - started).toBeLessThan(900);
+  expect(Date.now() - started).toBeLessThan(650);
   // Approach from below, moving up, and settle on the same anchor.
   await settleAt(page, "conversation");
   await wheelTo(page, pathways + Math.round(pathways * 0.28));
