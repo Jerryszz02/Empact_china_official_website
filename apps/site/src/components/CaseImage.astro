@@ -9,6 +9,10 @@ interface Props {
 
 const { entry, class: className = "" } = Astro.props;
 const media = mediaById(entry.imageId);
+const localImage =
+  !media && isPreviewMode()
+    ? (await import("@/lib/case-images")).caseImages[entry.id]
+    : undefined;
 ---
 
 {media ? (
@@ -21,6 +25,24 @@ const media = mediaById(entry.imageId);
       loading="lazy"
     />
   </figure>
+) : localImage ? (
+  <figure class={`case-image case-image-supplied ${className}`}>
+    <a
+      href={localImage.image.src}
+      target="_blank"
+      rel="noopener"
+      aria-label={`${localImage.alt}（打开完整图片）`}
+    >
+      <img
+        src={localImage.image.src}
+        alt={localImage.alt}
+        width={localImage.image.width}
+        height={localImage.image.height}
+        loading="lazy"
+      />
+    </a>
+    {localImage.caption && <figcaption>{localImage.caption}</figcaption>}
+  </figure>
 ) : (
   isPreviewMode() && (
     <div
@@ -31,3 +53,22 @@ const media = mediaById(entry.imageId);
     </div>
   )
 )}
+
+<style>
+  .case-image-supplied {
+    aspect-ratio: auto;
+  }
+  .case-image-supplied a {
+    display: block;
+  }
+  .case-image-supplied img {
+    height: auto;
+    max-height: 32rem;
+    object-fit: contain;
+  }
+  .case-image-supplied figcaption {
+    padding: 0.6rem 0.9rem;
+    color: var(--secondary);
+    font-size: 0.85rem;
+  }
+</style>

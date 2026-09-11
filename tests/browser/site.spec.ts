@@ -124,7 +124,7 @@ test("business paths retain their embedded cases after homepage simplification",
   await firstCase.scrollIntoViewIfNeeded();
   await expect(firstCase).toBeInViewport();
   await expect(firstCase.locator("h3")).toContainText("新加坡");
-  await expect(page.locator(".case-image-placeholder")).toHaveCount(2);
+  await expect(page.locator(".case-image-placeholder")).toHaveCount(1);
   await expect(page.locator(".case-image-placeholder img")).toHaveCount(0);
   await firstCase.screenshot({
     path: `test-results/case-${testInfo.project.name}.png`,
@@ -347,4 +347,55 @@ test("hybrid pointers reveal dropdowns on touch before following parent links", 
   await parent.click();
   await expect(page).toHaveURL(baseURL! + "/youth/");
   await context.close();
+});
+
+test("supplied case photos and posters load without cropping or overflow", async ({
+  page,
+}, testInfo) => {
+  const paths = [
+    "/youth/international-camp/",
+    "/youth/public-speaking/",
+    "/youth/youth-practice/",
+    "/corporate/volunteering/",
+    "/corporate/csr-consulting/",
+    "/corporate/cross-border/",
+  ];
+  let loaded = 0;
+  for (const path of paths) {
+    await page.goto(path);
+    const images = page.locator(".case-image-supplied img");
+    await expect(images).toHaveCount(path.includes("csr-consulting") ? 2 : 1);
+    for (const img of await images.all()) {
+      await img.scrollIntoViewIfNeeded();
+      await expect
+        .poll(() =>
+          img.evaluate(
+            (element: HTMLImageElement) =>
+              element.complete && element.naturalWidth > 0,
+          ),
+        )
+        .toBe(true);
+      await expect(img).toHaveCSS("object-fit", "contain");
+      await expect(img.locator("..")).toHaveAttribute(
+        "href",
+        (await img.getAttribute("src")) as string,
+      );
+      loaded++;
+    }
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
+    await page
+      .locator("#cases")
+      .screenshot({
+        path: `test-results/images-${path.split("/")[2]}-${testInfo.project.name}.png`,
+      });
+  }
+  expect(loaded).toBe(7);
+  await page.goto("/youth/public-speaking/");
+  await expect(page.locator(".case-image-supplied figcaption")).toHaveText(
+    "Empact 少年说系列主视觉",
+  );
 });
