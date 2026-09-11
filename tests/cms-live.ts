@@ -308,7 +308,9 @@ try {
     headers: { Cookie: cookies, "Sec-Fetch-Site": "same-origin" },
   });
   assert.equal(previewResponse.status, 200);
-  assert.match(await previewResponse.text(), /结构预览/);
+  const previewHtml = await previewResponse.text();
+  assert.match(previewHtml, /name="robots" content="noindex,nofollow"/);
+  assert.doesNotMatch(previewHtml, /结构预览|本机草稿内容/);
   assert.equal((await fetch(base + preview.previewUrl)).status, 401);
   assert.equal(
     (

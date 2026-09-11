@@ -147,17 +147,11 @@ const home = pageBySlug("home");
   :global(body.motion-home.motion-js .site-header) {
     position: fixed;
     z-index: 5;
-    top: calc(0.75rem + var(--motion-banner-space, 0px));
+    top: 0.75rem;
     left: 50%;
     transform: translateX(-50%);
     width: min(88rem, calc(100% - 3rem));
     margin: 0;
-  }
-  :global(body.motion-home.motion-js .preview-bar) {
-    position: fixed;
-    top: 0;
-    width: 100%;
-    z-index: 7;
   }
   .motion-stage {
     position: relative;
@@ -411,7 +405,7 @@ const home = pageBySlug("home");
 
   @media (max-width: 600px) {
     :global(body.motion-home.motion-js .site-header) {
-      top: calc(0.5rem + var(--motion-banner-space, 0px));
+      top: 0.5rem;
       width: calc(100% - 2rem);
     }
     .motion-scene {

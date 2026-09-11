@@ -13,11 +13,6 @@ const entry = pageBySlug("terms");
     <h1>{entry?.title ?? "使用条款"}</h1>
   </section>
   <section class="content-wrap">
-    <article
-      class="prose"
-      set:html={
-        entry?.bodyHtml ?? "<p>使用条款内容将在正式发布前由公司审核后公布。</p>"
-      }
-    />
+    <article class="prose" set:html={entry?.bodyHtml ?? ""} />
   </section>
 </BaseLayout>

@@ -39,7 +39,7 @@ test("homepage paths, dropdowns, mobile navigation and draft boundary", async ({
     "content",
     /noindex/,
   );
-  await expect(page.getByRole("status").first()).toContainText("结构预览");
+  await expect(page.locator(".preview-bar")).toHaveCount(0);
   if (testInfo.project.name === "mobile")
     await page.getByRole("button", { name: "菜单" }).click();
   const navigation = page.getByRole("navigation", { name: "主导航" });
@@ -132,7 +132,8 @@ test("business pages show case cards that open independent case articles", async
     "/cases/singapore-social-innovation-camp/",
   );
   await expect(firstCard).toHaveAccessibleName(/新加坡/);
-  await expect(firstCard.locator(".case-image-placeholder")).toHaveCount(1);
+  await expect(firstCard.locator(".case-image-placeholder")).toHaveCount(0);
+  await expect(firstCard.locator(".case-image")).toHaveCount(0);
   // The full case body now lives on the article page instead of the business page.
   await expect(cases).not.toContainText("安排营前课程");
   if (testInfo.project.name === "mobile") {
@@ -150,7 +151,7 @@ test("business pages show case cards that open independent case articles", async
     "新加坡社会创新与可持续发展研学营",
   );
   await expect(page.locator(".article-body .prose")).toContainText("营前课程");
-  await expect(page.locator(".article-cover")).toHaveCount(1);
+  await expect(page.locator(".article-cover")).toHaveCount(0);
   const back = page.locator(".back-link");
   await expect(back).toHaveAttribute("href", "/youth/international-camp/");
   await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
