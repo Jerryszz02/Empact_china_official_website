@@ -49,6 +49,9 @@ const updates = [...news].sort((a, b) =>
   {snapshot.company.approved && (
     <div class="footer-legal">
       <span>{snapshot.company.legalName}</span>
+      {snapshot.company.address && (
+        <address>{snapshot.company.address}</address>
+      )}
       {snapshot.company.icp && (
         <a href="https://beian.miit.gov.cn/" rel="noopener noreferrer">
           {snapshot.company.icp}
@@ -64,6 +67,10 @@ const updates = [...news].sort((a, b) =>
 </footer>
 
 <style>
+  .footer-legal address {
+    font-style: normal;
+    overflow-wrap: anywhere;
+  }
   .footer-content {
     grid-column: 1 / -1;
     display: grid;

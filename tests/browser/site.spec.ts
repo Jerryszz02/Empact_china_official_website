@@ -161,6 +161,23 @@ test("core pages render body, contact is truthful, ChatCircle stays isolated", a
   await expect(page.locator('select[name="business"]')).toHaveValue("other");
   await expect(page.getByRole("button", { name: /发送咨询/ })).toBeDisabled();
   await expect(page.locator("main")).not.toContainText("hello@example.com");
+  await expect(
+    page.locator('main a[href="mailto:empactsg@126.com"]'),
+  ).toBeVisible();
+  const footer = page.locator(".site-footer");
+  await expect(footer.locator(".footer-brand p")).toHaveText(
+    "empowering greater impact",
+  );
+  await expect(footer.locator(".footer-legal")).toContainText(
+    "上海井畅企业管理咨询有限公司",
+  );
+  await expect(footer.locator("address")).toHaveText(
+    "上海市虹漕路88号越虹广场B座1609",
+  );
+  await expect(
+    footer.getByRole("link", { name: "沪ICP备2026002363号-2" }),
+  ).toHaveAttribute("href", "https://beian.miit.gov.cn/");
+  await expect(footer.locator('a[href^="tel:"]')).toHaveCount(0);
   await page.screenshot({
     path: `test-results/contact-${testInfo.project.name}.png`,
     fullPage: true,
