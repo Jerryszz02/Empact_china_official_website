@@ -365,7 +365,7 @@ test("footer is compact and uses the transparent white logo", async ({
   // China-only social links open the official accounts in a safe new tab.
   for (const [name, href] of [
     ["小红书", "https://xhslink.cn/o/A6Nv4ftO0Td"],
-    ["微信公众号", "https://weixin.qq.com/r/mp/YBDv99XEyYi2rZGU90Vy"],
+    ["Empact中国", "https://weixin.qq.com/r/mp/YBDv99XEyYi2rZGU90Vy"],
   ] as const) {
     const link = footer.getByRole("link", { name });
     await expect(link).toBeVisible();
