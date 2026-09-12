@@ -133,7 +133,7 @@ export async function resetBusinessFramework(
     ]);
   for (const entry of desired) {
     const conflicts = (bySlug.get(entry.slug) ?? []).filter(
-      (doc) => doc.kind !== entry.kind,
+      (doc) => doc.kind !== entry.kind && !removedIds.has(String(doc.id)),
     );
     if (conflicts.length)
       throw new Error(`框架路径类型冲突，未执行 reset：${entry.slug}`);

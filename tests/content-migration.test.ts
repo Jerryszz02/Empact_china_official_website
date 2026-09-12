@@ -111,15 +111,15 @@ test("backup failure happens before media or runtime copies", async () => {
   await assert.rejects(() => access(mediaBackup));
 });
 
-test("framework reset dry-run plans case cleanup and four group sync without writes", async () => {
+test("framework reset dry-run ignores slug conflicts from cases and coverage scheduled for deletion", async () => {
   const calls: any[] = [];
   const payload: any = {
     find: async ({ collection }: any) =>
       collection === "content"
         ? {
             docs: [
-              { id: 1, kind: "case", slug: "old-case" },
-              { id: 2, kind: "coverage", slug: "old-coverage", parent: 1 },
+              { id: 1, kind: "case", slug: "student-stories" },
+              { id: 2, kind: "coverage", slug: "school", parent: 1 },
               {
                 id: 3,
                 kind: "business",
@@ -150,8 +150,8 @@ test("framework reset dry-run plans case cleanup and four group sync without wri
 test("framework reset apply deletes only case coverage and youth obsolete content", async () => {
   const calls: any[] = [];
   const docs: any[] = [
-    { id: 1, kind: "case", slug: "old-case", related: [2] },
-    { id: 2, kind: "coverage", slug: "old-coverage", parent: 1, related: [1] },
+    { id: 1, kind: "case", slug: "student-stories", related: [2] },
+    { id: 2, kind: "coverage", slug: "school", parent: 1, related: [1] },
     { id: 3, kind: "business", slug: "international-camp", segment: "youth" },
     {
       id: 4,
@@ -231,5 +231,27 @@ test("framework reset refuses a case with a project child before any write", asy
     () => resetBusinessFramework(payload, previewSnapshot, { dryRun: false }),
     /非 coverage 子内容/,
   );
+  assert.deepEqual(calls, []);
+});
+
+test("framework reset still rejects slug conflicts from surviving content before any write", async () => {
+  const calls: any[] = [];
+  const payload: any = {
+    find: async () => ({
+      docs: [
+        { id: 1, kind: "case", slug: "student-stories" },
+        { id: 2, kind: "project", slug: "student-stories" },
+      ],
+    }),
+    create: async (value: any) => calls.push(["create", value]),
+    update: async (value: any) => calls.push(["update", value]),
+    delete: async (value: any) => calls.push(["delete", value]),
+  };
+  for (const dryRun of [true, false]) {
+    await assert.rejects(
+      () => resetBusinessFramework(payload, previewSnapshot, { dryRun }),
+      /框架路径类型冲突.*student-stories/,
+    );
+  }
   assert.deepEqual(calls, []);
 });
