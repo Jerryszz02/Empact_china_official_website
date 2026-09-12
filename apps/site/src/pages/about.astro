@@ -1,26 +1,178 @@
 ---
 import BaseLayout from "@/layouts/BaseLayout.astro";
 import { pageBySlug } from "@/lib/content";
+import {
+  parseAboutBodyHtml,
+  aboutInnerHtml,
+  aboutListItems,
+  aboutPlainText,
+} from "@/lib/about";
+import "@/styles/about.css";
 const entry = pageBySlug("about");
+const groups = entry ? parseAboutBodyHtml(entry.bodyHtml) : undefined;
+const labels = [
+  "我们是谁",
+  "我们在中国做什么",
+  "我们的影响力",
+  "发展历程",
+  "荣誉与认可",
+  "团队",
+];
 ---
 
 <BaseLayout
-  title={entry?.title ?? "关于我们"}
-  description={entry?.summary ?? "了解 Empact 中国。"}
+  title={entry?.title ?? "关于 Empact"}
+  description={entry?.summary ?? "了解 Empact。"}
 >
-  <section class="page-hero">
-    <span class="eyebrow">About Empact</span>
-    <h1>{entry?.title ?? "关于我们"}</h1>
-    <p class="page-summary">
-      {entry?.summary ?? "我们相信，连接可以让成长发生。"}
-    </p>
-  </section>
-  <section class="content-wrap">
-    <article
-      class="prose"
-      set:html={
-        entry?.bodyHtml ?? "<p>Empact 中国致力于连接青年成长与组织发展。</p>"
-      }
-    />
-  </section>
+  {groups ? (
+    <div class="about-layout">
+      <section class="page-hero wrap">
+        <span class="eyebrow">About Empact</span>
+        <h1 set:html={groups[0].headingHtml} />
+        <div class="page-summary" set:html={groups[0].content[0]} />
+        <div class="hero-meta">
+          {aboutListItems(groups[0].content[1]).map((html) => (
+            <span set:html={html} />
+          ))}
+        </div>
+        {groups[0].notes.map((html) => (
+          <div class="lead-note" set:html={html} />
+        ))}
+      </section>
+      <section class="stat-band" aria-label={groups[1].heading}>
+        <div class="stat-grid">
+          {groups[1].items.map((item) => (
+            <div class="stat">
+              <span class="stat-num" set:html={item.headingHtml} />
+              <div class="stat-label" set:html={item.content.join("")} />
+            </div>
+          ))}
+        </div>
+        {groups[1].notes.map((html) => (
+          <div class="wrap" set:html={html} />
+        ))}
+      </section>
+      <div class="content-wrap">
+        <div class="wrap">
+          {groups.slice(2, 8).map((group, index) => (
+            <section class="section" aria-labelledby={`about-section-${index}`}>
+              <div class="section-head">
+                <span class="eyebrow">{`0${index + 1} / ${labels[index]}`}</span>
+                <h2
+                  id={`about-section-${index}`}
+                  set:html={group.headingHtml}
+                />
+                {group.kind !== "section" &&
+                  group.content.map((html) => <Fragment set:html={html} />)}
+              </div>
+              {group.kind === "section" && (
+                <div class="prose" set:html={group.content.join("")} />
+              )}
+              {group.kind === "services" && (
+                <div class="card-grid">
+                  {group.items.map((item, i) => (
+                    <article class="card">
+                      <span class="card-index">
+                        SERVICE {String(i + 1).padStart(2, "0")}
+                      </span>
+                      <h3 set:html={item.headingHtml} />
+                      <Fragment set:html={item.content.join("")} />
+                    </article>
+                  ))}
+                </div>
+              )}
+              {group.kind === "impact" && (
+                <div class="metrics">
+                  {group.items.map((item) => (
+                    <div class="metric">
+                      <b set:html={item.headingHtml} />
+                      <span set:html={aboutInnerHtml(item.content[0])} />
+                    </div>
+                  ))}
+                </div>
+              )}
+              {group.kind === "timeline" && (
+                <div class="timeline">
+                  {group.items.map((item) => (
+                    <div class="tl-item">
+                      <span class="tl-year" set:html={item.headingHtml} />
+                      <Fragment set:html={item.content.join("")} />
+                    </div>
+                  ))}
+                </div>
+              )}
+              {group.kind === "awards" && (
+                <div class="awards">
+                  {group.items.map((item) => (
+                    <div class="award">
+                      <span class="award-year" set:html={item.headingHtml} />
+                      <Fragment set:html={aboutInnerHtml(item.content[0])} />
+                      <span set:html={aboutInnerHtml(item.content[1])} />
+                    </div>
+                  ))}
+                </div>
+              )}
+              {group.kind === "team" && (
+                <div class="team">
+                  {group.items.map((item, i) => (
+                    <div class={`person person-${i + 1}`}>
+                      <div class="avatar" aria-hidden="true">
+                        {aboutPlainText(item.headingHtml)
+                          .split(/\s+/)
+                          .map((name) => name[0])
+                          .join("")
+                          .slice(0, 2)
+                          .replace("M杨", "MY")}
+                      </div>
+                      <div>
+                        <h3 set:html={item.headingHtml} />
+                        <span
+                          class="person-role"
+                          set:html={aboutInnerHtml(item.content[0])}
+                        />
+                        <Fragment set:html={item.content[1]} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {group.notes.map((html) => (
+                <div class="lead-note" set:html={html} />
+              ))}
+            </section>
+          ))}
+        </div>
+      </div>
+      <section class="cta">
+        <div class="wrap">
+          <div>
+            <span class="eyebrow">Let's talk</span>
+            <h2 set:html={groups[8].headingHtml} />
+            <Fragment set:html={groups[8].content[0]} />
+          </div>
+          <div>
+            <div class="cta-links">
+              {aboutListItems(groups[8].content[1]).map((html) => (
+                <Fragment set:html={html} />
+              ))}
+            </div>
+          </div>
+          {groups[8].notes.map((html) => (
+            <div class="lead-note" set:html={html} />
+          ))}
+        </div>
+      </section>
+    </div>
+  ) : (
+    <>
+      <section class="page-hero">
+        <span class="eyebrow">About Empact</span>
+        <h1>{entry?.title ?? "关于 Empact"}</h1>
+        <p class="page-summary">{entry?.summary ?? "了解 Empact。"}</p>
+      </section>
+      <section class="content-wrap">
+        <article class="prose" set:html={entry?.bodyHtml ?? ""} />
+      </section>
+    </>
+  )}
 </BaseLayout>

@@ -1,3 +1,4 @@
+import { aboutBodyHtml, aboutSummary } from "./about.js";
 import type { Snapshot, Entry } from "./schema.js";
 
 const businessDescriptions: Record<
@@ -114,8 +115,8 @@ const pages: Entry[] = [
     kind: "page",
     slug: "about",
     title: "关于 Empact",
-    summary: "了解团队正在开展的服务方向与合作方式。",
-    bodyHtml: "<p>Empact 中国致力于连接青年成长与组织发展。</p>",
+    summary: aboutSummary,
+    bodyHtml: aboutBodyHtml,
     approved: false,
   },
   {
