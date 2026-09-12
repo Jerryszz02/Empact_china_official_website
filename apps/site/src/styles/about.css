@@ -110,10 +110,6 @@
 }
 .about-layout .stat {
   padding: 1.8rem 1.4rem 1.8rem 0;
-  border-right: 1px solid var(--line);
-}
-.about-layout .stat:last-child {
-  border-right: 0;
 }
 .about-layout .stat-num {
   font:
@@ -406,15 +402,6 @@
   background: #fff;
   color: var(--blue);
 }
-.about-layout .cta-contact {
-  margin-top: 1.4rem;
-  font-size: 0.9rem;
-  color: #9fbdd0;
-  line-height: 1.9;
-}
-.about-layout .cta-contact a {
-  color: #fff;
-}
 
 @media (max-width: 62em) {
   .about-layout .cta .wrap {
@@ -434,7 +421,6 @@
     grid-template-columns: 1fr 1fr;
   }
   .about-layout .stat {
-    border-right: 0;
     border-bottom: 1px solid var(--line);
     padding-right: 1rem;
   }
@@ -468,12 +454,6 @@
 .about-layout .cta .eyebrow {
   color: var(--green);
 }
-.about-layout .cta-contact {
-  margin-top: 1.4rem;
-}
 .about-layout .person > div:last-child {
   min-width: 0;
-}
-.about-layout .cta-contact a {
-  overflow-wrap: anywhere;
 }

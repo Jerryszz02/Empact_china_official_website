@@ -18,7 +18,6 @@ const labels = [
   "荣誉与认可",
   "团队",
 ];
-const email = groups ? aboutPlainText(groups[8].content[2]) : "";
 ---
 
 <BaseLayout
@@ -156,19 +155,6 @@ const email = groups ? aboutPlainText(groups[8].content[2]) : "";
               {aboutListItems(groups[8].content[1]).map((html) => (
                 <Fragment set:html={html} />
               ))}
-            </div>
-            <div class="cta-contact">
-              <p>
-                📩{" "}
-                {/^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/.test(email) ? (
-                  <a href={`mailto:${email}`}>{email}</a>
-                ) : (
-                  <Fragment set:html={aboutInnerHtml(groups[8].content[2])} />
-                )}
-              </p>
-              <p>
-                📍 <Fragment set:html={aboutInnerHtml(groups[8].content[3])} />
-              </p>
             </div>
           </div>
           {groups[8].notes.map((html) => (

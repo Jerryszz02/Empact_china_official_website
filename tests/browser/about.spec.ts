@@ -15,9 +15,9 @@ test("about demo keeps grouped content and usable links across screen sizes", as
   await expect(page.locator(".person")).toHaveCount(2);
   await expect(page.locator("main")).not.toContainText(/DEMO 预览|文案细节待/);
   await expect(page.locator('main a[href="#"]')).toHaveCount(0);
-  await expect(page.locator(".cta-contact a")).toHaveAttribute(
-    "href",
-    "mailto:maggie.yang@empact.sg",
+  await expect(page.locator(".cta-contact")).toHaveCount(0);
+  await expect(page.locator(".cta")).not.toContainText(
+    /maggie.yang@empact.sg|中国 · 上海 · 徐汇|www.empact.sg/,
   );
 
   for (const width of [320, 768, 1440]) {
@@ -28,6 +28,10 @@ test("about demo keeps grouped content and usable links across screen sizes", as
       ),
       `overflow at ${width}`,
     ).toBe(true);
+    for (const stat of await page.locator(".stat").all()) {
+      await expect(stat).toHaveCSS("border-left-width", "0px");
+      await expect(stat).toHaveCSS("border-right-width", "0px");
+    }
     const cards = await page.locator(".card-grid .card").all();
     const boxes = await Promise.all(cards.map((card) => card.boundingBox()));
     if (width === 1440) {
