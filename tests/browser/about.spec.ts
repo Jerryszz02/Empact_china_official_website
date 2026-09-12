@@ -42,7 +42,14 @@ test("about demo keeps grouped content and usable links across screen sizes", as
       expect(boxes[0]!.y + boxes[0]!.height).toBeLessThan(boxes[1]!.y);
     }
   }
-  for (const href of ["/corporate/", "/youth/", "/contact/"]) {
+  await expect(page.locator(".cta-links a")).toHaveCount(5);
+  for (const href of [
+    "/corporate/",
+    "/youth/",
+    "/school/",
+    "/community/",
+    "/contact/",
+  ]) {
     await page.locator(`.cta-links a[href="${href}"]`).click();
     await expect(page).toHaveURL(new RegExp(`${href}$`));
     await expect(page.locator("main h1")).toBeVisible();
