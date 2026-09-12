@@ -1,0 +1,39 @@
+---
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import { businesses, pageBySlug, pathFor } from "@/lib/content";
+interface Props {
+  segment: "school" | "community";
+  title: string;
+  label: string;
+}
+const { segment, title, label } = Astro.props;
+const entry = pageBySlug(segment);
+const services = businesses.filter((item) => item.segment === segment);
+const summary = entry?.summary ?? "欢迎与我们交流你的需求，探讨合作方式。";
+---
+
+<BaseLayout title={entry?.title ?? title} description={summary}>
+  <section class="page-hero">
+    <span class="eyebrow">{label}</span>
+    <h1>{entry?.title ?? title}</h1>
+    <p class="page-summary">{summary}</p>
+  </section>
+  <section class="content-wrap">
+    {entry?.bodyHtml && <article class="prose" set:html={entry.bodyHtml} />}
+    {services.length > 0 && (
+      <div class="service-list service-list-spaced">
+        {services.map((item) => (
+          <div class="service-item">
+            <a href={pathFor(item)}>{item.title}</a>
+            <span>{item.summary}</span>
+          </div>
+        ))}
+      </div>
+    )}
+    <p>
+      <a class="button button-primary" href="/contact/">
+        咨询与合作 <span aria-hidden="true">↗</span>
+      </a>
+    </p>
+  </section>
+</BaseLayout>

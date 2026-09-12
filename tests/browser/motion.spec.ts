@@ -254,145 +254,101 @@ test("hero centers the brand logo and keeps the white mark with its red underlin
   );
 });
 
-test("a 180px wheel delta settles near 180px and away from scene anchors", async ({
-  page,
-}) => {
+test("one desktop wheel notch advances exactly one scene", async ({ page }) => {
   await page.goto("/");
+  test.skip(
+    !(await page.evaluate(
+      () => matchMedia("(hover: hover) and (pointer: fine)").matches,
+    )),
+    "wheel paging is desktop-only",
+  );
   await expect(page.locator("html")).toHaveCSS("scroll-snap-type", "none");
   await settleAt(page, "brand");
   const pathways = await sceneTop(page, "pathways");
-  await page.mouse.wheel(0, 180);
-  await expect.poll(() => scrollY(page)).toBeGreaterThan(120);
-  await page.waitForTimeout(450);
-  const y = await scrollY(page);
-  expect(Math.abs(y - 180)).toBeLessThan(50);
-  expect(y).toBeGreaterThan(72);
-  expect(Math.abs(y - pathways)).toBeGreaterThan(72);
+  await page.mouse.wheel(0, 100);
+  await expect
+    .poll(() => sceneOffset(page, "pathways"), { timeout: 1500 })
+    .toBeLessThan(3);
+  expect(await scrollY(page)).toBeCloseTo(pathways, 0);
 });
 
-test("a large downward wheel passes multiple scenes and reaches the footer", async ({
+test("two desktop wheel notches advance two scenes during animation", async ({
   page,
 }) => {
   await page.goto("/");
-  await settleAt(page, "brand");
-  const height = await page.evaluate(() => window.innerHeight);
-  await page.mouse.wheel(0, height * 3.2);
-  await expect(page.locator('.site-footer a[href="/terms/"]')).toBeInViewport();
-  expect(await scrollY(page)).toBeGreaterThan(
-    await sceneTop(page, "conversation"),
+  test.skip(
+    !(await page.evaluate(
+      () => matchMedia("(hover: hover) and (pointer: fine)").matches,
+    )),
+    "wheel paging is desktop-only",
   );
+  await settleAt(page, "brand");
+  const conversation = await sceneTop(page, "conversation");
+  await page.mouse.wheel(0, 100);
+  await page.mouse.wheel(0, 100);
+  await expect
+    .poll(() => sceneOffset(page, "conversation"), { timeout: 1800 })
+    .toBeLessThan(3);
+  expect(await scrollY(page)).toBeCloseTo(conversation, 0);
 });
 
-test("fine repeated wheel updates make monotonic progress without a delayed rewind", async ({
-  page,
-}) => {
+test("trackpad inertia is treated as one wheel gesture", async ({ page }) => {
   await page.goto("/");
+  test.skip(
+    !(await page.evaluate(
+      () => matchMedia("(hover: hover) and (pointer: fine)").matches,
+    )),
+    "wheel paging is desktop-only",
+  );
   await settleAt(page, "brand");
-  const points: number[] = [];
-  for (let i = 0; i < 8; i++) {
-    await page.mouse.wheel(0, 60);
-    await page.waitForTimeout(90);
-    points.push(await scrollY(page));
-  }
-  for (let i = 1; i < points.length; i++) {
-    expect(points[i]).toBeGreaterThanOrEqual(points[i - 1] - 1);
-  }
-  const settled = points[points.length - 1];
-  expect(settled).toBeGreaterThan(300);
+  const pathways = await sceneTop(page, "pathways");
+  for (const delta of [12, 12, 12, 12, 12, 12, 12, 12, 12])
+    await page.mouse.wheel(0, delta);
   await page.waitForTimeout(700);
-  const after = await scrollY(page);
-  expect(after).toBeGreaterThanOrEqual(settled - 3);
-  const next = await sceneTop(page, "pathways");
-  const capture = await page.evaluate(() => Math.min(innerHeight * 0.32, 360));
-  const expected = next - settled <= capture ? next : settled;
-  expect(Math.abs(after - expected)).toBeLessThan(3);
+  expect(Math.abs((await scrollY(page)) - pathways)).toBeLessThanOrEqual(3);
 });
 
-test("proximity snapping aligns a near-anchor stop from both directions", async ({
+test("wheel reversal cancels the current page and returns to the prior scene", async ({
   page,
 }) => {
   await page.goto("/");
-  expect(await enhancementDisabled(page)).toBe(false);
-  const pathways = await sceneTop(page, "pathways");
-  // Stop 28% of a screen short: the expanded capture zone finishes docking.
+  test.skip(
+    !(await page.evaluate(
+      () => matchMedia("(hover: hover) and (pointer: fine)").matches,
+    )),
+    "wheel paging is desktop-only",
+  );
   await settleAt(page, "brand");
-  const started = Date.now();
-  await wheelTo(page, pathways - Math.round(pathways * 0.28));
-  await expect
-    .poll(() => sceneOffset(page, "pathways"), {
-      timeout: 1500,
-      intervals: [50],
-    })
-    .toBeLessThan(3);
-  expect(Date.now() - started).toBeLessThan(650);
-  // The ease-out can enter the 3px tolerance before its final animation frame.
-  // Let it finish before the test teleports to the other side.
-  await page.waitForTimeout(100);
-  // Approach from below, moving up, and settle on the same anchor.
-  await settleAt(page, "conversation");
-  await wheelTo(page, pathways + Math.round(pathways * 0.28));
-  await expect
-    .poll(() => sceneOffset(page, "pathways"), {
-      timeout: 1500,
-      intervals: [50],
-    })
-    .toBeLessThan(3);
-});
-
-test("distant mid-page stops are not pulled to a scene anchor", async ({
-  page,
-}) => {
-  await page.goto("/");
-  expect(await enhancementDisabled(page)).toBe(false);
-  const pathways = await sceneTop(page, "pathways");
-  const middle = Math.round(pathways / 2);
-  await settleAt(page, "brand");
-  await wheelTo(page, middle);
-  await page.waitForTimeout(500);
-  const mid = await scrollY(page);
-  expect(Math.abs(mid - middle)).toBeLessThan(30);
-  expect(Math.abs(mid - pathways)).toBeGreaterThan(72);
-  // A stop 40% short remains outside the 32% capture zone.
-  await wheelTo(page, pathways * 0.6);
-  await page.waitForTimeout(500);
-  const near = await scrollY(page);
-  expect(Math.abs(near - pathways * 0.6)).toBeLessThan(30);
-  expect(Math.abs(near - pathways)).toBeGreaterThan(72);
-});
-
-test("opposite input cancels a proximity correction without pulling back", async ({
-  page,
-}) => {
-  await page.goto("/");
-  expect(await enhancementDisabled(page)).toBe(false);
-  const pathways = await sceneTop(page, "pathways");
-  await settleAt(page, "brand");
-  await wheelTo(page, pathways - 50);
+  await page.mouse.wheel(0, 100);
   await page.waitForTimeout(120);
-  await page.mouse.wheel(0, -320);
-  await page.waitForTimeout(650);
-  const y = await scrollY(page);
-  expect(Math.abs(y - pathways)).toBeGreaterThan(72);
-  expect(y).toBeLessThan(pathways - 72);
-  expect(y).toBeGreaterThan(72);
+  await page.mouse.wheel(0, -100);
+  await expect.poll(() => scrollY(page), { timeout: 1800 }).toBeLessThan(3);
 });
 
-test("the last scene allows a natural exit to the footer and a reverse back", async ({
+test("the last scene wheels to the footer and reverses back", async ({
   page,
 }) => {
   await page.goto("/");
+  test.skip(
+    !(await page.evaluate(
+      () => matchMedia("(hover: hover) and (pointer: fine)").matches,
+    )),
+    "wheel paging is desktop-only",
+  );
   expect(await enhancementDisabled(page)).toBe(false);
   const conversation = await sceneTop(page, "conversation");
   await settleAt(page, "conversation");
-  await page.mouse.wheel(0, 260);
-  await page.waitForTimeout(450);
-  const exited = await scrollY(page);
-  expect(exited).toBeGreaterThan(conversation + 72);
-  await page.mouse.wheel(0, -200);
-  await page.waitForTimeout(650);
-  expect(Math.abs((await scrollY(page)) - conversation)).toBeLessThanOrEqual(
-    80,
+  const footer = await page.evaluate(
+    () => document.documentElement.scrollHeight - innerHeight,
   );
+  await page.mouse.wheel(0, 100);
+  await expect
+    .poll(() => scrollY(page), { timeout: 1800 })
+    .toBeCloseTo(footer, 0);
+  await page.mouse.wheel(0, -100);
+  await expect
+    .poll(() => scrollY(page), { timeout: 1800 })
+    .toBeCloseTo(conversation, 0);
 });
 
 test("ambient particles keep redrawing while idle and pause when hidden, offscreen or reduced", async ({
@@ -517,13 +473,38 @@ test("pathway cards keep stable hit boxes, rotating faces and direct navigation"
   await page.goto("/");
   await settleAt(page, "pathways");
   const cards = page.locator(".motion-pathway");
-  await expect(cards).toHaveCount(2);
-  for (const href of ["/youth/", "/corporate/"]) {
+  await expect(cards).toHaveCount(4);
+  for (const [href, title] of [
+    ["/youth/", "青少年项目"],
+    ["/corporate/", "企业服务"],
+    ["/school/", "学校业务"],
+    ["/community/", "社区业务"],
+  ]) {
     const card = page.locator(`.motion-pathway[href="${href}"]`);
     await expect(card).toHaveCount(1);
-    await expect(card).toHaveAccessibleName(
-      href === "/youth/" ? /青少年项目/ : /企业服务/,
-    );
+    await expect(card).toHaveAccessibleName(new RegExp(title));
+    if (
+      await page.evaluate(
+        () => matchMedia("(hover: hover) and (pointer: fine)").matches,
+      )
+    ) {
+      const face = card.locator(".motion-pathway-turn");
+      const rest = await face.evaluate(
+        (element) => getComputedStyle(element).transform,
+      );
+      await card.hover();
+      await expect
+        .poll(() =>
+          face.evaluate((element) => getComputedStyle(element).transform),
+        )
+        .not.toBe(rest);
+      await page.mouse.move(1, 1);
+      await expect
+        .poll(() =>
+          face.evaluate((element) => getComputedStyle(element).transform),
+        )
+        .toBe(rest);
+    }
     await expect(card.locator(".motion-pathway-turn")).toHaveCount(1);
     await expect(card.locator(".motion-pathway-face")).toHaveCount(2);
     await expect(card.locator(".motion-pathway-face").nth(1)).toHaveAttribute(
@@ -720,7 +701,7 @@ test("motion recovers after a short viewport grows", async ({ page }) => {
   await expect.poll(() => canvasInk(page)).toBeGreaterThan(100);
 });
 
-test("holding a touch near an anchor never starts alignment before release", async ({
+test("holding a touch near an anchor keeps native mobile scrolling", async ({
   browser,
   baseURL,
 }) => {
@@ -759,7 +740,9 @@ test("holding a touch near an anchor never starts alignment before release", asy
     type: "touchEnd",
     touchPoints: [],
   });
-  await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(844);
+  expect(await page.evaluate(() => window.scrollY)).toBeGreaterThanOrEqual(
+    heldAt,
+  );
   await context.close();
 });
 

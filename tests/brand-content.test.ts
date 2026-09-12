@@ -22,35 +22,34 @@ test("brand content preview has the approved shape", () => {
       .map((entry) => entry.slug),
     [
       "monthly-camp",
-      "international-camp",
-      "public-speaking",
       "ai-and-theme-courses",
-      "youth-practice",
+      "public-speaking",
+      "student-stories",
     ],
   );
 
   const cases = previewSnapshot.entries.filter(
     (entry) => entry.kind === "case",
   );
-  assert.equal(cases.length, 11);
-  assert.equal(new Set(cases.map((entry) => entry.id)).size, cases.length);
-  assert.equal(new Set(cases.map((entry) => entry.slug)).size, cases.length);
-  for (const entry of cases) {
-    assert.equal(entry.approved, false);
-    assert.equal("imageId" in entry, false);
-    assert.ok(businesses.some((business) => business.id === entry.parentId));
-    assert.equal(entry.sourceName, "Empact公司介绍（中文版）");
-    assert.equal(entry.sourceType, "company");
-  }
+  assert.equal(cases.length, 0);
   assert.deepEqual(
-    cases
-      .filter((entry) => entry.featured)
-      .map((entry) => entry.slug)
-      .sort(),
-    [
-      "capitaland-university-career-mentoring",
-      "microsoft-d-and-i-volunteering",
-      "singapore-social-innovation-camp",
-    ].sort(),
+    businesses
+      .filter((entry) => entry.segment === "school")
+      .map((entry) => entry.slug),
+    [],
+  );
+  assert.deepEqual(
+    businesses
+      .filter((entry) => entry.segment === "community")
+      .map((entry) => entry.slug),
+    [],
+  );
+  assert.equal(
+    previewSnapshot.entries.find((entry) => entry.slug === "school")?.title,
+    "学校业务",
+  );
+  assert.equal(
+    previewSnapshot.entries.find((entry) => entry.slug === "community")?.title,
+    "社区业务",
   );
 });

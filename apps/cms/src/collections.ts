@@ -133,6 +133,8 @@ const contentFields: Field[] = [
             options: [
               { label: "青少年项目", value: "youth" },
               { label: "企业服务", value: "corporate" },
+              { label: "学校业务", value: "school" },
+              { label: "社区业务", value: "community" },
             ],
             admin: {
               condition: (_: unknown, siblingData: Record<string, unknown>) =>

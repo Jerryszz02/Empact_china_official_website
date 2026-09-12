@@ -141,7 +141,7 @@ const media = mediaById(entry.imageId);
           <div class="case-grid">
             {entryCases.map((item) => (
               <a id={item.slug} class="case-card" href={pathFor(item)}>
-                <CaseImage entry={item} linkImage={false} />
+                <CaseImage entry={item} />
                 <div class="case-card-copy">
                   <h3>{item.title}</h3>
                   <p>{item.summary}</p>
@@ -154,7 +154,7 @@ const media = mediaById(entry.imageId);
           </div>
         ) : (
           <p class="empty-state">
-            该方向的公开案例正在整理中。如果你想了解相近的实践，欢迎直接与我们沟通。
+            欢迎与我们交流你的需求，了解这一方向的合作方式。
           </p>
         )}
       </section>

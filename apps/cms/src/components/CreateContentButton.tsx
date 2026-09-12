@@ -9,7 +9,7 @@ export function CreateContentButton({
 }: {
   kind: "business" | "case";
   parentId?: string;
-  segment?: "corporate" | "youth";
+  segment?: "corporate" | "youth" | "school" | "community";
   label: string;
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
@@ -76,6 +76,8 @@ export function CreateContentButton({
               <select name="segment" defaultValue={segment || "corporate"}>
                 <option value="corporate">企业服务</option>
                 <option value="youth">青少年与青年</option>
+                <option value="school">学校业务</option>
+                <option value="community">社区业务</option>
               </select>
             </label>
           )}

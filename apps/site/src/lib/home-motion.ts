@@ -2,10 +2,11 @@
  * Progressive enhancement for the homepage.
  *
  * All content and navigation already exist in the HTML. This module only adds
- * decorative canvas particles, a shared background transition and an optional
- * proximity settle. Native wheel, touch and keyboard scrolling is never
- * intercepted or accelerated.
+ * decorative canvas particles, a shared background transition and desktop
+ * wheel paging. Touch, keyboard and short/overflow layouts remain native.
  */
+
+import { WheelNotchTracker, clampPage } from "./home-paging";
 
 const root = document.documentElement;
 const body = document.body;
@@ -491,184 +492,105 @@ function draw(now: number): boolean {
 }
 
 /* ------------------------------------------------------------------ */
-/* Proximity settle: one optional, cancellable alignment.             */
+/* Desktop wheel paging.                                              */
 /* ------------------------------------------------------------------ */
 
-let settleFrame = 0;
-let settleTimer = 0;
-let settling = false;
-let lastDirection = 0;
-let gesturePending = false;
-let suppressSettle = false;
-let touchActive = false;
-let scrollComplete = false;
-let latestInputAt = 0;
-let gestureStartY = 0;
-let gestureScrolled = false;
-const scrollEndSupported = "onscrollend" in window;
-const SETTLE_QUIET_MS = 60;
+const WHEEL_ANIMATION_MS = 520;
+let wheelTarget = 0;
+let wheelAnimationFrame = 0;
+const wheelTracker = new WheelNotchTracker();
 
-function cancelAlignment() {
-  if (settleFrame) cancelAnimationFrame(settleFrame);
-  settleFrame = 0;
-  if (settleTimer) clearTimeout(settleTimer);
-  settleTimer = 0;
-  settling = false;
+function cancelWheelAnimation() {
+  if (wheelAnimationFrame) cancelAnimationFrame(wheelAnimationFrame);
+  wheelAnimationFrame = 0;
 }
 
-function clearGesture() {
-  gesturePending = false;
-  scrollComplete = false;
-  gestureScrolled = false;
-  latestInputAt = 0;
+function pageTargets() {
+  return [
+    ...anchors,
+    Math.max(0, document.documentElement.scrollHeight - innerHeight),
+  ];
 }
 
-function armSettle(delay: number) {
-  if (settleFrame) return;
-  if (settleTimer) clearTimeout(settleTimer);
-  settleTimer = window.setTimeout(maybeSettle, delay);
-}
-
-function canSettle() {
-  if (!stage || !live || settling || suppressSettle) return false;
-  if (reduced.matches || oversized || document.hidden) return false;
-  if (nav?.classList.contains("is-open")) return false;
-  if (touchActive || (scrollEndSupported && !scrollComplete)) return false;
-  if (!gestureScrolled) return false;
-  return stageBottom - scrollY > 0 && stageTop - scrollY < innerHeight;
-}
-
-function startAlignment(target: number, from: number) {
-  settling = true;
-  const duration = 220;
+function animateToPage(page: number) {
+  const targets = pageTargets();
+  const target = targets[clampPage(page, targets.length)] ?? 0;
+  const from = scrollY;
   const started = performance.now();
+  cancelWheelAnimation();
   const step = (now: number) => {
-    settleFrame = 0;
-    if (!settling) return;
-    const amount = clamp((now - started) / duration);
-    scrollTo({
-      // Ease out immediately so docking connects to the native scroll.
-      top: from + (target - from) * (1 - (1 - amount) ** 3),
-      behavior: "instant",
-    });
-    if (amount < 1) settleFrame = requestAnimationFrame(step);
-    else settling = false;
+    const amount = clamp((now - started) / WHEEL_ANIMATION_MS);
+    const eased = 1 - (1 - amount) ** 4;
+    scrollTo({ top: from + (target - from) * eased, behavior: "instant" });
+    if (amount < 1) wheelAnimationFrame = requestAnimationFrame(step);
+    else {
+      wheelAnimationFrame = 0;
+    }
   };
-  settleFrame = requestAnimationFrame(step);
-}
-
-function maybeSettle() {
-  settleTimer = 0;
-  if (!gesturePending) return;
-  if (scrollEndSupported) {
-    const remaining = SETTLE_QUIET_MS - (performance.now() - latestInputAt);
-    if (!scrollComplete || remaining > 0 || touchActive) {
-      if (scrollComplete && !touchActive) armSettle(Math.max(1, remaining));
-      return;
-    }
-  }
-  gesturePending = false;
-  if (!canSettle()) return;
-  const y = scrollY;
-  let candidate: number | null = null;
-  // Never rewind the last gesture: only look for an anchor ahead of travel.
-  if (lastDirection > 0) {
-    for (const anchor of anchors) {
-      if (anchor >= y - 0.5) {
-        candidate = anchor;
-        break;
-      }
-    }
-  } else if (lastDirection < 0) {
-    for (const anchor of anchors) {
-      if (anchor <= y + 0.5) candidate = anchor;
-    }
-  }
-  if (candidate === null) return;
-  const delta = candidate - y;
-  // A perceptible approach zone, while keeping mid-scene stops free.
-  const captureDistance = Math.min(innerHeight * 0.32, 360);
-  if (Math.abs(delta) < 0.5 || Math.abs(delta) > captureDistance) return;
-  startAlignment(candidate, y);
+  wheelAnimationFrame = requestAnimationFrame(step);
 }
 
 function onWheel(event: WheelEvent) {
-  cancelAlignment();
-  if (event.ctrlKey || Math.abs(event.deltaX) > Math.abs(event.deltaY)) {
-    clearGesture();
+  if (
+    event.ctrlKey ||
+    event.metaKey ||
+    Math.abs(event.deltaX) > Math.abs(event.deltaY) ||
+    reduced.matches ||
+    oversized ||
+    !fine.matches ||
+    !stage ||
+    nav?.classList.contains("is-open") ||
+    isNativeScrollableTarget(event.target)
+  ) {
     return;
   }
-  const direction = Math.sign(event.deltaY);
-  if (direction === 0) return;
-  lastDirection = direction;
-  suppressSettle = false;
-  gesturePending = true;
-  scrollComplete = false;
-  gestureStartY = scrollY;
-  // Chromium may dispatch the final scroll event before the passive wheel
-  // listener. Native scrollend is the completion signal in that case.
-  gestureScrolled = scrollEndSupported;
-  latestInputAt = performance.now();
-  if (!scrollEndSupported) armSettle(200);
+  const now = performance.now();
+  const direction = wheelTracker.consume(event, innerHeight, now);
+  if (!direction) {
+    event.preventDefault();
+    return;
+  }
+  const targets = pageTargets();
+  if (!targets.length) return;
+  if (!wheelAnimationFrame) {
+    const nearest = targets.reduce(
+      (best, value, index) =>
+        Math.abs(value - scrollY) < Math.abs(targets[best] - scrollY)
+          ? index
+          : best,
+      0,
+    );
+    wheelTarget = nearest;
+  }
+  wheelTarget = clampPage(wheelTarget + direction, targets.length);
+  animateToPage(wheelTarget);
+  event.preventDefault();
 }
 
-let touchY = 0;
-let touchMoved = false;
-function onTouchStart(event: TouchEvent) {
-  cancelAlignment();
-  suppressSettle = false;
-  touchActive = true;
-  clearGesture();
-  gestureStartY = scrollY;
-  touchMoved = false;
-  touchY = event.touches[0]?.clientY ?? touchY;
-}
-
-function onTouchMove(event: TouchEvent) {
-  const current = event.touches[0]?.clientY;
-  if (current === undefined) return;
-  const direction = Math.sign(touchY - current);
-  if (direction) lastDirection = direction;
-  touchY = current;
-  touchMoved = true;
-  cancelAlignment();
-  gesturePending = true;
-  scrollComplete = false;
-  latestInputAt = performance.now();
-  if (!scrollEndSupported) armSettle(200);
-}
-
-function onTouchEnd() {
-  cancelAlignment();
-  touchActive = false;
-  // A tap without travel should never provoke a snap.
-  if (!touchMoved) return;
-  gesturePending = true;
-  latestInputAt = performance.now();
-  if (!scrollEndSupported) armSettle(160);
-  else if (scrollComplete) armSettle(SETTLE_QUIET_MS);
+function isNativeScrollableTarget(target: EventTarget | null) {
+  let element = target instanceof Element ? target : null;
+  while (element && element !== document.documentElement) {
+    if (element.matches("input, textarea, select, [contenteditable='true']"))
+      return true;
+    const style = getComputedStyle(element);
+    const scrollable = /(auto|scroll|overlay)/.test(style.overflowY);
+    if (scrollable && element.scrollHeight > element.clientHeight + 1)
+      return true;
+    element = element.parentElement;
+  }
+  return false;
 }
 
 function onPointerDown(event: PointerEvent) {
-  cancelAlignment();
-  if (event.pointerType === "touch") {
-    suppressSettle = false;
-    return;
-  }
-  suppressSettle = true;
-  clearGesture();
+  if (event.pointerType !== "touch") cancelWheelAnimation();
 }
 
 function onKeyboardInput() {
-  cancelAlignment();
-  suppressSettle = true;
-  clearGesture();
+  cancelWheelAnimation();
 }
 
 function onFocusIn() {
-  cancelAlignment();
-  suppressSettle = true;
-  clearGesture();
+  cancelWheelAnimation();
 }
 
 function updateLayout() {
@@ -707,7 +629,7 @@ if (stage && scenes.length === 3) {
   if (header) observer.observe(header);
   if (nav)
     new MutationObserver(() => {
-      if (nav.classList.contains("is-open")) cancelAlignment();
+      if (nav.classList.contains("is-open")) cancelWheelAnimation();
       root.classList.toggle(
         "motion-menu-open",
         nav.classList.contains("is-open"),
@@ -715,35 +637,11 @@ if (stage && scenes.length === 3) {
       updateLayout();
     }).observe(nav, { attributes: true, attributeFilter: ["class"] });
 
-  addEventListener(
-    "scroll",
-    () => {
-      if (gesturePending && Math.abs(scrollY - gestureStartY) > 0.5)
-        gestureScrolled = true;
-      if (scrollEndSupported) scrollComplete = false;
-      schedule();
-      if (gesturePending && !scrollEndSupported) armSettle(160);
-    },
-    { passive: true },
-  );
-  if (scrollEndSupported)
-    addEventListener(
-      "scrollend",
-      () => {
-        if (!gesturePending) return;
-        scrollComplete = true;
-        if (!touchActive)
-          armSettle(
-            Math.max(1, SETTLE_QUIET_MS - (performance.now() - latestInputAt)),
-          );
-      },
-      { passive: true },
-    );
-  addEventListener("wheel", onWheel, { passive: true });
-  addEventListener("touchstart", onTouchStart, { passive: true });
-  addEventListener("touchmove", onTouchMove, { passive: true });
-  addEventListener("touchend", onTouchEnd, { passive: true });
-  addEventListener("touchcancel", onTouchEnd, { passive: true });
+  addEventListener("scroll", schedule, { passive: true });
+  addEventListener("wheel", onWheel, { passive: false });
+  addEventListener("touchstart", cancelWheelAnimation, { passive: true });
+  addEventListener("touchend", cancelWheelAnimation, { passive: true });
+  addEventListener("touchcancel", cancelWheelAnimation, { passive: true });
   addEventListener("pointerdown", onPointerDown, { passive: true });
   addEventListener(
     "pointermove",
@@ -770,18 +668,12 @@ if (stage && scenes.length === 3) {
   );
   document.addEventListener("keydown", onKeyboardInput);
   document.addEventListener("focusin", onFocusIn);
-  document.addEventListener("visibilitychange", () => {
-    cancelAlignment();
-    clearGesture();
-    schedule();
-  });
   addEventListener("popstate", onKeyboardInput);
   addEventListener("hashchange", onKeyboardInput);
   addEventListener(
     "resize",
     () => {
-      cancelAlignment();
-      clearGesture();
+      cancelWheelAnimation();
       updateLayout();
     },
     { passive: true },
@@ -789,25 +681,25 @@ if (stage && scenes.length === 3) {
   window.visualViewport?.addEventListener(
     "resize",
     () => {
-      cancelAlignment();
+      cancelWheelAnimation();
       updateLayout();
     },
     { passive: true },
   );
   reduced.addEventListener("change", () => {
-    cancelAlignment();
+    cancelWheelAnimation();
     updateLayout();
   });
   document.addEventListener("visibilitychange", () => {
-    cancelAlignment();
+    cancelWheelAnimation();
     schedule();
   });
   addEventListener("pagehide", () => {
-    cancelAlignment();
+    cancelWheelAnimation();
     stopLoop();
   });
   addEventListener("pageshow", () => {
-    cancelAlignment();
+    cancelWheelAnimation();
     updateLayout();
   });
   document.fonts?.ready

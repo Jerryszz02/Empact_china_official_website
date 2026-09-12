@@ -1,12 +1,16 @@
 ---
 import { businesses, pages, projects, pathFor } from "@/lib/content";
 const chatCircle = projects.find((item) => item.slug === "chatcircle");
-const youthBusinesses = businesses.filter((item) => item.segment === "youth");
-const corporateBusinesses = businesses.filter(
-  (item) => item.segment === "corporate",
-);
-const youthPage = pages.find((item) => item.slug === "youth");
-const corporatePage = pages.find((item) => item.slug === "corporate");
+const groups = [
+  { segment: "youth", title: "青少年项目" },
+  { segment: "corporate", title: "企业服务" },
+  { segment: "school", title: "学校业务" },
+  { segment: "community", title: "社区业务" },
+].map((group) => ({
+  ...group,
+  page: pages.find((item) => item.slug === group.segment),
+  children: businesses.filter((item) => item.segment === group.segment),
+}));
 ---
 
 <header class="site-header">
@@ -30,41 +34,32 @@ const corporatePage = pages.find((item) => item.slug === "corporate");
     </span>
   </button>
   <nav id="site-navigation" class="site-nav" aria-label="主导航">
-    <div class="nav-group">
-      <a
-        class="nav-parent"
-        href={youthPage ? pathFor(youthPage) : "/youth/"}
-        aria-expanded="false"
-        aria-controls="nav-youth"
-      >
-        青少年项目
-      </a>
-      <div id="nav-youth" class="nav-dropdown">
-        <a href="/youth/development-model/">国际化人才培养模型</a>
-        {youthBusinesses.map((item) => (
-          <a href={pathFor(item)}>{item.title}</a>
-        ))}
-      </div>
-    </div>
-    <div class="nav-group">
-      <a
-        class="nav-parent"
-        href={corporatePage ? pathFor(corporatePage) : "/corporate/"}
-        aria-expanded={corporateBusinesses.length > 0 ? "false" : undefined}
-        aria-controls={
-          corporateBusinesses.length > 0 ? "nav-corporate" : undefined
-        }
-      >
-        企业服务
-      </a>
-      {corporateBusinesses.length > 0 && (
-        <div id="nav-corporate" class="nav-dropdown">
-          {corporateBusinesses.map((item) => (
-            <a href={pathFor(item)}>{item.title}</a>
-          ))}
+    {groups.map((group) => {
+      const hasChildren =
+        group.segment === "youth" || group.children.length > 0;
+      return (
+        <div class="nav-group">
+          <a
+            class="nav-parent"
+            href={group.page ? pathFor(group.page) : `/${group.segment}/`}
+            aria-expanded={hasChildren ? "false" : undefined}
+            aria-controls={hasChildren ? `nav-${group.segment}` : undefined}
+          >
+            {group.title}
+          </a>
+          {hasChildren && (
+            <div id={`nav-${group.segment}`} class="nav-dropdown">
+              {group.segment === "youth" && (
+                <a href="/youth/development-model/">国际化人才培养模型</a>
+              )}
+              {group.children.map((item) => (
+                <a href={pathFor(item)}>{item.title}</a>
+              ))}
+            </div>
+          )}
         </div>
-      )}
-    </div>
+      );
+    })}
     <a href="/about/">关于 Empact</a>
     {chatCircle && <a href={pathFor(chatCircle)}>ChatCircle</a>}
     <a class="nav-contact" href="/contact/">
