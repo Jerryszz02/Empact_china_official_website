@@ -1,0 +1,50 @@
+---
+interface Props {
+  businessId: string;
+  businessTitle: string;
+}
+const { businessId, businessTitle } = Astro.props;
+---
+
+<div class="project-planning">
+  <span class="planning-label">下一步，一起创造新的可能</span>
+  <h2>项目计划中</h2>
+  <p>
+    关于「{businessTitle}」的项目内容将在这里陆续更新。
+    欢迎告诉我们你的关注与需求，一起探讨参与或合作的可能。
+  </p>
+  <a
+    class="button button-primary"
+    href={`/contact/?business=${encodeURIComponent(businessId)}`}
+  >
+    交流合作想法 <span aria-hidden="true">↗</span>
+  </a>
+</div>
+
+<style>
+  .project-planning {
+    max-width: 48rem;
+    margin-inline: auto;
+    padding: clamp(1.5rem, 5vw, 3.5rem);
+    border: 1px solid var(--dark-line);
+    border-top: 3px solid var(--green);
+    background: rgb(255 255 255 / 45%);
+  }
+  .planning-label {
+    display: block;
+    margin-bottom: 1rem;
+    color: var(--secondary);
+    font-size: 0.85rem;
+    letter-spacing: 0.08em;
+  }
+  h2 {
+    margin-bottom: 1rem;
+    font-size: clamp(1.75rem, 5vw, 2.5rem);
+  }
+  p {
+    max-width: 34rem;
+    margin-bottom: 1.75rem;
+    color: var(--secondary);
+    overflow-wrap: anywhere;
+  }
+</style>

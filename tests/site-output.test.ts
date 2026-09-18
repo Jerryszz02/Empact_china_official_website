@@ -129,6 +129,18 @@ test(
           publishedAt: "2026-01-01T00:00:00Z",
         },
       );
+      const segments = ["youth", "corporate", "school", "community"] as const;
+      const emptyBusinesses: Entry[] = segments.map((segment) => ({
+        id: `planning-${segment}`,
+        kind: "business",
+        slug: `planning-${segment}`,
+        segment,
+        title: `${segment} 业务方向`,
+        summary: "业务方向说明。",
+        bodyHtml: "<p>保留现有业务介绍。</p>",
+        approved: true,
+      }));
+      data.entries.push(...emptyBusinesses);
       const path = join(temporary, "snapshot.json"),
         out = join(temporary, "public");
       await writeFile(path, JSON.stringify(data));
@@ -143,6 +155,28 @@ test(
         timeout: 50_000,
       });
       assert.deepEqual(await checkOutput(out, true), []);
+      for (const business of emptyBusinesses) {
+        const html = load(
+          await readFile(
+            join(out, business.segment!, business.slug, "index.html"),
+            "utf8",
+          ),
+        );
+        assert.equal(html("#cases .project-planning h2").text(), "项目计划中");
+        assert.match(html("#cases").text(), new RegExp(business.title));
+        assert.match(html(".prose").text(), /保留现有业务介绍/);
+        assert.equal(html(".case-card").length, 0);
+        const contactHref = `/contact/?business=${encodeURIComponent(business.id)}`;
+        assert.equal(
+          html(`#cases a[href="${contactHref}"]`)
+            .text()
+            .trim()
+            .replace(/\s+/g, " "),
+          "交流合作想法 ↗",
+        );
+        assert.equal(html(`main a[href="${contactHref}"]`).length, 1);
+        assert.ok(!html("#cases").text().includes("相关案例"));
+      }
       const model = load(
         await readFile(join(out, "youth/development-model/index.html"), "utf8"),
       );
@@ -168,6 +202,8 @@ test(
           "utf8",
         ),
       );
+      assert.equal(business(".project-planning").length, 0);
+      assert.equal(business("#cases h2").text(), "相关案例");
       const home = load(await readFile(join(out, "index.html"), "utf8"));
       for (const html of [home, business]) {
         assert.equal(html(".case-image-placeholder").length, 0);
@@ -245,6 +281,7 @@ test(
         ),
       );
       assert.match(page("main").text(), /已结束/);
+      assert.equal(page(".project-planning").length, 0);
       assert.equal(
         page('a[href="https://example.invalid/expired-registration"]').length,
         0,
