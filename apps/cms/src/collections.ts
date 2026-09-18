@@ -48,6 +48,7 @@ const contentFields: Field[] = [
     admin: { hidden: true },
   },
   text("summary", "摘要", true),
+  text("detailUrl", "详情外链"),
   {
     name: "body",
     label: "正文",
@@ -253,6 +254,7 @@ const approvalSensitiveFields = [
   "duration",
   "deadline",
   "registrationUrl",
+  "detailUrl",
   "publishedAt",
   "sourceName",
   "sourceUrl",
@@ -272,9 +274,10 @@ const visible = [
   "parent",
   "order",
   "image",
-  "sourceUrl",
+  "detailUrl",
   "body",
   "sourceName",
+  "sourceUrl",
 ];
 const businessContentFields: Field[] = [
   {
@@ -291,7 +294,13 @@ const businessContentFields: Field[] = [
       (field) => "name" in field && field.name === name,
     )!;
     const onlyBusiness = ["segment", "order"].includes(name),
-      onlyCase = ["parent", "image", "sourceName", "sourceUrl"].includes(name);
+      onlyCase = [
+        "parent",
+        "image",
+        "detailUrl",
+        "sourceName",
+        "sourceUrl",
+      ].includes(name);
     return {
       ...field,
       label:
@@ -304,23 +313,28 @@ const businessContentFields: Field[] = [
             body: "网页正文（无外链时，发布必填）",
             image: "项目封面（发布时必填）",
             order: "展示顺序（选填，数字越小越靠前）",
-            sourceUrl: "外链（与网页正文二选一）",
+            detailUrl: "外链（与网页正文二选一）",
             sourceName: "来源名称（选填）",
+            sourceUrl: "来源链接（选填）",
           } as Record<string, string>
         )[name] ?? ("label" in field ? field.label : undefined),
       admin: {
         ...field.admin,
         hidden: false,
-        ...(name === "sourceUrl"
+        ...(name === "detailUrl"
           ? {
               description:
                 "填写完整的 http:// 或 https:// 链接，访客点击详情时直接打开外链；留空则使用下方网页正文。已有正文会保留，清空外链后可继续编辑。",
             }
-          : {}),
+          : name === "sourceUrl"
+            ? {
+                description: "作为站内文章的引用来源，不改变详情跳转。",
+              }
+            : {}),
         condition: (_: unknown, data: Record<string, unknown>) =>
           name === "body" &&
           data.kind === "case" &&
-          String(data.sourceUrl || "").trim()
+          String(data.detailUrl || "").trim()
             ? false
             : onlyBusiness
               ? data.kind === "business"
@@ -328,12 +342,14 @@ const businessContentFields: Field[] = [
                 ? data.kind === "case"
                 : true,
       },
-      ...(name === "sourceUrl"
+      ...(["sourceUrl", "detailUrl"].includes(name)
         ? {
             validate: (value: unknown) => {
               if (!value) return true;
               if (isHttpUrl(String(value))) return true;
-              return "请填写有效的 http:// 或 https:// 外链，或留空并填写网页正文。";
+              return name === "detailUrl"
+                ? "请填写有效的 http:// 或 https:// 外链，或留空并填写网页正文。"
+                : "请填写有效的 http:// 或 https:// 来源链接，或留空。";
             },
             hooks: {
               beforeValidate: [

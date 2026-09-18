@@ -30,13 +30,13 @@ test("case details choose an external URL or a hosted article, with safe URLs re
     bodyHtml: "",
     approved: true,
     parentId: data.entries.find((item) => item.kind === "business")!.id,
-    sourceUrl: "https://example.com/article",
+    detailUrl: "https://example.com/article",
   };
   data.entries.push(entry, { ...entry, id: "same-url", slug: "same-url" });
   assert.doesNotThrow(() => validateSnapshot(data, { production: true }));
   assert.equal(entryPath(entry), "/cases/external-case/");
   assert.equal(entryUrl(entry), "https://example.com/article");
-  entry.sourceUrl = "";
+  entry.detailUrl = "";
   assert.throws(
     () => validateSnapshot(data, { production: true }),
     /missing body/,
@@ -52,13 +52,39 @@ test("case details choose an external URL or a hosted article, with safe URLs re
     "/relative",
     "ftp://example.com/file",
   ]) {
-    entry.sourceUrl = url;
+    entry.detailUrl = url;
     assert.throws(
       () => validateSnapshot(data, { production: true }),
       /unsafe URL/,
     );
     assert.throws(() => entryUrl(entry), /外链/);
   }
+});
+
+test("existing article citations preserve hosted routes and never replace required body", () => {
+  const data = structuredClone(previewSnapshot);
+  data.mode = "production";
+  data.company.privacyApproved = true;
+  data.entries = data.entries.map((entry) => ({ ...entry, approved: true }));
+  const entry = {
+    id: "cited-article",
+    kind: "case" as const,
+    slug: "cited-article",
+    title: "有来源的项目文章",
+    summary: "项目文章摘要。",
+    bodyHtml: "<p>原有站内正文。</p>",
+    approved: true,
+    parentId: data.entries.find((item) => item.kind === "business")!.id,
+    sourceUrl: "https://example.com/source",
+  };
+  data.entries.push(entry);
+  assert.equal(entryUrl(entry), "/cases/cited-article/");
+  assert.doesNotThrow(() => validateSnapshot(data, { production: true }));
+  entry.bodyHtml = "";
+  assert.throws(
+    () => validateSnapshot(data, { production: true }),
+    /missing body/,
+  );
 });
 test("script, event handler and unsafe rich text never survive export", () => {
   for (const html of [

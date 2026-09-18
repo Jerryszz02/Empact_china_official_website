@@ -104,7 +104,7 @@ test("external projects publish without body and can switch back to a hosted art
       parent: f.parent.id,
       image: 1,
       approved: false,
-      sourceUrl: "https://example.com/project",
+      detailUrl: "https://example.com/project",
       body: htmlToLexical(""),
     };
     f.docs.push(entry);
@@ -114,21 +114,21 @@ test("external projects publish without body and can switch back to a hosted art
       "100",
       f.options,
     );
-    assert.equal(preview.previewUrl, entry.sourceUrl);
+    assert.equal(preview.previewUrl, entry.detailUrl);
     const published = await businessAdminMutation(
       f.payload,
       "publish",
       "100",
       f.options,
     );
-    assert.equal(published.url, entry.sourceUrl);
+    assert.equal(published.url, entry.detailUrl);
     assert.equal(
       (await readLiveSnapshot(f.options.runtimeDir))?.entries.find(
         (item) => item.id === "100",
       )?.bodyHtml,
       "",
     );
-    entry.sourceUrl = "";
+    entry.detailUrl = "";
     await assert.rejects(
       () => businessAdminMutation(f.payload, "publish", "100", f.options),
       /外链或网页正文/,
@@ -143,7 +143,7 @@ test("external projects publish without body and can switch back to a hosted art
   }
 });
 
-test("publishes one saved case and images without manual approval; date and draft isolation survive edits", async () => {
+test("publishes one saved case and images without manual approval; citations, date and draft isolation survive edits", async () => {
   const f = await fixture();
   try {
     const entry = {
@@ -152,6 +152,7 @@ test("publishes one saved case and images without manual approval; date and draf
       slug: "article",
       title: "案例标题",
       summary: "案例摘要",
+      sourceUrl: "https://example.com/case-source",
       body,
       parent: f.parent.id,
       image: 1,
@@ -163,7 +164,10 @@ test("publishes one saved case and images without manual approval; date and draf
       slug: "untouched",
       title: "另一个草稿",
     });
-    await businessAdminMutation(f.payload, "publish", "100", f.options);
+    assert.equal(
+      (await businessAdminMutation(f.payload, "publish", "100", f.options)).url,
+      "/cases/article/",
+    );
     const live = await readLiveSnapshot(f.options.runtimeDir);
     assert.ok(live?.entries.find((e) => e.id === "100")?.publishedAt);
     assert.equal(

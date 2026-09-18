@@ -129,7 +129,7 @@ function ensurePublishable(
   if (!entry.title.trim() || !entry.summary.trim())
     throw new Error("请补齐标题和摘要后再发布。");
   if (
-    !(entry.kind === "case" && entry.sourceUrl) &&
+    !(entry.kind === "case" && entry.detailUrl) &&
     !entry.bodyHtml.replace(/<[^>]+>/g, "").trim()
   )
     throw new Error(
@@ -173,7 +173,7 @@ export async function businessAdminMutation(
   if (!entry || (entry.kind !== "business" && entry.kind !== "case"))
     throw new Error("业务内容不存在。");
   if (action === "preview") {
-    if (entry.kind === "case" && entry.sourceUrl)
+    if (entry.kind === "case" && entry.detailUrl)
       return {
         message: "该项目使用外链，详情将直接打开外链。",
         previewUrl: entryUrl(entry),

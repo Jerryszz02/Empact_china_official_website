@@ -75,7 +75,7 @@ test(
           approved: true,
           parentId: parent.id,
           imageId: "image-test",
-          sourceUrl: "https://example.invalid/project-details",
+          detailUrl: "https://example.invalid/project-details",
         },
         {
           id: "case-no-image",
@@ -97,6 +97,8 @@ test(
           imageId: "image-test",
           summary: "隔离案例摘要",
           bodyHtml: "<p>案例行动与结果正文。</p>",
+          sourceName: "原有来源",
+          sourceUrl: "https://example.invalid/case-source",
           approved: true,
           parentId: parent.id,
         },
@@ -212,6 +214,10 @@ test(
         await readFile(join(out, "cases", "case-test", "index.html"), "utf8"),
       );
       assert.match(caseArticle("main").text(), /案例行动与结果正文/);
+      assert.equal(
+        caseArticle(".article-source a").attr("href"),
+        "https://example.invalid/case-source",
+      );
       assert.equal(
         caseArticle('link[rel="canonical"]').attr("href"),
         "https://empact.cn/cases/case-test/",

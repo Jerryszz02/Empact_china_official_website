@@ -179,7 +179,7 @@ export interface Content {
   /**
    * 填写完整的 http:// 或 https:// 链接，访客点击详情时直接打开外链；留空则使用下方网页正文。已有正文会保留，清空外链后可继续编辑。
    */
-  sourceUrl?: string | null;
+  detailUrl?: string | null;
   body?: {
     root: {
       type: string;
@@ -196,6 +196,10 @@ export interface Content {
     [k: string]: unknown;
   } | null;
   sourceName?: string | null;
+  /**
+   * 作为站内文章的引用来源，不改变详情跳转。
+   */
+  sourceUrl?: string | null;
   kind: 'page' | 'business' | 'project' | 'news' | 'coverage' | 'case';
   slug: string;
   approved?: boolean | null;
@@ -386,9 +390,10 @@ export interface ContentSelect<T extends boolean = true> {
   parent?: T;
   order?: T;
   image?: T;
-  sourceUrl?: T;
+  detailUrl?: T;
   body?: T;
   sourceName?: T;
+  sourceUrl?: T;
   kind?: T;
   slug?: T;
   approved?: T;

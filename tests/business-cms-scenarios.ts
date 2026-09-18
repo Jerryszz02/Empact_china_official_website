@@ -73,6 +73,8 @@ export async function verifyBusinessWorkflow(options: {
     slug: "business-workflow-case",
     title: "图文案例验收",
     summary: "独立案例摘要。",
+    sourceName: "项目原有来源",
+    sourceUrl: "https://example.invalid/case-source",
     body,
     parent: Number(businessId),
     image: coverId,
@@ -124,6 +126,10 @@ export async function verifyBusinessWorkflow(options: {
   const firstDate = (await request(`/api/content/${id}`)).publishedAt;
   assert.ok(firstDate);
   assert.match(await publicText(url), /案例原版正文/);
+  assert.match(
+    await publicText(url),
+    /href="https:\/\/example.invalid\/case-source"/,
+  );
   assert.match(await publicText(url), /活动现场图注/);
   assert.match(await publicText(url), new RegExp(image.filename));
   assert.equal(
@@ -194,10 +200,10 @@ export async function verifyBusinessWorkflow(options: {
     summary: "无站内正文的外链项目。",
     parent: Number(businessId),
     image: coverId,
-    sourceUrl: "https://example.invalid/external-project",
+    detailUrl: "https://example.invalid/external-project",
   });
   const externalId = String(external.doc.id);
-  for (const sourceUrl of [
+  for (const detailUrl of [
     "javascript:alert(1)",
     "https://",
     "ftp://example.invalid/file",
@@ -209,7 +215,7 @@ export async function verifyBusinessWorkflow(options: {
         Origin: base,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ sourceUrl }),
+      body: JSON.stringify({ detailUrl }),
     });
     assert.equal(
       rejected.status,
@@ -221,17 +227,17 @@ export async function verifyBusinessWorkflow(options: {
     summary: "外链项目的已修改摘要。",
   });
   assert.equal(
-    (await request(`/api/content/${externalId}`)).sourceUrl,
-    external.doc.sourceUrl,
+    (await request(`/api/content/${externalId}`)).detailUrl,
+    external.doc.detailUrl,
     "saving other fields preserves the external URL",
   );
   assert.equal(
     (await action("preview", externalId)).previewUrl,
-    external.doc.sourceUrl,
+    external.doc.detailUrl,
   );
   assert.equal(
     (await action("publish", externalId)).url,
-    external.doc.sourceUrl,
+    external.doc.detailUrl,
   );
   const parentItem = (await request("/api/business-admin/state")).items.find(
     (item: any) => item.id === businessId,

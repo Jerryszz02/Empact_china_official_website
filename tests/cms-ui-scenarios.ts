@@ -93,6 +93,9 @@ export async function verifyCmsUI({
     await expect(
       page.getByLabel("来源名称（选填）", { exact: true }),
     ).toBeVisible();
+    await expect(
+      page.getByLabel("来源链接（选填）", { exact: true }),
+    ).toBeVisible();
     await page.goto(base + "/admin#drafts");
     await expect(
       page.locator(".case-row").filter({ hasText: "浏览器案例工作流" }),
@@ -107,6 +110,10 @@ export async function verifyCmsUI({
       .click();
     await page.getByRole("button", { name: "隔离图片", exact: true }).click();
     await page.locator('[contenteditable="true"]').fill("浏览器图文原版正文。");
+    await page
+      .getByLabel("来源链接（选填）", { exact: true })
+      .fill("https://example.invalid/browser-source");
+    await expect(page.locator('[contenteditable="true"]')).toBeVisible();
     await expect(
       page.getByRole("button", { name: "发布到官网", exact: true }),
     ).toBeDisabled();
@@ -116,6 +123,7 @@ export async function verifyCmsUI({
     ).toBeEnabled();
     const saved = await request("/api/content/" + id);
     assert.ok(saved.image);
+    assert.equal(saved.sourceUrl, "https://example.invalid/browser-source");
     await page.getByRole("button", { name: "发布到官网", exact: true }).click();
     await expect(page.locator(".content-document-actions")).toContainText(
       "已发布",
