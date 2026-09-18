@@ -157,6 +157,7 @@ test(
       const home = load(await readFile(join(out, "index.html"), "utf8"));
       for (const html of [home, business]) {
         assert.equal(html(".case-image-placeholder").length, 0);
+        assert.equal(html('footer a[href="/admin"]').text().trim(), "后台管理");
         assert.ok(!html.html().includes("项目图片待补充"));
       }
       assert.ok(business("main").text().includes("无图片的已审核案例"));

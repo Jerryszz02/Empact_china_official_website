@@ -21,6 +21,9 @@ test("homepage paths, dropdowns, mobile navigation and draft boundary", async ({
       '.site-footer img[src="/brand/empact-logo-tagline-white.png"]',
     ),
   ).toHaveJSProperty("complete", true);
+  await expect(
+    page.locator(".footer-links").getByRole("link", { name: "后台管理" }),
+  ).toHaveAttribute("href", "/admin");
   await expect(page.locator("#nav-corporate a")).toHaveCount(3);
   await expect(page.locator(".motion-home > section")).toHaveCount(3);
   expect(

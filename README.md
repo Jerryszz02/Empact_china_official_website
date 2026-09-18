@@ -22,22 +22,21 @@ npm run dev:logs    # 查看日志并返回
 npm run dev:stop    # 停止后台服务
 ```
 
-电脑重启后需重新运行 `npm run dev`。启动前应确认 4321 属于本项目；其他程序占用时不会自动改用新端口。需要同时使用官网和内容后台时，先执行 `npm run dev:stop`，再按下面的流程启动统一服务：
+电脑重启后需重新运行 `npm run dev`。启动前应确认 4321 属于本项目；其他程序占用时不会自动改用新端口。页脚底部的「后台管理」打开 `/admin`，未登录时进入管理员登录页，登录后进入「业务与案例」后台。开发预览在首次访问后台时加载 CMS，官网与后台共用 4321，无需另外启动后台服务。首次发布前前台显示设计内容；首次发布后自动读取 `RUNTIME_DIR/current` 对应的已发布内容，后续发布在刷新页面时生效。保存草稿不会改变前台，页面与样式修改仍由 Astro 热更新。
+
+首次使用后台时，先初始化本机配置和数据库：
 
 ```bash
-npm ci
 npm run setup:local
 npm run seed:local -w @empact/cms
-npm run build:cms
-npm run build:preview
-PUBLIC_ROOT="$PWD/apps/site/dist" npm run serve:workspace
+npm run dev
 ```
 
-官网与后台共用 [http://127.0.0.1:4321](http://127.0.0.1:4321)，后台入口为 `/admin`。启动前检查并停止属于本项目的旧预览，不同时运行多个本地入口。已有 `.env` 请将 `CMS_URL` 更新为 `http://127.0.0.1:4321`。
+本机初始化命令将随机账号凭据保存到 **`.data/local-admin.json`**（权限 600），不打印密码；已有账号和内容不会覆盖。后台支持用户名或邮箱登录。管理员维护命令 `npm run create-admin -w @empact/cms` 从环境变量 `ADMIN_EMAIL` 定位现有账号，使用 `ADMIN_PASSWORD`（至少 8 位）重设密码；可同时用 `ADMIN_USERNAME` 设置登录用户名。重设时会清除旧会话并解除登录锁定。真实凭据只放在本机私有环境或凭据文件中，不写入代码。
 
-本机初始化命令将随机账号凭据保存到 **`.data/local-admin.json`**（权限 600），不打印密码；已有账号和内容不会覆盖。`.env`、数据库、媒体与预览均被 Git 排除。不能把本机草稿部署到公开预览地址。
+升级已有数据库需先备份，并执行 `npm run migrate -w @empact/cms`；本次新增的用户名字段不会覆盖已有账号，旧账号仍可使用邮箱登录。统一开发预览不自动修改数据库结构。`.env`、数据库、媒体与预览均被 Git 排除。不能把本机草稿部署到公开预览地址。
 
-上述 `PUBLIC_ROOT` 用于结构预览；演练正式发布时移除它，服务会读取 `RUNTIME_DIR/current`。首次建立官网需要经核对的基础快照，见 [业务后台、迁移与首次发布](docs/business-content-migration.md)。仅修改前台时，也可独占 4321 运行 `npm run dev`。
+演练正式发布时，停止开发预览后使用 `npm run build:cms` 和 `npm run serve:workspace`，服务读取 `RUNTIME_DIR/current`；结构预览可在构建后设置 `PUBLIC_ROOT="$PWD/apps/site/dist"`。验收后恢复 `npm run dev`。首次建立官网需要经核对的基础快照，见 [业务后台、迁移与首次发布](docs/business-content-migration.md)。
 
 ## 运营流程
 

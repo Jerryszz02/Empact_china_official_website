@@ -52,3 +52,20 @@ test("youth development model route is reserved from CMS businesses", () => {
   business.segment = "corporate";
   assert.doesNotThrow(() => validateSnapshot(data));
 });
+
+test("ChatCircle external entry publishes without event dates or venue, while hosted projects still require facts", () => {
+  const data = structuredClone(previewSnapshot);
+  data.mode = "production";
+  data.company.privacyApproved = true;
+  data.entries = data.entries.map((entry) => ({ ...entry, approved: true }));
+  assert.doesNotThrow(() => validateSnapshot(data, { production: true }));
+  const project = data.entries.find((entry) => entry.kind === "project")!;
+  project.slug = "hosted-project";
+  project.parentId = data.entries.find(
+    (entry) => entry.kind === "business",
+  )!.id;
+  assert.throws(
+    () => validateSnapshot(data, { production: true }),
+    /missing project location\/duration/,
+  );
+});

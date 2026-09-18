@@ -26,7 +26,9 @@ export default buildConfig({
   }),
   csrf: [process.env.CMS_URL || "http://127.0.0.1:3000"],
   db: sqliteAdapter({
-    push: process.env.NODE_ENV !== "production",
+    push:
+      process.env.NODE_ENV !== "production" &&
+      process.env.CMS_DEV_SCHEMA_PUSH !== "false",
     client: { url: process.env.DATABASE_URL || "file:.data/cms.sqlite" },
   }),
   collections: [Users, Content, Media, Publications],

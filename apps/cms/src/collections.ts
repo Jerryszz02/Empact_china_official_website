@@ -328,6 +328,11 @@ const businessContentFields: Field[] = [
 export const Users: CollectionConfig = {
   slug: "users",
   auth: {
+    loginWithUsername: {
+      allowEmailLogin: true,
+      requireEmail: true,
+      requireUsername: false,
+    },
     maxLoginAttempts: 5,
     lockTime: 900000,
     tokenExpiration: 7200,

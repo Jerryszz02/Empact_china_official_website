@@ -17,6 +17,11 @@ async function loadSnapshot(): Promise<Snapshot> {
     const parsed = JSON.parse(raw) as Snapshot;
     return validateSnapshot(parsed, { production: !isPreview });
   }
+  if (import.meta.env.DEV && process.env.RUNTIME_DIR) {
+    const { readPublishedSnapshot } = await import("./published-snapshot");
+    const published = await readPublishedSnapshot(process.env.RUNTIME_DIR);
+    if (published) return published;
+  }
   if (isPreview) {
     const fixtures = await import("@empact/content/fixtures");
     return validateSnapshot(fixtures.previewSnapshot, { production: false });
@@ -97,5 +102,5 @@ export function htmlToText(html: string) {
 }
 
 export function isPreviewMode() {
-  return isPreview;
+  return snapshot.mode === "preview";
 }

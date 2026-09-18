@@ -1,4 +1,4 @@
-import test from "node:test";
+import test, { after } from "node:test";
 import assert from "node:assert/strict";
 import {
   backupBeforeMigration,
@@ -8,9 +8,12 @@ import {
 } from "../apps/cms/src/content-migration.js";
 import { previewSnapshot } from "@empact/content/fixtures";
 import type { Snapshot } from "@empact/content/schema";
-import { mkdtemp, access } from "node:fs/promises";
+import { mkdtemp, access, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+
+const resetRuntime = await mkdtemp(join(tmpdir(), "empact-reset-test-"));
+after(() => rm(resetRuntime, { recursive: true, force: true }));
 
 const snapshot = (entries: any[]): Snapshot => ({
   version: "test",
@@ -135,6 +138,7 @@ test("framework reset dry-run ignores slug conflicts from cases and coverage sch
     delete: async (value: any) => calls.push(["delete", value]),
   };
   const report = await resetBusinessFramework(payload, previewSnapshot, {
+    runtimeDir: resetRuntime,
     dryRun: true,
   });
   assert.deepEqual(report.casesRemoved, ["1"]);
@@ -192,6 +196,7 @@ test("framework reset apply deletes only case coverage and youth obsolete conten
     },
   };
   const report = await resetBusinessFramework(payload, previewSnapshot, {
+    runtimeDir: resetRuntime,
     dryRun: false,
   });
   assert.deepEqual(
@@ -228,7 +233,11 @@ test("framework reset refuses a case with a project child before any write", asy
     delete: async (value: any) => calls.push(["delete", value]),
   };
   await assert.rejects(
-    () => resetBusinessFramework(payload, previewSnapshot, { dryRun: false }),
+    () =>
+      resetBusinessFramework(payload, previewSnapshot, {
+        runtimeDir: resetRuntime,
+        dryRun: false,
+      }),
     /非 coverage 子内容/,
   );
   assert.deepEqual(calls, []);
@@ -249,7 +258,11 @@ test("framework reset still rejects slug conflicts from surviving content before
   };
   for (const dryRun of [true, false]) {
     await assert.rejects(
-      () => resetBusinessFramework(payload, previewSnapshot, { dryRun }),
+      () =>
+        resetBusinessFramework(payload, previewSnapshot, {
+          runtimeDir: resetRuntime,
+          dryRun,
+        }),
       /框架路径类型冲突.*student-stories/,
     );
   }

@@ -20,7 +20,8 @@ await mkdir(runtime);
 const base = "http://127.0.0.1:4321";
 const publicURL = base;
 const email = "isolated-test@example.invalid",
-  password = randomBytes(24).toString("base64url");
+  username = "test@admin";
+let password = randomBytes(7).toString("base64url");
 const env = {
   ...process.env,
   NODE_ENV: "production" as const,
@@ -32,6 +33,7 @@ const env = {
   CMS_URL: base,
   PUBLIC_HEALTH_URL: `${publicURL}/release.json`,
   ADMIN_EMAIL: email,
+  ADMIN_USERNAME: username,
   ADMIN_PASSWORD: password,
   NEXT_TELEMETRY_DISABLED: "1",
 };
@@ -157,17 +159,50 @@ try {
       await fetch(base + "/api/users/first-register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ username, password }),
       })
     ).status,
     403,
   );
+  const oldPassword = password;
+  const oldLogin = await fetch(base + "/api/users/login", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Origin: base },
+    body: JSON.stringify({ username, password: oldPassword }),
+  });
+  assert.equal(oldLogin.status, 200);
+  const oldUser = (await oldLogin.json()).user;
+  const oldCookies = oldLogin.headers
+    .getSetCookie()
+    .map((value) => value.split(";")[0])
+    .join("; ");
+  const activeSession = await fetch(base + "/api/users/me", {
+    headers: { Cookie: oldCookies, Origin: base },
+  });
+  assert.equal((await activeSession.json()).user.id, oldUser.id);
+  password = randomBytes(7).toString("base64url");
+  await execute(
+    process.execPath,
+    ["--import", "tsx", "src/cli/create-admin.ts"],
+    { cwd: cms, env: { ...env, ADMIN_PASSWORD: password }, timeout: 30_000 },
+  );
+  const expiredSession = await fetch(base + "/api/users/me", {
+    headers: { Cookie: oldCookies, Origin: base },
+  });
+  assert.equal((await expiredSession.json()).user, null);
+  const rejected = await fetch(base + "/api/users/login", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Origin: base },
+    body: JSON.stringify({ username, password: oldPassword }),
+  });
+  assert.equal(rejected.status, 401);
   const login = await fetch(base + "/api/users/login", {
     method: "POST",
     headers: { "Content-Type": "application/json", Origin: base },
-    body: JSON.stringify({ email, password }),
+    body: JSON.stringify({ username, password }),
   });
   assert.equal(login.status, 200);
+  assert.equal((await login.json()).user.id, oldUser.id);
   const cookies = login.headers
     .getSetCookie()
     .map((value) => value.split(";")[0])
@@ -553,7 +588,7 @@ try {
     request,
     lexical,
   });
-  await verifyCmsUI({ base, email, password, request });
+  await verifyCmsUI({ base, username, password, request });
   console.log(
     "PASS: migrated fresh SQLite, login, private drafts/media, image upload, protected preview, publish, edit isolation, project association, unpublish, and exact rollback.",
   );

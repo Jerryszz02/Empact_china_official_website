@@ -85,7 +85,12 @@ export async function checkOutput(
       const href = $(el).attr("href") || $(el).attr("src") || "";
       if (!href.startsWith("/") || href.startsWith("//")) continue;
       const pathname = new URL(href, "https://empact.cn").pathname;
-      if (pathname.startsWith("/api/") || pathname.startsWith("/media/"))
+      // The CMS entry is served dynamically, outside the static site output.
+      if (
+        pathname === "/admin" ||
+        pathname.startsWith("/api/") ||
+        pathname.startsWith("/media/")
+      )
         continue;
       const target = join(directory, decodeURIComponent(pathname));
       try {
