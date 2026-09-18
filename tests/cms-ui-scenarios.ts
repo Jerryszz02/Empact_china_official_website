@@ -3,12 +3,12 @@ import { chromium, expect } from "@playwright/test";
 
 export async function verifyCmsUI({
   base,
-  email,
+  username,
   password,
   request,
 }: {
   base: string;
-  email: string;
+  username: string;
   password: string;
   request: (path: string, method?: string, data?: unknown) => Promise<any>;
 }) {
@@ -25,7 +25,7 @@ export async function verifyCmsUI({
   const businessIds: string[] = [];
   try {
     await page.goto(base + "/admin/login");
-    await page.locator('input[name="email"]').fill(email);
+    await page.locator('input[name="username"]').fill(username);
     await page.locator('input[name="password"]').fill(password);
     await page.locator('button[type="submit"]').click();
     await page.waitForURL(base + "/admin");
