@@ -1,8 +1,8 @@
 # 规划文档索引
 
-2026-09-10。本轮请求是实现《前端优化计划》，已完成的文字驱动重构仅作历史记录。
+维护核对：2026-09-18，代码基线 `eb8f417`。本目录保留前端方案与阶段验收记录；当前交付范围见[交付验收状态](../readiness.md)，日常入口见[项目 README](../../README.md)。
 
-实现工作树为 `/private/tmp/empact-frontend-motion-implementation`，分支 `agent/frontend-motion-implementation`，基于本次刷新的 `origin/main`（`0c78808`）；包含规划 PR #8 的归档提交。原目录及其他工作树的未提交文件保留原状。
+唯一工作区为 `/Users/jerryszz/Desktop/实习/Empact/empactchinaOfficialWeb`。历史验收文档中的临时工作树、分支和提交仅用于追溯，不再作为开发入口；本地预览统一从该目录运行 `npm run dev`，使用 4321。
 
 ## 当前实施依据
 
@@ -11,7 +11,7 @@
 | [青少年人才培养模型](youth-development-model.md) | 模型页面的内容、结构及验收记录 |
 | [前端优化计划](前端优化计划.md)             | 三屏粒子首页的范围、步骤、降级和验收要求；已实现，实机验收待完成 |
 | [动效设计规范](frontend-motion-design.md)   | 已确认配色、排版、粒子规则与用户原话                             |
-| [实施与验收](frontend-motion-acceptance.md) | 本轮代码实现、内容去向、实际检查结果和实机／发布边界             |
+| [实施与验收](frontend-motion-acceptance.md) | 动效实现阶段的检查记录与实机／发布边界；不是当前版本复验结果 |
 | [可滚动样张](motion-demo.html)              | 已确认蓝—米白—蓝视觉基准，保留作对照，不是生产模板               |
 | [品牌颜色图](motion-brand-reference.png)    | 用户提供的 HEX 色值来源                                          |
 | [官网实施与验收计划](implementation.md)     | 原工程、CMS、内容和发布边界；前端方向转向当前优化计划            |
@@ -27,9 +27,9 @@
 
 ## 维护与边界
 
-内容去向、检查命令和结果集中在本轮实施验收，不重复创建 PRD 或 API 文档。前台变化没有扩展 CMS、数据 schema、咨询服务端或生产发布机制。
+动效阶段的内容去向、检查命令和结果保留在对应验收文档。后续业务框架与后台发布流程见[框架调整](../business-framework-reset.md)和[业务后台、迁移与首次发布](../business-content-migration.md)。
 
-当前代码与本机 Chromium 回归已验证；真实 iOS Safari／Android 工具栏、手感及性能仍需实机验收。内容审批、部署与公网检查另走现有流程。运行状态以实际服务和进程为准，历史截图不能证明当前服务版本。
+历史文档记录了对应版本的本机 Chromium 回归；真实 iOS Safari／Android 工具栏、手感及性能仍需实机验收。内容审批、部署与公网检查另走现有流程。运行状态以实际服务和进程为准，历史截图不能证明当前服务版本。
 
 文档检查：
 
