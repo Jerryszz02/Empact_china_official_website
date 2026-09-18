@@ -1,6 +1,7 @@
 ---
 import BaseLayout from "@/layouts/BaseLayout.astro";
 import CaseImage from "@/components/CaseImage.astro";
+import ProjectPlanning from "@/components/ProjectPlanning.astro";
 import { effectiveProjectStatus } from "@empact/content/schema";
 import {
   entries,
@@ -75,6 +76,7 @@ const relatedWork = [
       .map((item) => [item!.id, item!]),
   ).values(),
 ];
+const isPlanning = entry.kind === "business" && entryCases.length === 0;
 const media = mediaById(entry.imageId);
 ---
 
@@ -136,7 +138,7 @@ const media = mediaById(entry.imageId);
       )}
     {(entry.kind === "business" || entryCases.length > 0) && (
       <section id="cases" class="embedded-section case-section">
-        <h2>相关案例</h2>
+        {!isPlanning && <h2>相关案例</h2>}
         {entryCases.length > 0 ? (
           <div class="case-grid">
             {entryCases.map((item) => (
@@ -153,9 +155,7 @@ const media = mediaById(entry.imageId);
             ))}
           </div>
         ) : (
-          <p class="empty-state">
-            欢迎与我们交流你的需求，了解这一方向的合作方式。
-          </p>
+          <ProjectPlanning businessId={entry.id} businessTitle={entry.title} />
         )}
       </section>
     )}
@@ -213,14 +213,16 @@ const media = mediaById(entry.imageId);
         ))}
       </section>
     )}
-    <section class="embedded-section">
-      <h2>咨询与合作</h2>
-      <a
-        class="button button-primary"
-        href={`/contact/?business=${encodeURIComponent(entry.kind === "business" ? entry.id : entry.parentId || "")}`}
-      >
-        {entry.segment === "youth" ? "个人、家庭或学校咨询" : "提交咨询需求"}
-      </a>
-    </section>
+    {!isPlanning && (
+      <section class="embedded-section">
+        <h2>咨询与合作</h2>
+        <a
+          class="button button-primary"
+          href={`/contact/?business=${encodeURIComponent(entry.kind === "business" ? entry.id : entry.parentId || "")}`}
+        >
+          {entry.segment === "youth" ? "个人、家庭或学校咨询" : "提交咨询需求"}
+        </a>
+      </section>
+    )}
   </section>
 </BaseLayout>

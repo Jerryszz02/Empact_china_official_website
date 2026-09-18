@@ -473,10 +473,6 @@ h3 {
 .content-wrap .case-section {
   max-width: 100%;
 }
-.empty-state {
-  max-width: 40rem;
-  color: var(--secondary);
-}
 .article-hero .back-link {
   display: flex;
   width: fit-content;
