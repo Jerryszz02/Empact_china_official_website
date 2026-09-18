@@ -11,6 +11,7 @@ import {
 } from "./publisher.js";
 import {
   entryPath,
+  entryUrl,
   validateSnapshot,
   type Entry,
   type Snapshot,
@@ -111,7 +112,7 @@ export async function businessAdminState(
               )),
           ),
           approved: entry.approved,
-          url: entryPath(entry),
+          url: entryUrl(current ?? entry),
           publishedAt:
             entry.publishedAt ||
             (receipt?.state === "published" ? receipt.finishedAt : undefined),
@@ -125,12 +126,17 @@ function ensurePublishable(
   draft: Snapshot,
   live: Snapshot | undefined,
 ) {
+  if (!entry.title.trim() || !entry.summary.trim())
+    throw new Error("请补齐标题和摘要后再发布。");
   if (
-    !entry.title.trim() ||
-    !entry.summary.trim() ||
+    !(entry.kind === "case" && entry.sourceUrl) &&
     !entry.bodyHtml.replace(/<[^>]+>/g, "").trim()
   )
-    throw new Error("请补齐标题、摘要和正文后再发布。");
+    throw new Error(
+      entry.kind === "case"
+        ? "请填写外链或网页正文后再发布，两者任选其一。"
+        : "请补齐业务介绍正文后再发布。",
+    );
   if (entry.kind === "case") {
     if (!entry.parentId) throw new Error("案例必须关联业务方向。");
     const parent = entryFor(draft, entry.parentId);
@@ -167,6 +173,11 @@ export async function businessAdminMutation(
   if (!entry || (entry.kind !== "business" && entry.kind !== "case"))
     throw new Error("业务内容不存在。");
   if (action === "preview") {
+    if (entry.kind === "case" && entry.sourceUrl)
+      return {
+        message: "该项目使用外链，详情将直接打开外链。",
+        previewUrl: entryUrl(entry),
+      };
     const selected = [id];
     if (
       entry.kind === "case" &&
@@ -348,7 +359,7 @@ export async function businessAdminMutation(
         data: { approved: true },
         overrideAccess: true,
       });
-    return { message: "已发布。", url: entryPath(entry) };
+    return { message: "已发布。", url: entryUrl(published) };
   }
   if (entry.kind === "business")
     await assertBusinessDependencyFree(payload, id);

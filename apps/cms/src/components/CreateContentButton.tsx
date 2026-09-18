@@ -6,11 +6,13 @@ export function CreateContentButton({
   parentId,
   segment,
   label,
+  businesses = [],
 }: {
   kind: "business" | "case";
   parentId?: string;
   segment?: "corporate" | "youth" | "school" | "community";
   label: string;
+  businesses?: { id: string; title: string }[];
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
   const [busy, setBusy] = useState(false),
@@ -30,7 +32,7 @@ export function CreateContentButton({
           summary: form.get("summary"),
           ...(kind === "business"
             ? { segment: form.get("segment"), order: 0 }
-            : { parent: Number(parentId) }),
+            : { parent: Number(parentId || form.get("parent")) }),
           approved: false,
         }),
       });
@@ -57,27 +59,46 @@ export function CreateContentButton({
       <dialog
         ref={dialog}
         className="content-create-dialog"
-        aria-label={kind === "business" ? "新建业务" : "新建案例"}
+        aria-label={kind === "business" ? "新增业务类型" : "新增项目"}
       >
         <form onSubmit={create}>
-          <h2>{kind === "business" ? "新建业务类型" : "新建案例"}</h2>
-          <p>先填写名称和简短介绍，随后编辑完整图文内容。</p>
+          <h2>{kind === "business" ? "新增业务类型" : "新增项目"}</h2>
+          <p>先填写必填信息，创建草稿后继续编辑封面和详情。</p>
           <label>
-            名称 / 标题
+            名称 / 标题（必填）
             <input name="title" required autoFocus maxLength={120} />
           </label>
           <label>
-            简短介绍 / 案例摘要
+            简短介绍 / 项目摘要（必填）
             <textarea name="summary" required rows={3} maxLength={500} />
           </label>
           {kind === "business" && (
             <label>
-              业务分组
-              <select name="segment" defaultValue={segment || "corporate"}>
+              业务分组（必填）
+              <select
+                name="segment"
+                required
+                defaultValue={segment || "corporate"}
+              >
                 <option value="corporate">企业服务</option>
                 <option value="youth">青少年与青年</option>
                 <option value="school">学校业务</option>
                 <option value="community">社区业务</option>
+              </select>
+            </label>
+          )}
+          {kind === "case" && !parentId && (
+            <label>
+              所属业务类型（必填）
+              <select name="parent" required defaultValue="">
+                <option value="" disabled>
+                  请选择业务类型
+                </option>
+                {businesses.map((business) => (
+                  <option key={business.id} value={business.id}>
+                    {business.title}
+                  </option>
+                ))}
               </select>
             </label>
           )}

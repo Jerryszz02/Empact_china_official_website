@@ -5,6 +5,8 @@ import {
   validateSnapshot,
   effectiveProjectStatus,
   sanitizeBodyHtml,
+  entryPath,
+  entryUrl,
 } from "@empact/content/schema";
 
 test("unapproved preview cannot enter production publication", () => {
@@ -12,6 +14,51 @@ test("unapproved preview cannot enter production publication", () => {
   const promoted = structuredClone(previewSnapshot);
   promoted.mode = "production";
   assert.throws(() => validateSnapshot(promoted, { production: true }));
+});
+
+test("case details choose an external URL or a hosted article, with safe URLs required", () => {
+  const data = structuredClone(previewSnapshot);
+  data.mode = "production";
+  data.company.privacyApproved = true;
+  data.entries = data.entries.map((entry) => ({ ...entry, approved: true }));
+  const entry = {
+    id: "external-case",
+    kind: "case" as const,
+    slug: "external-case",
+    title: "外链项目",
+    summary: "项目介绍。",
+    bodyHtml: "",
+    approved: true,
+    parentId: data.entries.find((item) => item.kind === "business")!.id,
+    sourceUrl: "https://example.com/article",
+  };
+  data.entries.push(entry, { ...entry, id: "same-url", slug: "same-url" });
+  assert.doesNotThrow(() => validateSnapshot(data, { production: true }));
+  assert.equal(entryPath(entry), "/cases/external-case/");
+  assert.equal(entryUrl(entry), "https://example.com/article");
+  entry.sourceUrl = "";
+  assert.throws(
+    () => validateSnapshot(data, { production: true }),
+    /missing body/,
+  );
+  entry.bodyHtml = "<p>站内正文。</p>";
+  assert.doesNotThrow(() => validateSnapshot(data, { production: true }));
+  assert.equal(entryUrl(entry), "/cases/external-case/");
+  for (const url of [
+    "javascript:alert(1)",
+    "https://",
+    "https:example.com",
+    "https:/example.com",
+    "/relative",
+    "ftp://example.com/file",
+  ]) {
+    entry.sourceUrl = url;
+    assert.throws(
+      () => validateSnapshot(data, { production: true }),
+      /unsafe URL/,
+    );
+    assert.throws(() => entryUrl(entry), /外链/);
+  }
 });
 test("script, event handler and unsafe rich text never survive export", () => {
   for (const html of [

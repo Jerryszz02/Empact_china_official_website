@@ -103,7 +103,7 @@ export function ContentDocumentActions() {
   return (
     <section className="content-document-actions" aria-label="业务内容操作">
       <a className="text-link" href="/admin">
-        ← 返回业务与案例
+        ← 返回项目管理
       </a>
       <p className="document-publish-status">
         {status?.live
@@ -150,6 +150,11 @@ export function ContentDocumentActions() {
           </button>
         )}
       </div>
+      <p>
+        {kind === "case"
+          ? "标注必填的信息请先补齐；封面在发布时必填。详情填写外链或网页正文，二选一；填写外链后将直接跳转。"
+          : "标注必填的信息请先补齐；业务介绍在发布时必填，展示顺序选填。"}
+      </p>
       {(!id || modified) && (
         <p>请先保存草稿，再预览或发布；保存不会改变官网。</p>
       )}

@@ -66,6 +66,18 @@ test(
       ];
       data.entries.push(
         {
+          id: "external-case",
+          kind: "case",
+          slug: "external-case",
+          title: "外链项目",
+          summary: "外链项目摘要。",
+          bodyHtml: "",
+          approved: true,
+          parentId: parent.id,
+          imageId: "image-test",
+          sourceUrl: "https://example.invalid/project-details",
+        },
+        {
           id: "case-no-image",
           kind: "case",
           slug: "case-no-image",
@@ -172,6 +184,14 @@ test(
       assert.equal(home(".motion-home > section").length, 3);
       assert.equal(business("#case-no-image .case-image").length, 0);
       assert.equal(business("#case-test").attr("href"), "/cases/case-test/");
+      assert.equal(
+        business("#external-case").attr("href"),
+        "https://example.invalid/project-details",
+      );
+      await assert.rejects(
+        readFile(join(out, "cases/external-case/index.html"), "utf8"),
+        { code: "ENOENT" },
+      );
       assert.ok(business("#case-test").text().includes("隔离案例摘要"));
       // Case bodies moved to their own articles, not embedded on the business page.
       assert.ok(!business("#cases").text().includes("案例行动与结果正文"));
@@ -248,6 +268,8 @@ test(
       );
       const sitemap = await readFile(join(out, "sitemap.xml"), "utf8");
       assert.ok(!sitemap.includes("chatcircle"));
+      assert.ok(!sitemap.includes("external-case"));
+      assert.ok(!sitemap.includes("example.invalid/project-details"));
       assert.ok(sitemap.includes("/cases/case-test/"));
       assert.ok(sitemap.includes("/cases/case-no-image/"));
       assert.ok(!sitemap.includes("/coverage-test/"));
