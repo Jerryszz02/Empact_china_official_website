@@ -176,6 +176,10 @@ export interface Content {
   parent?: (number | null) | Content;
   order?: number | null;
   image?: (number | null) | Media;
+  /**
+   * 填写完整的 http:// 或 https:// 链接，访客点击详情时直接打开外链；留空则使用下方网页正文。已有正文会保留，清空外链后可继续编辑。
+   */
+  sourceUrl?: string | null;
   body?: {
     root: {
       type: string;
@@ -192,7 +196,6 @@ export interface Content {
     [k: string]: unknown;
   } | null;
   sourceName?: string | null;
-  sourceUrl?: string | null;
   kind: 'page' | 'business' | 'project' | 'news' | 'coverage' | 'case';
   slug: string;
   approved?: boolean | null;
@@ -383,9 +386,9 @@ export interface ContentSelect<T extends boolean = true> {
   parent?: T;
   order?: T;
   image?: T;
+  sourceUrl?: T;
   body?: T;
   sourceName?: T;
-  sourceUrl?: T;
   kind?: T;
   slug?: T;
   approved?: T;
