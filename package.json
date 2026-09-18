@@ -19,7 +19,7 @@
     "build:cms": "npm run build -w @empact/cms",
     "check": "tsc --noEmit && npm run check -w @empact/site && npm run check -w @empact/cms",
     "test": "tsx --test tests/*.test.ts",
-    "verify": "npm run check && npm test && npm run build:preview && SITE_MODE=preview npm run check:output && npm run build:cms && npm run test:cms && npm run test:browser",
+    "verify": "npm run check && npm test && npm run build:preview && SITE_MODE=preview npm run check:output && npm run build:cms && npm run test:cms && npm run test:dev && npm run test:browser",
     "build:preview": "SITE_MODE=preview npm run build -w @empact/site",
     "serve": "tsx --env-file=.env scripts/public-server.ts",
     "test:browser": "playwright test",
@@ -28,7 +28,8 @@
     "serve:preview": "tsx scripts/serve-preview.ts",
     "serve:workspace": "tsx --env-file=.env scripts/serve-workspace.ts",
     "test:cms": "tsx tests/cms-live.ts",
-    "format": "prettier --write apps packages scripts tests *.json playwright.config.ts"
+    "format": "prettier --write apps packages scripts tests *.json playwright.config.ts",
+    "test:dev": "tsx tests/dev-publication.ts"
   },
   "devDependencies": {
     "@playwright/test": "1.63.0",

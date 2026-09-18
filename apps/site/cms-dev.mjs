@@ -1,6 +1,9 @@
 import { createRequire } from "node:module";
 import { loadEnvFile } from "node:process";
 import { fileURLToPath } from "node:url";
+import { realpath } from "node:fs/promises";
+import { join } from "node:path";
+import { createPublicServer } from "../../scripts/public-server.ts";
 
 const origin = "http://127.0.0.1:4321";
 export function isCmsPath(pathname) {
@@ -18,15 +21,48 @@ export function cmsDev() {
     name: "empact-cms-dev",
     apply: "serve",
     configureServer(server) {
+      try {
+        loadEnvFile(fileURLToPath(new URL("../../.env", import.meta.url)));
+      } catch (error) {
+        if (error.code !== "ENOENT") throw error;
+      }
+      process.env.RUNTIME_DIR ||= fileURLToPath(
+        new URL("../../.data/site", import.meta.url),
+      );
+      const publishedRoot = join(process.env.RUNTIME_DIR, "current");
+      const publishedAssets = createPublicServer({
+        root: publishedRoot,
+        origin,
+      });
+      let lastPublication;
+      server.middlewares.use((req, res, next) => {
+        const pathname = new URL(req.url || "/", origin).pathname;
+        if (pathname.startsWith("/media/") || pathname === "/api/contact") {
+          publishedAssets.emit("request", req, res);
+          return;
+        }
+        if (isCmsPath(pathname)) return next();
+        // Atomic publication changes select a new snapshot. Invalidate Astro's
+        // cached data before rendering the next request, without restarting dev.
+        void realpath(publishedRoot)
+          .catch((error) => {
+            if (error.code === "ENOENT") return undefined;
+            throw error;
+          })
+          .then((publication) => {
+            if (publication !== lastPublication) {
+              lastPublication = publication;
+              server.moduleGraph.invalidateAll();
+              server.ws.send({ type: "full-reload", path: "*" });
+            }
+            next();
+          })
+          .catch(next);
+      });
       let app;
       let ready;
       const prepare = () => {
         ready ??= (async () => {
-          try {
-            loadEnvFile(fileURLToPath(new URL("../../.env", import.meta.url)));
-          } catch (error) {
-            if (error.code !== "ENOENT") throw error;
-          }
           process.env.CMS_URL = origin;
           process.env.NEXT_TELEMETRY_DISABLED = "1";
           // The shared preview uses the initialized database without changing its schema.

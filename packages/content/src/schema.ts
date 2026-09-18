@@ -320,7 +320,11 @@ export function validateSnapshot(
         (!parent || parent.kind !== "business")
       )
         throw new Error(`project requires business: ${e.id}`);
-      if (e.kind === "project" && (!e.location || !e.duration))
+      if (
+        e.kind === "project" &&
+        e.slug !== "chatcircle" &&
+        (!e.location || !e.duration)
+      )
         throw new Error(`missing project location/duration: ${e.id}`);
       if (e.kind === "news" && !e.publishedAt)
         throw new Error(`news publication date required: ${e.id}`);
