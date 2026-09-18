@@ -30,21 +30,25 @@ export async function verifyCmsUI({
     await page.locator('button[type="submit"]').click();
     await page.waitForURL(base + "/admin");
     await expect(
-      page.getByRole("heading", { name: "业务与案例", exact: true }),
+      page.getByRole("heading", { name: "项目管理", exact: true }),
     ).toBeVisible();
+    await expect(
+      page.getByRole("navigation", { name: "内容管理入口" }).getByRole("link"),
+    ).toHaveCount(4);
     for (const [segment, label] of [
       ["school", "学校业务"],
       ["community", "社区业务"],
     ]) {
+      await page.getByRole("link", { name: /新增业务类型/ }).click();
       await page
-        .getByRole("button", { name: "+ 新建业务", exact: true })
+        .getByRole("button", { name: "新增业务类型", exact: true })
         .click();
       const dialog = page.getByRole("dialog", {
-        name: "新建业务",
+        name: "新增业务类型",
         exact: true,
       });
       await dialog.getByLabel("名称 / 标题").fill(`浏览器${label}创建验收`);
-      await dialog.getByLabel("简短介绍 / 案例摘要").fill("隔离测试业务摘要。");
+      await dialog.getByLabel("简短介绍 / 项目摘要").fill("隔离测试业务摘要。");
       await dialog.getByLabel("业务分组").selectOption({ label });
       await dialog
         .getByRole("button", { name: "创建并编辑", exact: true })
@@ -57,14 +61,19 @@ export async function verifyCmsUI({
       assert.equal(business.segment, segment);
       await page.goto(base + "/admin");
       await expect(
-        page.getByRole("heading", { name: "业务与案例", exact: true }),
+        page.getByRole("heading", { name: "项目管理", exact: true }),
       ).toBeVisible();
     }
-    await page.locator(".business-card").first().click();
+    const state = await request("/api/business-admin/state");
+    const parent = state.items.find(
+      (item: any) => item.kind === "business" && item.live,
+    );
+    assert.ok(parent);
+    await page.getByRole("button", { name: "新增项目", exact: true }).click();
     await page
-      .locator(".business-detail")
-      .getByRole("button", { name: "+ 新建案例", exact: true })
-      .click();
+      .getByRole("dialog", { name: "新增项目", exact: true })
+      .getByLabel("所属业务类型（必填）")
+      .selectOption(parent.id);
     await page
       .locator('dialog[open] input[name="title"]')
       .fill("浏览器案例工作流");
@@ -77,12 +86,34 @@ export async function verifyCmsUI({
     await expect(page.locator('input[name="kind"]')).toHaveValue("case");
     const created = await request("/api/content/" + id);
     assert.equal(created.kind, "case");
-    assert.ok(created.parent);
+    assert.equal(String(created.parent.id ?? created.parent), parent.id);
+    await expect(
+      page.getByText("项目封面（发布时必填）", { exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByLabel("来源名称（选填）", { exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByLabel("来源链接（选填）", { exact: true }),
+    ).toBeVisible();
+    await page.goto(base + "/admin#drafts");
+    await expect(
+      page.locator(".case-row").filter({ hasText: "浏览器案例工作流" }),
+    ).toBeVisible();
+    await page
+      .locator(".case-row")
+      .filter({ hasText: "浏览器案例工作流" })
+      .getByRole("link", { name: "编辑", exact: true })
+      .click();
     await page
       .getByRole("button", { name: "从现有中选择", exact: true })
       .click();
     await page.getByRole("button", { name: "隔离图片", exact: true }).click();
     await page.locator('[contenteditable="true"]').fill("浏览器图文原版正文。");
+    await page
+      .getByLabel("来源链接（选填）", { exact: true })
+      .fill("https://example.invalid/browser-source");
+    await expect(page.locator('[contenteditable="true"]')).toBeVisible();
     await expect(
       page.getByRole("button", { name: "发布到官网", exact: true }),
     ).toBeDisabled();
@@ -92,6 +123,7 @@ export async function verifyCmsUI({
     ).toBeEnabled();
     const saved = await request("/api/content/" + id);
     assert.ok(saved.image);
+    assert.equal(saved.sourceUrl, "https://example.invalid/browser-source");
     await page.getByRole("button", { name: "发布到官网", exact: true }).click();
     await expect(page.locator(".content-document-actions")).toContainText(
       "已发布",
@@ -100,6 +132,15 @@ export async function verifyCmsUI({
     await expect(
       page.getByRole("button", { name: "发布更新", exact: true }),
     ).toBeVisible();
+    await page.goto(base + "/admin#published");
+    await expect(
+      page.locator(".case-row").filter({ hasText: "浏览器案例工作流" }),
+    ).toBeVisible();
+    await page.getByRole("link", { name: /管理草稿/ }).click();
+    await expect(
+      page.locator(".case-row").filter({ hasText: "浏览器案例工作流" }),
+    ).toHaveCount(0);
+    await page.goto(base + `/admin/collections/content/${id}`);
     await page
       .locator('[contenteditable="true"]')
       .fill("浏览器尚未发布的新正文。");
@@ -137,9 +178,36 @@ export async function verifyCmsUI({
       path: "test-results/cms-editor-mobile.png",
       fullPage: true,
     });
-    await page.goto(base + "/admin");
+    await page
+      .getByLabel("外链（与网页正文二选一）", { exact: true })
+      .fill("https://example.invalid/browser-project");
+    await expect(page.locator('[contenteditable="true"]')).toHaveCount(0);
+    await page.getByRole("button", { name: "保存", exact: true }).click();
     await expect(
-      page.getByRole("heading", { name: "业务与案例", exact: true }),
+      page.getByRole("button", { name: "发布更新", exact: true }),
+    ).toBeEnabled();
+    await page.getByRole("button", { name: "发布更新", exact: true }).click();
+    await expect(page.locator(".content-document-actions")).toContainText(
+      "已发布",
+      { timeout: 180000 },
+    );
+    await page.goto(base + "/admin#published");
+    const publishedRow = page
+      .locator(".case-row")
+      .filter({ hasText: "浏览器案例工作流" });
+    await expect(
+      publishedRow.getByRole("link", { name: "查看详情 ↗", exact: true }),
+    ).toHaveAttribute("href", "https://example.invalid/browser-project");
+    await publishedRow
+      .getByRole("button", { name: "撤下", exact: true })
+      .click();
+    await expect(publishedRow).toHaveCount(0, { timeout: 180000 });
+    await page.getByRole("link", { name: /管理草稿/ }).click();
+    await expect(
+      page.locator(".case-row").filter({ hasText: "浏览器案例工作流" }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "项目管理", exact: true }),
     ).toBeVisible();
     assert.equal(
       await page.evaluate(
@@ -154,7 +222,7 @@ export async function verifyCmsUI({
     });
     assert.deepEqual(errors, []);
     console.log(
-      "PASS: browser school/community business creation, case creation, automatic business assignment, visual editor, media selection, save/publish guard and mobile admin.",
+      "PASS: four admin workflows, school/community business creation, required/optional fields, selected business, drafts/published transitions, external details, editor and mobile admin.",
     );
   } finally {
     await browser.close();

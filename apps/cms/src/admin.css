@@ -81,8 +81,6 @@
 }
 .business-admin__hero,
 .section-heading,
-.detail-toolbar,
-.case-list__head,
 .case-row {
   display: flex;
   align-items: center;
@@ -134,32 +132,31 @@
 .business-admin__hero .eyebrow {
   color: #9ed9e6;
 }
-.business-admin__layout {
+.admin-parts {
   display: grid;
-  grid-template-columns: minmax(260px, 0.8fr) minmax(0, 1.5fr);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 22px;
   margin-top: 22px;
 }
-.business-list,
-.business-detail {
+.admin-workspace {
   min-width: 0;
   padding: 26px;
   border: 1px solid var(--empact-line);
   border-radius: 20px;
   background: white;
 }
-.business-cards,
 .case-list {
   display: grid;
   gap: 10px;
   margin-top: 24px;
 }
-.business-card {
+.admin-part {
   display: grid;
   gap: 8px;
   width: 100%;
   padding: 18px;
   text-align: left;
+  text-decoration: none;
   border: 1px solid var(--empact-line);
   border-radius: 14px;
   color: inherit;
@@ -170,19 +167,20 @@
     transform 0.18s,
     box-shadow 0.18s;
 }
-.business-card:hover,
-.business-card.is-selected {
+.admin-part:hover,
+.admin-part.is-selected,
+.admin-part:focus-visible {
   border-color: var(--empact-blue);
   transform: translateY(-2px);
   box-shadow: 0 10px 24px rgba(18, 82, 132, 0.1);
 }
-.business-card__mark {
+.admin-part__number {
   font-size: 11px;
   letter-spacing: 0.08em;
   color: var(--empact-blue);
   font-weight: 700;
 }
-.business-card > span:not(.business-card__mark) {
+.admin-part > span:not(.admin-part__number) {
   color: #64798a;
   font-size: 13px;
   line-height: 1.55;
@@ -257,17 +255,6 @@
 .case-list {
   margin-top: 28px;
 }
-.case-list__head {
-  padding-bottom: 12px;
-  border-bottom: 1px solid var(--empact-line);
-}
-.case-list__head h3 {
-  margin: 0;
-}
-.case-list__head span {
-  color: #708493;
-  font-size: 13px;
-}
 .case-row {
   align-items: flex-start;
   padding: 18px 0;
@@ -324,8 +311,8 @@
   background: #ffe7e8;
 }
 @media (max-width: 860px) {
-  .business-admin__layout {
-    grid-template-columns: 1fr;
+  .admin-parts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .business-admin__hero {
     align-items: flex-start;
@@ -342,16 +329,11 @@
   .business-admin {
     padding: 20px 14px 48px;
   }
-  .business-list,
-  .business-detail {
+  .admin-workspace {
     padding: 18px;
     border-radius: 16px;
   }
   .section-heading {
-    align-items: flex-start;
-    flex-direction: column;
-  }
-  .detail-toolbar {
     align-items: flex-start;
     flex-direction: column;
   }
@@ -360,16 +342,6 @@
   }
 }
 
-.business-cards > section {
-  display: grid;
-  gap: 12px;
-}
-.business-cards > section > h3 {
-  margin: 12px 0 0;
-}
-.business-card {
-  width: 100%;
-}
 .content-create-dialog {
   width: min(560px, calc(100vw - 32px));
   border: 1px solid #bdd1df;
@@ -428,5 +400,36 @@
   }
   .doc-controls__controls {
     flex-wrap: wrap;
+  }
+}
+
+.admin-workspace {
+  margin-top: 22px;
+}
+.admin-workspace__create {
+  margin-top: 24px;
+}
+.admin-workspace__create p,
+.admin-workspace__hint {
+  margin-top: 14px;
+  color: #64798a;
+  font-size: 13px;
+  line-height: 1.7;
+}
+.admin-part,
+.case-row__body {
+  overflow-wrap: anywhere;
+}
+@media (max-width: 520px) {
+  .admin-parts {
+    gap: 10px;
+  }
+  .admin-part {
+    padding: 14px;
+  }
+  .business-admin-nav,
+  .business-admin-nav__links {
+    flex-wrap: wrap;
+    gap: 12px;
   }
 }

@@ -73,6 +73,8 @@ export async function verifyBusinessWorkflow(options: {
     slug: "business-workflow-case",
     title: "图文案例验收",
     summary: "独立案例摘要。",
+    sourceName: "项目原有来源",
+    sourceUrl: "https://example.invalid/case-source",
     body,
     parent: Number(businessId),
     image: coverId,
@@ -124,6 +126,10 @@ export async function verifyBusinessWorkflow(options: {
   const firstDate = (await request(`/api/content/${id}`)).publishedAt;
   assert.ok(firstDate);
   assert.match(await publicText(url), /案例原版正文/);
+  assert.match(
+    await publicText(url),
+    /href="https:\/\/example.invalid\/case-source"/,
+  );
   assert.match(await publicText(url), /活动现场图注/);
   assert.match(await publicText(url), new RegExp(image.filename));
   assert.equal(
@@ -186,6 +192,69 @@ export async function verifyBusinessWorkflow(options: {
     items.some((item: any) => item.id === id),
     false,
   );
+
+  const external = await request("/api/content", "POST", {
+    kind: "case",
+    slug: "external-workflow-project",
+    title: "外链项目验收",
+    summary: "无站内正文的外链项目。",
+    parent: Number(businessId),
+    image: coverId,
+    detailUrl: "https://example.invalid/external-project",
+  });
+  const externalId = String(external.doc.id);
+  for (const detailUrl of [
+    "javascript:alert(1)",
+    "https://",
+    "ftp://example.invalid/file",
+  ]) {
+    const rejected = await fetch(base + `/api/content/${externalId}`, {
+      method: "PATCH",
+      headers: {
+        Cookie: cookies,
+        Origin: base,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ detailUrl }),
+    });
+    assert.equal(
+      rejected.status,
+      400,
+      "invalid external URLs must be rejected on save",
+    );
+  }
+  await request(`/api/content/${externalId}`, "PATCH", {
+    summary: "外链项目的已修改摘要。",
+  });
+  assert.equal(
+    (await request(`/api/content/${externalId}`)).detailUrl,
+    external.doc.detailUrl,
+    "saving other fields preserves the external URL",
+  );
+  assert.equal(
+    (await action("preview", externalId)).previewUrl,
+    external.doc.detailUrl,
+  );
+  assert.equal(
+    (await action("publish", externalId)).url,
+    external.doc.detailUrl,
+  );
+  const parentItem = (await request("/api/business-admin/state")).items.find(
+    (item: any) => item.id === businessId,
+  );
+  assert.match(
+    await publicText(parentItem.url),
+    /href="https:\/\/example.invalid\/external-project"/,
+  );
+  assert.equal(
+    (await fetch(publicURL + "/cases/external-workflow-project/")).status,
+    404,
+  );
+  assert.doesNotMatch(
+    await publicText("/sitemap.xml"),
+    /external-workflow-project|example.invalid\/external-project/,
+  );
+  await action("delete", externalId);
 
   const empty = await request("/api/content", "POST", {
     kind: "business",

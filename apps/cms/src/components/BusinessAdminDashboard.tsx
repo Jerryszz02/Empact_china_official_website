@@ -1,7 +1,7 @@
 "use client";
 
 import { CreateContentButton } from "./CreateContentButton.js";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 
 type Item = {
   id: string;
@@ -10,17 +10,34 @@ type Item = {
   segment?: "youth" | "corporate" | "school" | "community";
   parentId?: string;
   summary?: string;
-  slug: string;
   order?: number;
   live?: boolean;
   modified?: boolean;
-  approved?: boolean;
   url?: string;
   publishedAt?: string;
   lastError?: string;
   lastAction?: string;
 };
 
+const parts = [
+  {
+    id: "new-project",
+    title: "新增项目",
+    description: "填写信息，创建新的项目草稿",
+  },
+  {
+    id: "published",
+    title: "管理已发布项目",
+    description: "查看官网项目，编辑更新或撤下",
+  },
+  { id: "drafts", title: "管理草稿", description: "继续编辑、预览并发布项目" },
+  {
+    id: "business-types",
+    title: "新增业务类型",
+    description: "添加业务类型，维护业务介绍",
+  },
+] as const;
+type Part = (typeof parts)[number]["id"];
 const segmentLabels = {
   corporate: "企业服务",
   youth: "青少年与青年",
@@ -31,83 +48,81 @@ const segmentLabels = {
 function status(item: Item) {
   if (item.lastError) return { label: "操作失败 · 可重试", tone: "changed" };
   if (item.live && item.modified)
-    return { label: "已上线 · 有修改", tone: "changed" };
-  if (item.live) return { label: "已上线", tone: "live" };
+    return { label: "已发布 · 有未发布修改", tone: "changed" };
+  if (item.live) return { label: "已发布", tone: "live" };
   return {
-    label: item.lastAction === "unpublished" ? "已撤下" : "草稿",
+    label: item.lastAction === "unpublished" ? "已撤下 · 草稿" : "草稿",
     tone: "draft",
   };
 }
 
 export function BusinessAdminDashboard() {
   const [items, setItems] = useState<Item[]>([]);
-  const [selectedId, setSelectedId] = useState<string>();
+  const [part, setPart] = useState<Part>("new-project");
+  const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [resultUrl, setResultUrl] = useState("");
   const [error, setError] = useState("");
 
   async function refresh() {
+    setLoading(true);
     setError("");
     try {
       const response = await fetch("/api/business-admin/state", {
         cache: "no-store",
       });
       const data = await response.json();
-      if (!response.ok) throw new Error(data.error || "业务数据暂时无法加载");
+      if (!response.ok) throw new Error(data.error || "项目数据暂时无法加载");
       setItems(Array.isArray(data.items) ? data.items : []);
-      setSelectedId((current) =>
-        current && data.items.some((item: Item) => item.id === current)
-          ? current
-          : data.items.find((item: Item) => item.kind === "business")?.id,
-      );
     } catch (caught) {
       setError(
-        caught instanceof Error ? caught.message : "业务数据暂时无法加载",
+        caught instanceof Error ? caught.message : "项目数据暂时无法加载",
       );
+    } finally {
+      setLoading(false);
     }
   }
 
   useEffect(() => {
+    const selectPart = () => {
+      const next = parts.find((item) => `#${item.id}` === window.location.hash);
+      setPart(next?.id || "new-project");
+    };
+    selectPart();
+    window.addEventListener("hashchange", selectPart);
     void refresh();
+    return () => window.removeEventListener("hashchange", selectPart);
   }, []);
 
-  const businesses = useMemo(
-    () =>
-      items
-        .filter((item) => item.kind === "business")
-        .sort((a, b) => (a.order || 0) - (b.order || 0)),
-    [items],
-  );
-  const selected =
-    businesses.find((item) => item.id === selectedId) || businesses[0];
-  const cases = selected
-    ? items
-        .filter((item) => item.parentId === selected.id && item.kind === "case")
-        .sort(
-          (a, b) =>
-            (Date.parse(b.publishedAt || "") || 0) -
-            (Date.parse(a.publishedAt || "") || 0),
-        )
-    : [];
+  const businesses = items
+    .filter((item) => item.kind === "business")
+    .sort((a, b) => (a.order || 0) - (b.order || 0));
+  const projects = items
+    .filter((item) => item.kind === "case")
+    .sort(
+      (a, b) =>
+        (Date.parse(b.publishedAt || "") || 0) -
+        (Date.parse(a.publishedAt || "") || 0),
+    );
+  const published = projects.filter((item) => item.live);
+  const drafts = projects.filter((item) => !item.live);
+  const currentPart = parts.find((item) => item.id === part)!;
+  const visibleItems =
+    part === "published" ? published : part === "drafts" ? drafts : businesses;
 
   async function action(
     type: "preview" | "publish" | "unpublish" | "delete",
     item: Item,
   ) {
     if (
-      type === "delete" &&
+      type !== "preview" &&
       !window.confirm(
-        `确定删除“${item.title}”？已上线内容会先撤下；有依赖的业务无法删除。`,
-      )
-    )
-      return;
-    if (
-      (type === "publish" || type === "unpublish") &&
-      !window.confirm(
-        type === "publish"
-          ? `发布“${item.title}”？请确认已保存最新修改。`
-          : `撤下“${item.title}”？`,
+        type === "delete"
+          ? `确定删除“${item.title}”？已发布内容会先撤下；有依赖的业务类型无法删除。`
+          : type === "publish"
+            ? `发布“${item.title}”？请确认已保存最新修改。`
+            : `撤下“${item.title}”？撤下后可在草稿中继续管理。`,
       )
     )
       return;
@@ -135,15 +150,34 @@ export function BusinessAdminDashboard() {
   }
 
   return (
-    <main className="business-admin" aria-label="业务与案例管理">
+    <main className="business-admin" aria-label="项目管理">
       <header className="business-admin__hero">
         <div>
           <p className="eyebrow">EMPACT CONTENT STUDIO</p>
-          <h1>业务与案例</h1>
-          <p>把业务方向、案例内容和官网状态放在同一个工作台。</p>
+          <h1>项目管理</h1>
+          <p>新增项目、维护已发布内容，或从草稿继续。</p>
         </div>
-        <CreateContentButton kind="business" label="+ 新建业务" />
       </header>
+      <nav className="admin-parts" aria-label="内容管理入口">
+        {parts.map((item, index) => (
+          <a
+            key={item.id}
+            href={`#${item.id}`}
+            className={`admin-part ${part === item.id ? "is-selected" : ""}`}
+            aria-current={part === item.id ? "page" : undefined}
+          >
+            <span className="admin-part__number">0{index + 1}</span>
+            <strong>{item.title}</strong>
+            <span>{item.description}</span>
+            {!loading && (item.id === "published" || item.id === "drafts") && (
+              <span>
+                {item.id === "published" ? published.length : drafts.length}{" "}
+                个项目
+              </span>
+            )}
+          </a>
+        ))}
+      </nav>
       {message && (
         <p className="admin-notice" role="status">
           {message}
@@ -162,143 +196,82 @@ export function BusinessAdminDashboard() {
           {error}
         </p>
       )}
-      <div className="business-admin__layout">
-        <section
-          className="business-list"
-          aria-labelledby="business-list-title"
-        >
-          <div className="section-heading">
-            <div>
-              <p className="eyebrow">业务类型</p>
-              <h2 id="business-list-title">选择要管理的业务</h2>
-            </div>
-            <button
-              className="button button--quiet"
-              onClick={() => void refresh()}
-              disabled={busy}
-            >
-              刷新
-            </button>
+      <section
+        className="admin-workspace"
+        aria-labelledby="workspace-title"
+        aria-busy={loading || busy}
+      >
+        <div className="section-heading">
+          <div>
+            <h2 id="workspace-title">{currentPart.title}</h2>
+            <p>{currentPart.description}</p>
           </div>
-          {businesses.length === 0 ? (
-            <div className="empty-state">
-              <strong>还没有业务方向</strong>
-              <p>先创建一个业务，再把案例放到对应业务下。</p>
-              <CreateContentButton kind="business" label="创建第一个业务" />
-            </div>
-          ) : (
-            <div className="business-cards">
-              {(["youth", "corporate", "school", "community"] as const).map(
-                (segment) => (
-                  <section key={segment}>
-                    <h3>{segmentLabels[segment]}</h3>
-                    {businesses
-                      .filter((item) => item.segment === segment)
-                      .map((item) => {
-                        const current = status(item);
-                        return (
-                          <button
-                            key={item.id}
-                            className={`business-card ${selected?.id === item.id ? "is-selected" : ""}`}
-                            onClick={() => setSelectedId(item.id)}
-                          >
-                            <span className="business-card__mark">
-                              {item.segment
-                                ? segmentLabels[item.segment]
-                                : "业务方向"}
-                            </span>
-                            <strong>{item.title}</strong>
-                            <span>{item.summary || "还没有导读"}</span>
-                            <em className={`status status--${current.tone}`}>
-                              {current.label}
-                            </em>
-                          </button>
-                        );
-                      })}
-                  </section>
-                ),
-              )}
-            </div>
-          )}
-        </section>
-        {selected && (
-          <section
-            className="business-detail"
-            aria-labelledby="business-detail-title"
+          <button
+            className="button button--quiet"
+            onClick={() => void refresh()}
+            disabled={busy || loading}
           >
-            <div className="section-heading">
-              <div>
-                <p className="eyebrow">当前业务</p>
-                <h2 id="business-detail-title">{selected.title}</h2>
-                <p>
-                  {selected.summary ||
-                    "为这项业务补充一段导读，让团队和访客快速理解它。"}
-                </p>
-              </div>
-              <a
-                className="button button--secondary"
-                href={`/admin/collections/content/${selected.id}`}
-              >
-                编辑介绍
-              </a>
-            </div>
-            <div className="detail-toolbar">
-              <div className="case-row__actions">
-                <button
-                  className="button button--quiet"
-                  disabled={busy}
-                  onClick={() => void action("preview", selected)}
-                >
-                  预览草稿
-                </button>
-                <button
-                  className="button button--primary"
-                  disabled={busy}
-                  onClick={() => void action("publish", selected)}
-                >
-                  {selected.live ? "发布更新" : "发布到官网"}
-                </button>
-                {selected.live && (
-                  <button
-                    className="button button--quiet"
-                    disabled={busy}
-                    onClick={() => void action("unpublish", selected)}
-                  >
-                    撤下
-                  </button>
-                )}
-                <button
-                  className="button button--danger"
-                  disabled={busy}
-                  onClick={() => void action("delete", selected)}
-                >
-                  删除
-                </button>
-              </div>
+            刷新
+          </button>
+        </div>
+        {loading ? (
+          <p role="status">正在加载项目…</p>
+        ) : part === "new-project" ? (
+          <div className="empty-state">
+            <strong>先填写项目信息，再选择详情展示方式</strong>
+            <p>
+              标题、摘要和所属业务类型必填。创建后可继续添加封面，填写外链或站内网页正文。
+            </p>
+            {businesses.length ? (
               <CreateContentButton
                 kind="case"
-                parentId={selected.id}
-                label="+ 新建案例"
+                businesses={businesses}
+                label="新增项目"
               />
-            </div>
-            <div className="case-list">
-              <div className="case-list__head">
-                <h3>案例内容</h3>
-                <span>{cases.length} 个案例</span>
+            ) : (
+              <>
+                <p>请先新增一个业务类型，再创建项目。</p>
+                <a className="button button--primary" href="#business-types">
+                  前往新增业务类型
+                </a>
+              </>
+            )}
+          </div>
+        ) : (
+          <>
+            {part === "business-types" && (
+              <div className="admin-workspace__create">
+                <CreateContentButton kind="business" label="新增业务类型" />
+                <p>已有业务类型可在下方编辑介绍、发布或调整展示顺序。</p>
               </div>
-              {cases.length === 0 ? (
-                <div className="empty-state empty-state--small">
-                  <strong>这个业务还没有案例</strong>
-                  <p>新建一个案例后，它会自动出现在这里。</p>
-                  <CreateContentButton
-                    kind="case"
-                    parentId={selected.id}
-                    label="创建案例"
-                  />
+            )}
+            {part === "published" && (
+              <p className="admin-workspace__hint">
+                已发布项目的修改仍在这里管理；保存草稿后，点击“发布更新”才会更新官网。
+              </p>
+            )}
+            <div className="case-list">
+              {visibleItems.length === 0 ? (
+                <div className="empty-state">
+                  <strong>
+                    {part === "published"
+                      ? "还没有已发布项目"
+                      : part === "drafts"
+                        ? "目前没有项目草稿"
+                        : "还没有业务类型"}
+                  </strong>
+                  {part !== "business-types" && (
+                    <a className="text-link" href="#new-project">
+                      新增一个项目 →
+                    </a>
+                  )}
                 </div>
               ) : (
-                cases.map((item) => {
+                visibleItems.map((item) => {
                   const current = status(item);
+                  const business = businesses.find(
+                    (candidate) => candidate.id === item.parentId,
+                  );
                   return (
                     <article className="case-row" key={item.id}>
                       <div className="case-row__body">
@@ -306,6 +279,13 @@ export function BusinessAdminDashboard() {
                           {current.label}
                         </span>
                         <h3>{item.title}</h3>
+                        <p>
+                          {item.kind === "case"
+                            ? `所属业务：${business?.title || "未选择"}`
+                            : item.segment
+                              ? segmentLabels[item.segment]
+                              : "未选择业务分组"}
+                        </p>
                         <p>{item.summary || "暂无摘要"}</p>
                         {item.lastError && (
                           <p className="admin-error">{item.lastError}</p>
@@ -325,26 +305,34 @@ export function BusinessAdminDashboard() {
                         >
                           预览草稿
                         </button>
-                        <button
-                          className="button button--quiet"
-                          disabled={busy}
-                          onClick={() =>
-                            void action(
-                              item.live
-                                ? item.modified
-                                  ? "publish"
-                                  : "unpublish"
-                                : "publish",
-                              item,
-                            )
-                          }
-                        >
-                          {item.live
-                            ? item.modified
-                              ? "发布更新"
-                              : "撤下"
-                            : "发布"}
-                        </button>
+                        {(!item.live || item.modified) && (
+                          <button
+                            className="button button--primary"
+                            disabled={busy}
+                            onClick={() => void action("publish", item)}
+                          >
+                            {item.live ? "发布更新" : "发布到官网"}
+                          </button>
+                        )}
+                        {item.live && (
+                          <>
+                            <a
+                              className="button button--quiet"
+                              href={item.url}
+                              target="_blank"
+                              rel="noreferrer"
+                            >
+                              查看详情 ↗
+                            </a>
+                            <button
+                              className="button button--quiet"
+                              disabled={busy}
+                              onClick={() => void action("unpublish", item)}
+                            >
+                              撤下
+                            </button>
+                          </>
+                        )}
                         <button
                           className="button button--danger"
                           disabled={busy}
@@ -358,9 +346,9 @@ export function BusinessAdminDashboard() {
                 })
               )}
             </div>
-          </section>
+          </>
         )}
-      </div>
+      </section>
     </main>
   );
 }

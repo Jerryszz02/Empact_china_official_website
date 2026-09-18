@@ -167,6 +167,7 @@ export async function readDraftSnapshot(payload: Payload): Promise<Snapshot> {
           projectStatus: optional(doc.projectStatus) as Entry["projectStatus"],
           deadline: optional(doc.deadline),
           registrationUrl: optional(doc.registrationUrl),
+          detailUrl: optional(doc.detailUrl),
           publishedAt: optional(doc.publishedAt),
           sourceUrl: optional(doc.sourceUrl),
           sourceName: optional(doc.sourceName),

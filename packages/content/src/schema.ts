@@ -25,6 +25,7 @@ export type Entry = {
   projectStatus?: ProjectStatus;
   deadline?: string;
   registrationUrl?: string;
+  detailUrl?: string;
   sourceUrl?: string;
   sourceName?: string;
   sourceType?: string;
@@ -146,6 +147,7 @@ const entrySchema = z.object({
   deadline: z.string().optional(),
   registrationUrl: z.string().optional(),
   sourceUrl: z.string().optional(),
+  detailUrl: z.string().optional(),
   sourceName: z.string().optional(),
   sourceType: z.string().optional(),
   eventDate: z.string().optional(),
@@ -217,6 +219,25 @@ export function entryPath(entry: Entry): string {
   if (entry.kind === "news") return `/news/${entry.slug}/`;
   if (entry.kind === "case") return `/cases/${entry.slug}/`;
   return "";
+}
+
+export function isHttpUrl(value: string): boolean {
+  if (!/^https?:\/\//i.test(value)) return false;
+  try {
+    return ["http:", "https:"].includes(new URL(value).protocol);
+  } catch {
+    return false;
+  }
+}
+
+/** CMS projects use case storage; their public detail may be hosted externally. */
+export function entryUrl(entry: Entry): string {
+  if (entry.kind === "case" && entry.detailUrl) {
+    if (!isHttpUrl(entry.detailUrl))
+      throw new Error("请填写有效的 http:// 或 https:// 外链。");
+    return entry.detailUrl;
+  }
+  return entryPath(entry);
 }
 
 export function validateSnapshot(
@@ -304,7 +325,11 @@ export function validateSnapshot(
     if (parent && !["business", "project", "case"].includes(parent.kind))
       throw new Error(`invalid parent kind: ${e.id}`);
     if (options.production) {
-      if (e.kind !== "coverage" && !e.bodyHtml.replace(/<[^>]+>/g, "").trim())
+      if (
+        e.kind !== "coverage" &&
+        !(e.kind === "case" && e.detailUrl) &&
+        !e.bodyHtml.replace(/<[^>]+>/g, "").trim()
+      )
         throw new Error(`missing body: ${e.id}`);
       if (
         /(待补充|待确认|待审核|占位|lorem ipsum)/i.test(
@@ -338,9 +363,8 @@ export function validateSnapshot(
       throw new Error(`unknown image: ${e.imageId}`);
     for (const id of e.bodyMediaIds ?? [])
       if (!mediaIds.has(id)) throw new Error(`unknown body media: ${id}`);
-    for (const url of [e.registrationUrl, e.sourceUrl])
-      if (url && !/^https?:\/\//i.test(url))
-        throw new Error(`unsafe URL: ${url}`);
+    for (const url of [e.registrationUrl, e.sourceUrl, e.detailUrl])
+      if (url && !isHttpUrl(url)) throw new Error(`unsafe URL: ${url}`);
     if (e.parentId && !input.entries.some((x) => x.id === e.parentId))
       throw new Error(`unknown parent: ${e.parentId}`);
     for (const id of e.relatedIds ?? [])

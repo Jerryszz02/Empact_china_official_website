@@ -6,6 +6,7 @@ import { randomUUID } from "node:crypto";
 import { listReceipts, readLiveSnapshot } from "./publisher.js";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
+import { isHttpUrl } from "@empact/content/schema";
 import {
   BlockquoteFeature,
   FixedToolbarFeature,
@@ -47,6 +48,7 @@ const contentFields: Field[] = [
     admin: { hidden: true },
   },
   text("summary", "摘要", true),
+  text("detailUrl", "详情外链"),
   {
     name: "body",
     label: "正文",
@@ -252,6 +254,7 @@ const approvalSensitiveFields = [
   "duration",
   "deadline",
   "registrationUrl",
+  "detailUrl",
   "publishedAt",
   "sourceName",
   "sourceUrl",
@@ -271,6 +274,7 @@ const visible = [
   "parent",
   "order",
   "image",
+  "detailUrl",
   "body",
   "sourceName",
   "sourceUrl",
@@ -290,29 +294,71 @@ const businessContentFields: Field[] = [
       (field) => "name" in field && field.name === name,
     )!;
     const onlyBusiness = ["segment", "order"].includes(name),
-      onlyCase = ["parent", "image", "sourceName", "sourceUrl"].includes(name);
+      onlyCase = [
+        "parent",
+        "image",
+        "detailUrl",
+        "sourceName",
+        "sourceUrl",
+      ].includes(name);
     return {
       ...field,
       label:
         (
           {
-            title: "名称 / 标题",
-            summary: "简短介绍 / 案例摘要",
-            body: "详细内容",
-            image: "案例封面",
-            order: "展示顺序（数字越小越靠前）",
+            title: "名称 / 标题（必填）",
+            summary: "简短介绍 / 项目摘要（必填）",
+            segment: "业务分组（必填）",
+            parent: "所属业务类型（必填）",
+            body: "网页正文（无外链时，发布必填）",
+            image: "项目封面（发布时必填）",
+            order: "展示顺序（选填，数字越小越靠前）",
+            detailUrl: "外链（与网页正文二选一）",
+            sourceName: "来源名称（选填）",
+            sourceUrl: "来源链接（选填）",
           } as Record<string, string>
         )[name] ?? ("label" in field ? field.label : undefined),
       admin: {
         ...field.admin,
         hidden: false,
+        ...(name === "detailUrl"
+          ? {
+              description:
+                "填写完整的 http:// 或 https:// 链接，访客点击详情时直接打开外链；留空则使用下方网页正文。已有正文会保留，清空外链后可继续编辑。",
+            }
+          : name === "sourceUrl"
+            ? {
+                description: "作为站内文章的引用来源，不改变详情跳转。",
+              }
+            : {}),
         condition: (_: unknown, data: Record<string, unknown>) =>
-          onlyBusiness
-            ? data.kind === "business"
-            : onlyCase
-              ? data.kind === "case"
-              : true,
+          name === "body" &&
+          data.kind === "case" &&
+          String(data.detailUrl || "").trim()
+            ? false
+            : onlyBusiness
+              ? data.kind === "business"
+              : onlyCase
+                ? data.kind === "case"
+                : true,
       },
+      ...(["sourceUrl", "detailUrl"].includes(name)
+        ? {
+            validate: (value: unknown) => {
+              if (!value) return true;
+              if (isHttpUrl(String(value))) return true;
+              return name === "detailUrl"
+                ? "请填写有效的 http:// 或 https:// 外链，或留空并填写网页正文。"
+                : "请填写有效的 http:// 或 https:// 来源链接，或留空。";
+            },
+            hooks: {
+              beforeValidate: [
+                ({ value }: { value?: string }) =>
+                  typeof value === "string" ? value.trim() : value,
+              ],
+            },
+          }
+        : {}),
     } as Field;
   }),
   ...flattened
@@ -437,7 +483,10 @@ export const Content: CollectionConfig = {
         }
 
         if ((data.kind || originalDoc?.kind) === "case") {
-          const parentId = data.parent ?? originalDoc?.parent;
+          const parentId = Object.hasOwn(data, "parent")
+            ? data.parent
+            : originalDoc?.parent;
+          if (!parentId) throw new APIError("请选择项目所属的业务类型。", 400);
           if (parentId) {
             const parent = await req.payload.findByID({
               collection: "content",
@@ -448,6 +497,13 @@ export const Content: CollectionConfig = {
               throw new APIError("案例必须归属于一个业务类型。", 400);
           }
         }
+        if (
+          (data.kind || originalDoc?.kind) === "business" &&
+          !(Object.hasOwn(data, "segment")
+            ? data.segment
+            : originalDoc?.segment)
+        )
+          throw new APIError("请选择业务分组。", 400);
         const contentChanged =
           originalDoc &&
           approvalSensitiveFields.some(

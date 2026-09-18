@@ -1,5 +1,5 @@
 import {
-  entryPath,
+  entryUrl,
   validateSnapshot,
   type Entry,
   type Snapshot,
@@ -55,7 +55,7 @@ export function pathFor(entry: SitePage) {
   // ChatCircle intentionally leaves the site: keep the direct external link.
   if (entry.kind === "project" && entry.slug === "chatcircle")
     return "https://chatcircle.empact.cn";
-  return entryPath(entry);
+  return entryUrl(entry);
 }
 
 /** Stable publishedAt-descending sort; legacy entries without a date keep their order. */
