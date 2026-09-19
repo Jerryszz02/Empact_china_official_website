@@ -1,5 +1,38 @@
 import { test, expect } from "@playwright/test";
 
+test("ChatCircle is a community child and links directly to its website", async ({
+  page,
+}, testInfo) => {
+  await page.goto("/");
+  await expect(
+    page.locator('.site-nav > a[href="https://chatcircle.empact.cn"]'),
+  ).toHaveCount(0);
+  await expect(page.locator(".site-nav .nav-parent")).toHaveCount(4);
+  if (testInfo.project.name === "mobile")
+    await page.getByRole("button", { name: "菜单" }).click();
+  const community = page.locator('.nav-parent[href="/community/"]');
+  if (testInfo.project.name === "mobile") await community.click();
+  else await community.hover();
+  const chatCircle = page.locator("#nav-community").getByRole("link", {
+    name: "ChatCircle",
+    exact: true,
+  });
+  await expect(chatCircle).toBeVisible();
+  await expect(chatCircle).toHaveAttribute(
+    "href",
+    "https://chatcircle.empact.cn",
+  );
+  await page.route("https://chatcircle.empact.cn/", (route) =>
+    route.fulfill({ contentType: "text/html", body: "ChatCircle destination" }),
+  );
+  await chatCircle.click();
+  await expect(page).toHaveURL("https://chatcircle.empact.cn/");
+  await page.goto("/community/");
+  await expect(
+    page.locator('.service-list a[href="https://chatcircle.empact.cn"]'),
+  ).toBeVisible();
+});
+
 test("homepage paths, dropdowns, mobile navigation and draft boundary", async ({
   page,
 }, testInfo) => {
@@ -238,8 +271,9 @@ test("no-script pages retain content and navigation", async ({
   const nav = page.getByRole("navigation", { name: "主导航" });
   await expect(nav.locator('a[href="/youth/"]')).toBeVisible();
   await expect(nav.locator('a[href="/corporate/"]')).toBeVisible();
+  await nav.locator('a[href="/community/"]').click();
   await expect(
-    nav.locator('a[href="https://chatcircle.empact.cn"]'),
+    page.locator('.service-list a[href="https://chatcircle.empact.cn"]'),
   ).toBeVisible();
   await nav.locator('a[href="/contact/"]').click();
   await expect(page.getByRole("button", { name: /发送咨询/ })).toBeDisabled();

@@ -1,6 +1,5 @@
 ---
-import { businesses, pages, projects, pathFor } from "@/lib/content";
-const chatCircle = projects.find((item) => item.slug === "chatcircle");
+import { pages, servicesForSegment, pathFor } from "@/lib/content";
 const groups = [
   { segment: "youth", title: "青少年项目" },
   { segment: "corporate", title: "企业服务" },
@@ -9,7 +8,7 @@ const groups = [
 ].map((group) => ({
   ...group,
   page: pages.find((item) => item.slug === group.segment),
-  children: businesses.filter((item) => item.segment === group.segment),
+  children: servicesForSegment(group.segment),
 }));
 ---
 
@@ -57,7 +56,6 @@ const groups = [
       );
     })}
     <a href="/about/">关于 Empact</a>
-    {chatCircle && <a href={pathFor(chatCircle)}>ChatCircle</a>}
     <a class="nav-contact" href="/contact/">
       咨询与合作 <span aria-hidden="true">↗</span>
     </a>
