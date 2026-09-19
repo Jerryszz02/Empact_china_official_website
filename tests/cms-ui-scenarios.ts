@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { chromium, expect } from "@playwright/test";
+import { serializeLexicalBody } from "../apps/cms/src/cms-data.js";
 
 export async function verifyCmsUI({
   base,
@@ -105,11 +106,19 @@ export async function verifyCmsUI({
       .filter({ hasText: "浏览器案例工作流" })
       .getByRole("link", { name: "编辑", exact: true })
       .click();
+    await expect(
+      page.getByRole("button", { name: "发布到官网", exact: true }),
+    ).toBeEnabled();
+    await page.locator('[contenteditable="true"]').fill("浏览器图文原版正文。");
+    // Lexical defers its form update until idle. Change it first so another
+    // field cannot mark the form modified before the body has synchronized.
+    await expect(
+      page.getByRole("button", { name: "发布到官网", exact: true }),
+    ).toBeDisabled();
     await page
       .getByRole("button", { name: "从现有中选择", exact: true })
       .click();
     await page.getByRole("button", { name: "隔离图片", exact: true }).click();
-    await page.locator('[contenteditable="true"]').fill("浏览器图文原版正文。");
     await page
       .getByLabel("来源链接（选填）", { exact: true })
       .fill("https://example.invalid/browser-source");
@@ -124,6 +133,11 @@ export async function verifyCmsUI({
     const saved = await request("/api/content/" + id);
     assert.ok(saved.image);
     assert.equal(saved.sourceUrl, "https://example.invalid/browser-source");
+    assert.match(
+      (await serializeLexicalBody(saved.body, [])).html,
+      /浏览器图文原版正文/,
+      "the saved draft must contain the editor body before publishing",
+    );
     await page.getByRole("button", { name: "发布到官网", exact: true }).click();
     await expect(page.locator(".content-document-actions")).toContainText(
       "已发布",
@@ -141,6 +155,9 @@ export async function verifyCmsUI({
       page.locator(".case-row").filter({ hasText: "浏览器案例工作流" }),
     ).toHaveCount(0);
     await page.goto(base + `/admin/collections/content/${id}`);
+    await expect(
+      page.getByRole("button", { name: "发布更新", exact: true }),
+    ).toBeEnabled();
     await page
       .locator('[contenteditable="true"]')
       .fill("浏览器尚未发布的新正文。");
@@ -151,6 +168,12 @@ export async function verifyCmsUI({
     await expect(
       page.getByRole("button", { name: "发布更新", exact: true }),
     ).toBeEnabled();
+    const edited = await request("/api/content/" + id);
+    assert.match(
+      (await serializeLexicalBody(edited.body, [])).html,
+      /浏览器尚未发布的新正文/,
+      "the updated draft must persist while the public body stays unchanged",
+    );
     const html = await (await fetch(base + `/cases/${saved.slug}/`)).text();
     assert.match(html, /浏览器图文原版正文/);
     assert.doesNotMatch(html, /浏览器尚未发布的新正文/);
