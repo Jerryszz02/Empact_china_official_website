@@ -6,6 +6,7 @@ import { randomBytes } from "node:crypto";
 import { spawn, execFile } from "node:child_process";
 import { promisify } from "node:util";
 import sharp from "sharp";
+import { previewSnapshot as directorySnapshot } from "@empact/content/fixtures";
 import { frameworkSnapshot as previewSnapshot } from "./helpers/content-fixture.js";
 import { verifyCmsUI } from "./cms-ui-scenarios.js";
 import { verifyBusinessWorkflow } from "./business-cms-scenarios.js";
@@ -288,7 +289,7 @@ try {
   const seededCases = seeded.docs.filter(
     (entry: { kind: string }) => entry.kind === "case",
   );
-  const expectedCases = previewSnapshot.entries.filter(
+  const expectedCases = directorySnapshot.entries.filter(
     (entry) => entry.kind === "case",
   );
   assert.equal(seededCases.length, expectedCases.length);
@@ -298,7 +299,14 @@ try {
     );
     assert.ok(actual, `seeded case ${entry.slug}`);
     assert.equal(actual.sourceName, entry.sourceName);
-    assert.equal(actual.sourceType, entry.sourceType);
+    assert.equal(actual.sourceType || undefined, entry.sourceType);
+    assert.equal(actual.detailUrl || undefined, entry.detailUrl);
+    assert.equal(actual.sourceUrl || undefined, entry.sourceUrl);
+    const parent = directorySnapshot.entries.find(
+      (candidate) => candidate.id === entry.parentId,
+    );
+    assert.equal(actual.parent?.slug, parent?.slug);
+    assert.ok(actual.image?.filename, `seeded cover ${entry.slug}`);
     assert.equal(actual.approved, false);
   }
   const lexical = (text: string) => ({

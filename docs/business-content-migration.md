@@ -20,6 +20,8 @@
 
 默认来源为当前 `previewSnapshot`，业务和案例目录维护在 `packages/content/src/business-directory.ts`，对应媒体位于 `apps/site/public/media`。目录中的内容来源与尚缺资料见[业务目录同步记录](business-directory-sync.md)。历史 `packages/content/assets/catalog.json` 及 `apps/site/src/assets/cases` 仍保留归档资料，但不再自动加入默认迁移。正式发布只复制被引用的媒体；导入不会自动审核或发布。
 
+空数据库执行 `npm run seed:local -w @empact/cms` 时，先建立固定页面与业务，再通过同一迁移流程导入案例和封面，保留案例正文、所属业务及详情外链。所有内容仍为未审核草稿；已有内容的数据库不会被初始化命令覆盖。
+
 外链案例导入会保留 `detailUrl`，不会因没有站内正文而列入 `missingBody`。`sourceUrl` 仍只用于来源引用。仅有来源链接、没有 `detailUrl` 的站内文章依然必须提供正文。
 
 升级已有数据库还需执行 `npm run migrate -w @empact/cms`，与此内容导入命令分开。用户名及 `detailUrl` 的 schema 迁移说明见 [README](../README.md#本机启动)；开发预览不会自动改数据库结构。已有业务的名称、介绍与顺序需在后台维护，不能把增量导入当作覆盖或删除工具。[框架重置流程](business-framework-reset.md)会清空案例且只同步预设条目，不适合用来同步完整的新业务目录。
