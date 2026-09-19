@@ -43,6 +43,14 @@ export const projects = entries.filter((entry) => entry.kind === "project");
 export const news = entries.filter((entry) => entry.kind === "news");
 export const cases = entries.filter((entry) => entry.kind === "case");
 
+export function servicesForSegment(segment: string) {
+  const services = businesses.filter((entry) => entry.segment === segment);
+  const chatCircle = projects.find((entry) => entry.slug === "chatcircle");
+  return segment === "community" && chatCircle
+    ? [...services, chatCircle]
+    : services;
+}
+
 export function byId(id?: string) {
   return id ? entries.find((entry) => entry.id === id) : undefined;
 }

@@ -322,7 +322,23 @@ test(
             (file === "index.html" ? 1 : 2),
         );
         assert.equal(html('a[href="/projects/chatcircle/"]').length, 0);
+        assert.equal(
+          html('.site-nav > a[href="https://chatcircle.empact.cn"]').length,
+          0,
+        );
+        assert.equal(
+          html('#nav-community a[href="https://chatcircle.empact.cn"]').length,
+          1,
+        );
       }
+      const community = load(
+        await readFile(join(out, "community/index.html"), "utf8"),
+      );
+      assert.equal(
+        community('.service-list a[href="https://chatcircle.empact.cn"]')
+          .length,
+        1,
+      );
       await assert.rejects(
         readFile(join(out, "projects/chatcircle/index.html"), "utf8"),
         { code: "ENOENT" },
