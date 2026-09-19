@@ -89,7 +89,7 @@ async function main() {
         typeof cli["source-media-dir"] === "string"
           ? cli["source-media-dir"]
           : !cli.source
-            ? resolve(repository, "apps/site/public/media")
+            ? resolve(repository, "packages/content/fixtures/media")
             : undefined,
       media: sourceMedia(snapshot),
     });

@@ -1,12 +1,13 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtemp, writeFile, readFile, rm } from "node:fs/promises";
+import { access, mkdtemp, writeFile, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { load } from "cheerio";
 import { frameworkSnapshot as previewSnapshot } from "./helpers/content-fixture.js";
+import { previewSnapshot as directorySnapshot } from "@empact/content/fixtures";
 import type { Entry } from "@empact/content/schema";
 import { checkOutput } from "../scripts/check-output.js";
 
@@ -31,6 +32,11 @@ test(
         contactEnabled: false,
         retentionDays: 30,
       };
+      // Other content must remain publishable before the optional model business
+      // is first published, or after that business is withdrawn.
+      data.entries = data.entries.filter(
+        (entry) => entry.slug !== "international-talent-model",
+      );
       data.entries = data.entries.map((entry): Entry => ({
         ...entry,
         title: `验收-${entry.slug}`,
@@ -154,6 +160,18 @@ test(
         },
         timeout: 50_000,
       });
+      for (const media of directorySnapshot.media) {
+        await assert.rejects(access(join(out, "media", media.filename)), {
+          code: "ENOENT",
+        });
+      }
+      const youthOverview = load(
+        await readFile(join(out, "youth/index.html"), "utf8"),
+      );
+      assert.equal(
+        youthOverview('a[href="/youth/international-talent-model/"]').length,
+        0,
+      );
       assert.deepEqual(await checkOutput(out, true), []);
       for (const business of emptyBusinesses) {
         const html = load(

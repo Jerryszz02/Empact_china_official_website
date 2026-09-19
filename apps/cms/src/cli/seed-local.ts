@@ -114,7 +114,7 @@ if (existing.totalDocs === 0) {
   // Import cases after their required business parents, preserving rich text,
   // external destinations and cover media through the shared migration path.
   await migrateBusinessContent(payload, previewSnapshot, {
-    mediaDir: resolve("../site/public/media"),
+    mediaDir: resolve("../../packages/content/fixtures/media"),
   });
   await payload.updateGlobal({
     slug: "company",

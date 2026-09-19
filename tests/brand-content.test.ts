@@ -83,7 +83,7 @@ test("brand content preview has the approved shape", () => {
 
 test("directory covers exist and links in the workbook's extra columns are retained", async () => {
   for (const media of previewSnapshot.media) {
-    await access(join("apps/site/public/media", media.filename));
+    await access(join("packages/content/fixtures/media", media.filename));
   }
   assert.equal(
     previewSnapshot.entries.find((entry) => entry.slug === "empact-youth-talk")

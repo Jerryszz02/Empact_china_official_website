@@ -18,7 +18,9 @@
 
 迁移按 `kind + slug` 匹配：已有 CMS 记录完全保留，仅补入缺失业务和案例。源码中的 HTML 转为可编辑富文本，保留段落、标题、列表、加粗、链接等格式。父级和关联关系分两步映射，避免丢失前向引用。现有正文已经包含内嵌图片的自定义来源，应先提供明确的媒体映射；导入工具遇到未映射的内嵌图片会停止，不会静默丢图。
 
-默认来源为当前 `previewSnapshot`，业务和案例目录维护在 `packages/content/src/business-directory.ts`，对应媒体位于 `apps/site/public/media`。目录中的内容来源与尚缺资料见[业务目录同步记录](business-directory-sync.md)。历史 `packages/content/assets/catalog.json` 及 `apps/site/src/assets/cases` 仍保留归档资料，但不再自动加入默认迁移。正式发布只复制被引用的媒体；导入不会自动审核或发布。
+默认来源为当前 `previewSnapshot`，业务和案例目录维护在 `packages/content/src/business-directory.ts`，对应媒体位于 `packages/content/fixtures/media`。目录中的内容来源与尚缺资料见[业务目录同步记录](business-directory-sync.md)。历史 `packages/content/assets/catalog.json` 及 `apps/site/src/assets/cases` 仍保留归档资料，但不再自动加入默认迁移。正式发布只复制被引用的媒体；导入不会自动审核或发布。
+
+原始媒体位于 Astro 公共目录之外。明确的设计预览才会复制这些素材；基于快照的构建由发布器提供选定媒体。开发服务在已有发布版本时，也只提供该版本的媒体，不回退到原始素材。
 
 空数据库执行 `npm run seed:local -w @empact/cms` 时，先建立固定页面与业务，再通过同一迁移流程导入案例和封面，保留案例正文、所属业务及详情外链。所有内容仍为未审核草稿；已有内容的数据库不会被初始化命令覆盖。
 
