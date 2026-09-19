@@ -405,6 +405,7 @@ function entryData(
     "projectStatus",
     "deadline",
     "registrationUrl",
+    "detailUrl",
     "publishedAt",
     "sourceUrl",
     "sourceName",
@@ -488,7 +489,10 @@ export async function migrateBusinessContent(
     overrideAccess: true,
   });
   for (const entry of pending) {
-    if (!entry.bodyHtml.replace(/<[^>]*>/g, "").trim())
+    if (
+      !(entry.kind === "case" && entry.detailUrl) &&
+      !entry.bodyHtml.replace(/<[^>]*>/g, "").trim()
+    )
       report.missingBody.push(entry.slug);
     if (entry.kind === "case" && !entry.imageId)
       report.missingMedia.push(`${entry.slug}:cover`);

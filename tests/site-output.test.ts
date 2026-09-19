@@ -6,7 +6,7 @@ import { join, resolve } from "node:path";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { load } from "cheerio";
-import { previewSnapshot } from "@empact/content/fixtures";
+import { frameworkSnapshot as previewSnapshot } from "./helpers/content-fixture.js";
 import type { Entry } from "@empact/content/schema";
 import { checkOutput } from "../scripts/check-output.js";
 

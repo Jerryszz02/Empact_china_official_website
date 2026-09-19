@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { mkdtemp, mkdir, writeFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { previewSnapshot } from "@empact/content/fixtures";
+import { frameworkSnapshot as previewSnapshot } from "./helpers/content-fixture.js";
 import { validateSnapshot, sanitizeBodyHtml } from "@empact/content/schema";
 import { businessAdminMutation } from "../apps/cms/src/business-admin.js";
 import { readDraftSnapshot } from "../apps/cms/src/cms-data.js";

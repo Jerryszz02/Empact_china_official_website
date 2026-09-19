@@ -11,7 +11,7 @@ import {
 } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { previewSnapshot } from "@empact/content/fixtures";
+import { frameworkSnapshot as previewSnapshot } from "./helpers/content-fixture.js";
 
 const execute = promisify(execFile);
 const base = "http://127.0.0.1:4321";

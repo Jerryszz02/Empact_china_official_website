@@ -98,6 +98,41 @@ test("dry run is idempotent and does not create records", async () => {
   assert.equal(creates, 0);
 });
 
+test("imports external case destinations without requiring an article body", async () => {
+  const created: any[] = [];
+  const payload: any = {
+    find: async ({ collection }: any) => ({
+      docs:
+        collection === "content"
+          ? [{ id: 7, kind: "business", slug: "a" }]
+          : [],
+    }),
+    create: async ({ data }: any) => {
+      created.push(data);
+      return { id: 8 };
+    },
+  };
+  const report = await migrateBusinessContent(
+    payload,
+    snapshot([
+      entry(),
+      entry({
+        id: "linked",
+        kind: "case",
+        slug: "linked",
+        parentId: "business-a",
+        bodyHtml: "",
+        detailUrl: "https://example.com/article",
+        sourceUrl: "https://example.com/source",
+      }),
+    ]),
+  );
+  assert.equal(created[0].detailUrl, "https://example.com/article");
+  assert.equal(created[0].sourceUrl, "https://example.com/source");
+  assert.equal(created[0].parent, 7);
+  assert.deepEqual(report.missingBody, []);
+});
+
 test("backup failure happens before media or runtime copies", async () => {
   const dir = await mkdtemp(join(tmpdir(), "empact-migration-"));
   const mediaBackup = join(dir, "media-backup");

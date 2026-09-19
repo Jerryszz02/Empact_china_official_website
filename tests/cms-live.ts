@@ -6,7 +6,7 @@ import { randomBytes } from "node:crypto";
 import { spawn, execFile } from "node:child_process";
 import { promisify } from "node:util";
 import sharp from "sharp";
-import { previewSnapshot } from "@empact/content/fixtures";
+import { frameworkSnapshot as previewSnapshot } from "./helpers/content-fixture.js";
 import { verifyCmsUI } from "./cms-ui-scenarios.js";
 import { verifyBusinessWorkflow } from "./business-cms-scenarios.js";
 const execute = promisify(execFile),

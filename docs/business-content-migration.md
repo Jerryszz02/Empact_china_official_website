@@ -18,11 +18,11 @@
 
 迁移按 `kind + slug` 匹配：已有 CMS 记录完全保留，仅补入缺失业务和案例。源码中的 HTML 转为可编辑富文本，保留段落、标题、列表、加粗、链接等格式。父级和关联关系分两步映射，避免丢失前向引用。现有正文已经包含内嵌图片的自定义来源，应先提供明确的媒体映射；导入工具遇到未映射的内嵌图片会停止，不会静默丢图。
 
-默认来源为当前 `previewSnapshot` 与 `packages/content/assets/catalog.json`。2026-09-18 代码基线中，预览内容已重置为业务框架，不含旧案例记录；目录中保留的 7 张历史配图不会自动重新建立旧案例。配图文件位于 `apps/site/src/assets/cases`，来源说明见[历史配图核对](case-images.md)。需要导入站内正文案例时应提供实际来源快照，缺失内容以本次导入报告为准，不沿用旧版“7 张已配图、4 篇待补图”的迁移数量。正式发布仅复制当前内容引用的媒体；导入不会自动审核或发布。
+默认来源为当前 `previewSnapshot`，业务和案例目录维护在 `packages/content/src/business-directory.ts`，对应媒体位于 `apps/site/public/media`。目录中的内容来源与尚缺资料见[业务目录同步记录](business-directory-sync.md)。历史 `packages/content/assets/catalog.json` 及 `apps/site/src/assets/cases` 仍保留归档资料，但不再自动加入默认迁移。正式发布只复制被引用的媒体；导入不会自动审核或发布。
 
-**当前导入限制：** 内容迁移工具不会复制 `detailUrl`，因此上述快照导入流程不适用于外链案例；仅有外链的案例还会被列入 `missingBody`。外链项目请在后台「新增项目」中创建并填写详情外链，再按正常审批发布流程处理。后台支持外链不代表迁移工具已支持，不要直接导入外链快照后当作完整迁移。
+外链案例导入会保留 `detailUrl`，不会因没有站内正文而列入 `missingBody`。`sourceUrl` 仍只用于来源引用。仅有来源链接、没有 `detailUrl` 的站内文章依然必须提供正文。
 
-升级已有数据库还需执行 `npm run migrate -w @empact/cms`，与此内容导入命令分开。用户名及 `detailUrl` 的 schema 迁移说明见 [README](../README.md#本机启动)；开发预览不会自动改数据库结构。若需要调整既有业务框架，使用单独的[框架重置流程](business-framework-reset.md)，不能把增量导入当作覆盖或删除工具。
+升级已有数据库还需执行 `npm run migrate -w @empact/cms`，与此内容导入命令分开。用户名及 `detailUrl` 的 schema 迁移说明见 [README](../README.md#本机启动)；开发预览不会自动改数据库结构。已有业务的名称、介绍与顺序需在后台维护，不能把增量导入当作覆盖或删除工具。[框架重置流程](business-framework-reset.md)会清空案例且只同步预设条目，不适合用来同步完整的新业务目录。
 
 从仓库根目录执行预演（下列路径替换成实际绝对路径）：
 
