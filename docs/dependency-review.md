@@ -6,6 +6,8 @@
 - DOMPurify 固定到 3.4.15，修复 Payload UI 的传递依赖公告。
 - @esbuild-kit/core-utils 使用修复后的 esbuild；本项目不向公网开放其开发服务器。
 - sharp 必须使用 0.35.4 或验证通过的后续修复版，不接受旧图像解码库的高风险报告。
-- Payload 3.88.0 的默认 account-unlock 权限公告暂无上游可用修复版：users 集合显式限制 read/update/unlock 到受信任管理员，并关闭 HTTP 注册。该配置需要 HTTP/权限测试和最终审计结果支持；不能仅凭单账号就忽略公告。
+- Payload 与全部直接依赖的 `@payloadcms/*` 包统一升级到 3.90.1，包含 [3.90.0 安全更新](https://github.com/payloadcms/payload/releases/tag/v3.90.0)。保留 users 集合显式的 read/update/unlock 管理员限制；账号注册和密码恢复接口在集合端点层关闭，覆盖编码、大小写和尾斜杠变体。
+- 升级需要执行 `20260919_043657_payload_security_fields` 数据库迁移，为 users 新增可空的 `reset_password_requested_at` 字段。先备份，再运行 `npm run migrate -w @empact/cms`；不要依赖生产环境 schema push。
+- 2026-09-19 的 `npm audit --json --ignore-scripts` 全依赖审计为 0 个已知漏洞；升级前为 7 条中风险记录，均追溯到同一个 Payload account-unlock 公告。公告范围和审计结果不能替代应用权限测试。
 
-完整审计以交付时的 `npm audit --omit=dev` 输出为准。上游中等风险仍可能影响报告退出码，即使应用已覆盖默认权限；维护时持续跟进上游补丁。CI 阻止高风险及以上新增依赖漏洞。
+完整审计以交付时的 `npm audit --omit=dev` 输出为准；维护时持续跟进上游补丁。CI 阻止高风险及以上新增依赖漏洞。本次范围与验证记录见 [安全审查](security-review-2026-09-19.md)。
