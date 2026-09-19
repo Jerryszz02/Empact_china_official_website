@@ -373,6 +373,19 @@ const businessContentFields: Field[] = [
 
 export const Users: CollectionConfig = {
   slug: "users",
+  // Match through the same router as Payload's built-in auth endpoints so
+  // encoded or differently cased URLs cannot bypass the CLI-only policy.
+  endpoints: ["/first-register", "/forgot-password", "/reset-password"].map(
+    (path) => ({
+      path,
+      method: "post" as const,
+      handler: () =>
+        Response.json(
+          { errors: [{ message: "请联系维护人通过本机命令管理账号。" }] },
+          { status: 403 },
+        ),
+    }),
+  ),
   auth: {
     loginWithUsername: {
       allowEmailLogin: true,

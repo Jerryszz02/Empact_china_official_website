@@ -89,28 +89,8 @@ try {
   );
   await execute(
     process.execPath,
-    [
-      "--import",
-      "tsx",
-      join(repository, "node_modules/payload/bin.js"),
-      "migrate",
-    ],
+    ["--import", "tsx", join(cms, "payload.mjs"), "migrate"],
     { cwd: cms, env, timeout: 60_000 },
-  );
-  await execute(
-    process.execPath,
-    ["--import", "tsx", "src/cli/create-admin.ts"],
-    { cwd: cms, env, timeout: 30_000 },
-  );
-  await execute(
-    process.execPath,
-    ["--import", "tsx", "src/cli/seed-local.ts"],
-    {
-      cwd: cms,
-      // The isolated database already uses the production migrations.
-      env: { ...env, NODE_ENV: "test", PAYLOAD_MIGRATING: "true" },
-      timeout: 60_000,
-    },
   );
   child = spawn(
     process.execPath,
@@ -146,6 +126,43 @@ try {
     `CMS did not become ready under isolated child ${child.pid}: ${
       childExit ? `exit ${childExit.code ?? childExit.signal}; ` : ""
     }${logs}`,
+  );
+  // Test bootstrap before the trusted CLI creates any user. Testing only an
+  // initialized database hides Payload's first-register access override.
+  for (const path of [
+    "/api/users/first-register",
+    "/api/users/%66irst-register",
+    "/api/users/FIRST-REGISTER",
+    "/api/%75sers/first-register/",
+    "/api/users/forgot-password",
+    "/api/users/%66orgot-password",
+    "/api/users/FORGOT-PASSWORD/",
+    "/api/users/reset-password",
+    "/api/users/%72eset-password",
+    "/api/users/RESET-PASSWORD/",
+    "/api/users",
+  ]) {
+    const registration = await fetch(base + path, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Origin: base },
+      body: JSON.stringify({ email, username, password, role: "admin" }),
+    });
+    assert.equal(registration.status, 403, `Empty database: ${path}`);
+  }
+  await execute(
+    process.execPath,
+    ["--import", "tsx", "src/cli/create-admin.ts"],
+    { cwd: cms, env, timeout: 30_000 },
+  );
+  await execute(
+    process.execPath,
+    ["--import", "tsx", "src/cli/seed-local.ts"],
+    {
+      cwd: cms,
+      // The isolated database already uses the production migrations.
+      env: { ...env, NODE_ENV: "test", PAYLOAD_MIGRATING: "true" },
+      timeout: 60_000,
+    },
   );
   for (const path of [
     "/api/content",
@@ -203,10 +220,35 @@ try {
   });
   assert.equal(login.status, 200);
   assert.equal((await login.json()).user.id, oldUser.id);
+  assert.match(login.headers.get("set-cookie") || "", /HttpOnly/i);
+  assert.match(login.headers.get("set-cookie") || "", /SameSite=Strict/i);
   const cookies = login.headers
     .getSetCookie()
     .map((value) => value.split(";")[0])
     .join("; ");
+  for (const path of [
+    "/api/business-admin/publish",
+    "/api/publication/publish",
+  ]) {
+    for (const origin of [undefined, "https://attacker.invalid"]) {
+      const response = await fetch(base + path, {
+        method: "POST",
+        headers: {
+          Cookie: cookies,
+          "Content-Type": "application/json",
+          ...(origin ? { Origin: origin } : {}),
+        },
+        body: JSON.stringify({ id: "1", ids: ["1"], confirmed: true }),
+      });
+      assert.ok([401, 403].includes(response.status), `${path}: CSRF`);
+    }
+  }
+  const unlock = await fetch(base + "/api/users/unlock", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Origin: base },
+    body: JSON.stringify({ email, username }),
+  });
+  assert.equal(unlock.status, 403, "Anonymous account unlock must be denied");
   const request = async (path: string, method = "GET", data?: unknown) => {
     const response = await fetch(base + path, {
       method,
