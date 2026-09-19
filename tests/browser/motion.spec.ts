@@ -267,9 +267,8 @@ test("one desktop wheel notch advances exactly one scene", async ({ page }) => {
   const pathways = await sceneTop(page, "pathways");
   await page.mouse.wheel(0, 100);
   await expect
-    .poll(() => sceneOffset(page, "pathways"), { timeout: 1500 })
-    .toBeLessThan(3);
-  expect(await scrollY(page)).toBeCloseTo(pathways, 0);
+    .poll(() => scrollY(page), { timeout: 1500 })
+    .toBeCloseTo(pathways, 0);
 });
 
 test("two desktop wheel notches advance two scenes during animation", async ({
@@ -287,9 +286,8 @@ test("two desktop wheel notches advance two scenes during animation", async ({
   await page.mouse.wheel(0, 100);
   await page.mouse.wheel(0, 100);
   await expect
-    .poll(() => sceneOffset(page, "conversation"), { timeout: 1800 })
-    .toBeLessThan(3);
-  expect(await scrollY(page)).toBeCloseTo(conversation, 0);
+    .poll(() => scrollY(page), { timeout: 1800 })
+    .toBeCloseTo(conversation, 0);
 });
 
 test("trackpad inertia is treated as one wheel gesture", async ({ page }) => {
