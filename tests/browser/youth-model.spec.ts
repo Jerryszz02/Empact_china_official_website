@@ -1,12 +1,11 @@
 import { test, expect } from "@playwright/test";
 
-test("youth model is reachable, readable and responsive", async ({
+test("legacy youth model reference remains readable and responsive", async ({
   page,
 }, testInfo) => {
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
-  await page.goto("/youth/");
-  await page.getByRole("link", { name: "了解国际化人才培养模型" }).click();
+  await page.goto("/youth/development-model/");
   await expect(page).toHaveURL(/\/youth\/development-model\/$/);
   await expect(page.locator("h1")).toHaveText("国际化人才培养模型");
   for (const title of [

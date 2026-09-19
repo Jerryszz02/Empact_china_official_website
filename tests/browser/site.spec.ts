@@ -24,7 +24,7 @@ test("homepage paths, dropdowns, mobile navigation and draft boundary", async ({
   await expect(
     page.locator(".footer-links").getByRole("link", { name: "后台管理" }),
   ).toHaveAttribute("href", "/admin");
-  await expect(page.locator("#nav-corporate a")).toHaveCount(3);
+  await expect(page.locator("#nav-corporate a")).toHaveCount(5);
   await expect(page.locator(".motion-home > section")).toHaveCount(3);
   expect(
     await page
@@ -113,22 +113,28 @@ test("homepage paths, dropdowns, mobile navigation and draft boundary", async ({
   expect(errors).toEqual([]);
 });
 
-test("youth framework has five categories and no old case articles", async ({
+test("youth directory has six workbook categories and linked and hosted cases", async ({
   page,
 }) => {
   await page.goto("/youth/");
   await expect(page.locator("#nav-youth a")).toHaveText([
-    "国际化人才培养模型",
+    "国际人才培养模型",
     "公益社创体验",
-    "AI 加思辨",
-    "演讲与表达",
+    "演讲类表达",
+    "AI学习力课程",
+    "SEL社会情感学习",
     "学员故事与家长说",
   ]);
-  await expect(page.locator(".service-list a")).toHaveCount(4);
+  await expect(page.locator(".service-list a")).toHaveCount(6);
   await page.locator('.service-list a[href="/youth/monthly-camp/"]').click();
   await expect(page.locator("h1")).toHaveText("公益社创体验");
-  await expect(page.locator("#cases .case-card")).toHaveCount(0);
-  await expect(page.locator("#cases")).not.toContainText("陶氏");
+  await expect(page.locator("#office-camp")).toHaveAttribute(
+    "href",
+    "https://mp.weixin.qq.com/s/G0BOtrCiky1EMb5_nzbf0Q",
+  );
+  await page.locator("#singapore-social-innovation-camp-2026").click();
+  await expect(page.locator("h1")).toContainText("新加坡研学营");
+  await expect(page.locator(".prose")).toContainText("厨尊");
   for (const path of [
     "/cases/singapore-social-innovation-camp/",
     "/cases/microsoft-d-and-i-volunteering/",
@@ -476,7 +482,7 @@ test("four homepage entrances preserve row order and open their framework pages"
   }
 });
 
-test("business framework contains no old cases or case image fallbacks", async ({
+test("directory business pages render supported cases without image placeholders", async ({
   page,
 }) => {
   for (const path of [
@@ -485,14 +491,14 @@ test("business framework contains no old cases or case image fallbacks", async (
     "/youth/public-speaking/",
     "/youth/student-stories/",
     "/corporate/volunteering/",
-    "/corporate/csr-consulting/",
-    "/corporate/cross-border/",
+    "/corporate/ai-organizational-change/",
+    "/corporate/leadership-innovation/",
+    "/school/ai-social-innovation-pbl/",
+    "/community/zhaoxi-youai/",
   ]) {
     const response = await page.goto(path);
     expect(response?.status(), path).toBe(200);
     await expect(page.locator("#cases")).toBeVisible();
-    await expect(
-      page.locator(".case-card, .case-image-supplied, .case-image-placeholder"),
-    ).toHaveCount(0);
+    await expect(page.locator(".case-image-placeholder")).toHaveCount(0);
   }
 });

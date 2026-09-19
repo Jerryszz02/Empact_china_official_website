@@ -34,11 +34,31 @@ export function cmsDev() {
         root: publishedRoot,
         origin,
       });
+      const fixtureAssets = createPublicServer({
+        root: fileURLToPath(
+          new URL("../../packages/content/fixtures/", import.meta.url),
+        ),
+        origin,
+      });
       let lastPublication;
       server.middlewares.use((req, res, next) => {
         const pathname = new URL(req.url || "/", origin).pathname;
-        if (pathname.startsWith("/media/") || pathname === "/api/contact") {
+        if (pathname === "/api/contact") {
           publishedAssets.emit("request", req, res);
+          return;
+        }
+        if (pathname.startsWith("/media/")) {
+          void realpath(publishedRoot)
+            .then(() => publishedAssets)
+            .catch((error) => {
+              if (error.code !== "ENOENT") throw error;
+              return process.env.SITE_MODE === "preview" &&
+                !process.env.SNAPSHOT_PATH
+                ? fixtureAssets
+                : publishedAssets;
+            })
+            .then((assets) => assets.emit("request", req, res))
+            .catch(next);
           return;
         }
         if (isCmsPath(pathname)) return next();

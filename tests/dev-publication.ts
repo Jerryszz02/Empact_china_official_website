@@ -11,7 +11,8 @@ import {
 } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { previewSnapshot } from "@empact/content/fixtures";
+import { frameworkSnapshot as previewSnapshot } from "./helpers/content-fixture.js";
+import { previewSnapshot as directorySnapshot } from "@empact/content/fixtures";
 
 const execute = promisify(execFile);
 const base = "http://127.0.0.1:4321";
@@ -47,12 +48,14 @@ try {
     await writeFile(join(release, "public/media/cover.png"), version);
   }
   await writeFile(join(runtime, "private.png"), "unpublished media");
-  await symlink(join(runtime, "first/public"), join(runtime, "current"));
   await execute("npm", ["run", "dev"], {
     env: { ...process.env, RUNTIME_DIR: runtime },
     timeout: 30_000,
   });
   started = true;
+  const draftMediaPath = `/media/${directorySnapshot.media[0].filename}`;
+  assert.equal((await fetch(base + draftMediaPath)).status, 200);
+  await symlink(join(runtime, "first/public"), join(runtime, "current"));
   const page = async () => (await fetch(base + "/youth/monthly-camp/")).text();
   assert.match(await page(), /Published first summary/);
   assert.equal(
@@ -61,6 +64,7 @@ try {
   );
   assert.equal(await (await fetch(base + "/media/cover.png")).text(), "first");
   assert.equal((await fetch(base + "/media/private.png")).status, 404);
+  assert.equal((await fetch(base + draftMediaPath)).status, 404);
   await writeFile(
     join(runtime, "draft.json"),
     JSON.stringify({ ...snapshot, version: "draft" }),

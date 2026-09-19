@@ -35,8 +35,7 @@ const groups = [
   </button>
   <nav id="site-navigation" class="site-nav" aria-label="主导航">
     {groups.map((group) => {
-      const hasChildren =
-        group.segment === "youth" || group.children.length > 0;
+      const hasChildren = group.children.length > 0;
       return (
         <div class="nav-group">
           <a
@@ -49,9 +48,6 @@ const groups = [
           </a>
           {hasChildren && (
             <div id={`nav-${group.segment}`} class="nav-dropdown">
-              {group.segment === "youth" && (
-                <a href="/youth/development-model/">国际化人才培养模型</a>
-              )}
               {group.children.map((item) => (
                 <a href={pathFor(item)}>{item.title}</a>
               ))}

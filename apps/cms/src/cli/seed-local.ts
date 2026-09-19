@@ -5,6 +5,7 @@ import { previewSnapshot } from "@empact/content/fixtures";
 import { randomBytes } from "node:crypto";
 import { writeFile, mkdir } from "node:fs/promises";
 import { resolve } from "node:path";
+import { migrateBusinessContent } from "../content-migration.js";
 
 if (process.env.NODE_ENV === "production")
   throw new Error("结构草稿只允许在本机开发环境初始化。");
@@ -41,7 +42,10 @@ const existing = await payload.find({
 });
 if (existing.totalDocs === 0) {
   const ids = new Map<string, number>();
-  for (const entry of previewSnapshot.entries) {
+  const frameworkEntries = previewSnapshot.entries.filter(
+    (entry) => entry.kind !== "case",
+  );
+  for (const entry of frameworkEntries) {
     const body = {
       root: {
         type: "root",
@@ -99,7 +103,7 @@ if (existing.totalDocs === 0) {
     });
     ids.set(entry.id, doc.id);
   }
-  for (const entry of previewSnapshot.entries)
+  for (const entry of frameworkEntries)
     if (entry.parentId && ids.has(entry.parentId))
       await payload.update({
         collection: "content",
@@ -107,6 +111,11 @@ if (existing.totalDocs === 0) {
         data: { parent: ids.get(entry.parentId)! },
         overrideAccess: true,
       });
+  // Import cases after their required business parents, preserving rich text,
+  // external destinations and cover media through the shared migration path.
+  await migrateBusinessContent(payload, previewSnapshot, {
+    mediaDir: resolve("../../packages/content/fixtures/media"),
+  });
   await payload.updateGlobal({
     slug: "company",
     data: previewSnapshot.company,

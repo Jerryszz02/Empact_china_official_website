@@ -32,38 +32,7 @@ function required(value: string | boolean | undefined, name: string): string {
 async function loadSource(
   path: string | boolean | undefined,
 ): Promise<Snapshot> {
-  if (!path) {
-    const catalog = JSON.parse(
-      await readFile(
-        resolve(repository, "packages/content/assets/catalog.json"),
-        "utf8",
-      ),
-    ) as Array<Record<string, unknown>>;
-    const bySlug = new Map(catalog.map((item) => [String(item.slug), item]));
-    return {
-      ...previewSnapshot,
-      entries: previewSnapshot.entries.map((entry) => {
-        const image = bySlug.get(entry.slug);
-        return image ? { ...entry, imageId: String(image.id) } : entry;
-      }),
-      media: [
-        ...previewSnapshot.media,
-        ...catalog.map((item) => ({
-          id: String(item.id),
-          filename: String(item.filename),
-          alt: String(item.alt),
-          width: Number(item.width),
-          height: Number(item.height),
-          approved: item.approved === true,
-          mimeType: String(item.filename).endsWith(".webp")
-            ? ("image/webp" as const)
-            : String(item.filename).endsWith(".png")
-              ? ("image/png" as const)
-              : ("image/jpeg" as const),
-        })),
-      ],
-    };
-  }
+  if (!path) return structuredClone(previewSnapshot);
   return JSON.parse(
     await readFile(required(path, "source"), "utf8"),
   ) as Snapshot;
@@ -120,7 +89,7 @@ async function main() {
         typeof cli["source-media-dir"] === "string"
           ? cli["source-media-dir"]
           : !cli.source
-            ? resolve(repository, "apps/site/src/assets/cases")
+            ? resolve(repository, "packages/content/fixtures/media")
             : undefined,
       media: sourceMedia(snapshot),
     });

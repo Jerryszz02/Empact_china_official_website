@@ -10,7 +10,7 @@ import {
 } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { previewSnapshot } from "@empact/content/fixtures";
+import { frameworkSnapshot as previewSnapshot } from "./helpers/content-fixture.js";
 import { readPublishedSnapshot } from "../apps/site/src/lib/published-snapshot.js";
 
 test("development reads only the selected publication and follows atomic changes", async () => {
