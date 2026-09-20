@@ -89,13 +89,19 @@ const entry = pageBySlug("contact");
         aria-hidden="true"
       />
       <input type="hidden" name="idempotencyKey" value="" />
-      <p class="form-status" data-form-status role="status" aria-live="polite">
-        {enabled
-          ? ""
-          : fallback
-            ? `线上咨询暂不可用，请通过 ${fallback} 联系我们。`
-            : "在线咨询暂不可用，请稍后再试。"}
-      </p>
+      <p
+        class="form-status"
+        data-form-status
+        role="status"
+        aria-live="polite"
+        set:text={
+          enabled
+            ? ""
+            : fallback
+              ? `线上咨询暂不可用，请通过 ${fallback} 联系我们。`
+              : "在线咨询暂不可用，请稍后再试。"
+        }
+      />
       <button class="button button-primary" type="submit" disabled={!enabled}>
         发送咨询 <span aria-hidden="true">↗</span>
       </button>
