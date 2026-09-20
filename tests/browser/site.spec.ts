@@ -313,10 +313,14 @@ test("empty form feedback stays accessible before an update", async ({
 }) => {
   await page.goto("/contact/");
   const status = page.locator("[data-form-status]");
-  // Preview has fallback copy; reproduce the enabled form's initially empty state.
+  // Remove preview copy without hiding whitespace left by the rendered template.
   await status.evaluate((element) => {
-    element.textContent = "";
+    const text = element.textContent ?? "";
+    element.textContent = text.replace(text.trim(), "");
   });
+  await expect(status).toHaveCSS("position", "absolute");
+  await expect(status).toHaveCSS("width", "1px");
+  await expect(status).toHaveCSS("height", "1px");
   await expect(status).not.toHaveCSS("display", "none");
   await expect(status).toHaveCSS("visibility", "visible");
   await expect(page.getByRole("status").and(status)).toHaveCount(1);
