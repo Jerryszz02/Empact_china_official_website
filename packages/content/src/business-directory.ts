@@ -1,5 +1,9 @@
 import type { Entry, Media, Segment } from "./schema.js";
 import { enterpriseArticles } from "./business-directory-enterprise.js";
+import {
+  singaporeCampArticle,
+  singaporeCampMedia,
+} from "./business-directory-singapore.js";
 
 // Content source and unresolved material requests: docs/business-directory-sync.md.
 // Keep stable slugs for existing business pages while adopting the workbook labels.
@@ -340,7 +344,7 @@ const linkedCases: LinkedCase[] = [
 ];
 
 const hostedCases: Array<
-  LinkedCase & { bodyHtml: string; sourceName: string }
+  LinkedCase & { bodyHtml: string; sourceName: string; bodyMediaIds?: string[] }
 > = [
   ...enterpriseArticles,
   {
@@ -359,24 +363,7 @@ const hostedCases: Array<
       <h2>用活动资料记录项目设计</h2>
       <p>本页根据当期活动海报介绍项目主题与参与安排。科技探索与家庭志愿参与构成这项活动的设计方向，现场交流和陪伴是共同参与的重点。</p>`,
   },
-  {
-    slug: "singapore-social-innovation-camp-2026",
-    title: "新加坡研学营 · 从理解议题到参与行动",
-    business: "monthly-camp",
-    summary:
-      "走进社会企业与共融社区，在服务、AI 学习和课题汇报中连接观察与行动。",
-    url: "",
-    sourceName: "Empact 2026 暑假新加坡社创及可持续发展研学营学员成长报告",
-    bodyHtml: `<p>2026 年暑假，Empact 新加坡社创及可持续发展研学营把学习带进大学、社会企业和社区。学员在不同现场观察社会需求，参与服务，再把途中积累的问题带回小组讨论与结营汇报。</p>
-      <h2>让社会议题有具体的面貌</h2>
-      <p>在新加坡国立大学，学员通过校园参访和主题分享接触社会创新。在社会企业餐厅厨尊，学习与服务紧密相连，活动包括手语学习、餐食分装与分发。滨海湾的永续发展参访，则把可持续发展目标放进城市日常，让学员观察理念如何进入公共空间。</p>
-      <p>行程还走进 HCSA 和淡马锡基金会相关场所，通过机构参访与故事分享了解社会支持的不同方式。黑暗中对话和 Enabling Village 的共融体验，让学员从自己的感受出发，继续思考不同群体在生活中遇到的需求。</p>
-      <h2>把经历整理成可以分享的成果</h2>
-      <p>项目以“知道、做到、悟到”组织学习目标。了解 SDGs、当地文化与 AI for Good，是认识问题的起点；复盘、AI 工具使用和团队协作，把观察推进到实际任务；同理心与个人方向的讨论，帮助学员重新理解自己想参与的改变。</p>
-      <p>学员在营中参与 AI 学习，并以小组课题汇报整理所见、所想与方案。复盘采用 Facts、Feelings、Findings、Future 四个角度，依次回看事实、感受、发现和下一步行动，让一次参访留下可以继续讨论的问题。</p>
-      <h2>把成长记录留给下一次实践</h2>
-      <p>项目通过营前与营后问卷记录学员对自己学习状态的观察，并结合活动反馈与课题产出整理成长报告。这些记录用于理解一次具体学习经历，也为后续陪伴提供讨论的依据。</p>`,
-  },
+  singaporeCampArticle,
   {
     slug: "hong-kong-social-innovation-camp-2026",
     title: "香港研学营 · 在城市现场理解社会创新",
@@ -460,6 +447,7 @@ export const directoryCases: Entry[] = [
   ...hostedCases.map((item, index) => ({
     ...caseBase(item, linkedCases.length + index),
     bodyHtml: item.bodyHtml,
+    ...(item.bodyMediaIds ? { bodyMediaIds: item.bodyMediaIds } : {}),
     sourceName: item.sourceName,
   })),
 ];
@@ -467,6 +455,7 @@ export const directoryCases: Entry[] = [
 // Use an explicitly labelled brand cover when a verified activity photograph is
 // unavailable. Never borrow a different event's photo as documentary evidence.
 export const directoryMedia: Media[] = [
+  ...singaporeCampMedia,
   {
     id: "directory-boke-annual-salon",
     filename: "directory-boke-annual-salon.webp",

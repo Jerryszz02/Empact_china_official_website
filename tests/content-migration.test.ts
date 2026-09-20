@@ -8,6 +8,7 @@ import {
 } from "../apps/cms/src/content-migration.js";
 import { previewSnapshot } from "@empact/content/fixtures";
 import type { Snapshot } from "@empact/content/schema";
+import { serializeLexicalBody } from "../apps/cms/src/cms-data.js";
 import { mkdtemp, access, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -51,6 +52,67 @@ test("converts rich text blocks, marks, links and lists", () => {
   assert.equal(body.root.children[1].type, "heading");
   assert.equal(body.root.children[2].type, "list");
   assert.equal(body.root.children[2].children[0].children[0].text, "One");
+});
+
+test("imports an illustrated directory article with media IDs and captions", async () => {
+  const article = previewSnapshot.entries.find(
+    (item) => item.slug === "singapore-social-innovation-camp-2026",
+  )!;
+  const parent = previewSnapshot.entries.find(
+    (item) => item.id === article.parentId,
+  )!;
+  const source = { ...previewSnapshot, entries: [parent, article] };
+  const images: any[] = [];
+  const content: any[] = [];
+  const payload: any = {
+    find: async ({ collection }: any) => ({
+      docs:
+        collection === "content"
+          ? [{ id: 7, kind: "business", slug: parent.slug }]
+          : [],
+    }),
+    create: async ({ collection, data, file }: any) => {
+      if (collection === "media") {
+        const id = 100 + images.length;
+        const image = {
+          ...data,
+          id: String(id),
+          filename: `stored-${id}.webp`,
+          width: 100,
+          height: 80,
+        };
+        assert.equal(file.mimetype, "image/webp");
+        images.push(image);
+        return image;
+      }
+      content.push(data);
+      return { id: 8 };
+    },
+  };
+  const options = { mediaDir: "packages/content/fixtures/media" };
+  const dryRun = await migrateBusinessContent(payload, source, {
+    ...options,
+    dryRun: true,
+  });
+  assert.equal(dryRun.mediaImported, 6);
+  assert.equal(images.length, 0);
+  const report = await migrateBusinessContent(payload, source, options);
+  assert.equal(report.imported, 1);
+  assert.deepEqual(report.missingMedia, []);
+  assert.equal(images.length, 6);
+  assert.equal(content[0].parent, 7);
+  assert.equal(content[0].image, Number(images[0].id));
+  assert.equal(content[0].approved, false);
+  const serialized = await serializeLexicalBody(content[0].body, images);
+  assert.equal(serialized.mediaIds.length, 5);
+  assert.equal((serialized.html.match(/<figcaption>/g) ?? []).length, 5);
+  assert.match(serialized.html, /营前会第 35 页/);
+  assert.match(serialized.html, /stored-101.webp/);
+  assert.doesNotMatch(serialized.html, /src="\/media\/directory-/);
+  assert.throws(
+    () => htmlToLexical(article.bodyHtml),
+    /explicit media mapping/,
+  );
 });
 
 test("preserves existing records and maps parent IDs", async () => {

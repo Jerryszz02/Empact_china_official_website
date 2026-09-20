@@ -17,7 +17,7 @@
 
 ## 已整理的案例
 
-`packages/content/src/business-directory.ts` 为目录、外链、文章和媒体元数据的入口，企业文章维护在 `business-directory-enterprise.ts`；`fixtures.ts` 引用它。默认迁移也读取这一份内容。所有来源条目默认未审核，导入只保存草稿，不自动改变任何已发布内容。
+`packages/content/src/business-directory.ts` 为目录、外链、文章和媒体元数据的入口，企业文章维护在 `business-directory-enterprise.ts`，新加坡图文维护在 `business-directory-singapore.ts`；`fixtures.ts` 引用它。默认迁移也读取这一份内容。所有来源条目默认未审核，导入只保存草稿，不自动改变任何已发布内容。
 
 ### 24 个直接跳转案例
 
@@ -28,7 +28,7 @@
 | D11/L11    | Empact少年说               | [原文](https://mp.weixin.qq.com/s/UGGEg-b-63ClrGwz-4IcDg)     |
 | D12/F12    | 演讲×社会创新赋能营        | [原文](https://mp.weixin.qq.com/s/RJl0g0qx_dD2EIIePNh4GA)     |
 | D14        | AI×PBL                     | [课程简介](https://mp.weixin.qq.com/s/id_ez_EPeSetTWOOuz5A-w) |
-| D15/F15    | AI×思辨线上课程           | [营期回顾](https://mp.weixin.qq.com/s/z7Cqv_67MsGGJ5DZ_k5Z2Q) |
+| D15/F15    | AI×思辨线上课程            | [营期回顾](https://mp.weixin.qq.com/s/z7Cqv_67MsGGJ5DZ_k5Z2Q) |
 | D16/F16    | Vibe Coding 线下创造营     | [路演邀请](https://mp.weixin.qq.com/s/PygyZrN0ctSCRxE76bpM9g) |
 | D17/J17    | AI公益课                   | [原文](https://mp.weixin.qq.com/s/uFAridjXbU396-tp27qrEw)     |
 | D18/F18    | 白名单赛事培训             | [赛事介绍](https://mp.weixin.qq.com/s/6Dpl05FjXC1VSRR4BqA6-Q) |
@@ -64,13 +64,13 @@
 
 ### 15 篇站内文章
 
-| 文章地址                                         | 原始资料与核对位置                                                                           | 写作边界                                                                               |
-| ------------------------------------------------ | -------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
-| `/cases/singapore-social-innovation-camp-2026/`  | `Empact_新加坡研学营学员成长报告.docx`，项目概况、01 项目概述和真实行程；同目录 TXT 辅助检索 | 只整理活动过程与学习方法，不披露学员信息，不把问卷自评分当成客观效果保证               |
-| `/cases/hong-kong-social-innovation-camp-2026/`  | `7.19-7.24香港研学营学员成长报告.docx` 及家长版 PDF，第 1–5 页和行程记录                     | 只整理参访、体验、服务与课题过程，不使用个体评价和联系方式                             |
-| `/cases/blind-football-social-innovation-pbl/`   | `HSHS第一模块盲人足球体验活动 PBL 项目化学习实施报告.docx`，第 1–4 节                        | 写明高一、三次课、体验、访谈、痛点地图和公益海报；不引用未经核验的社会统计数据         |
-| `/cases/huasheng-huaishao-speaking-program/`     | `上海嘉定区民办华盛怀少学校×Empact演讲合作项目202604.pdf`，第 1–2 页                         | 明确为课程与活动方案；不声称已执行，不公开报价、内部预算或联系人手机号                 |
-| `/cases/microsoft-accessible-youth-exploration/` | `志愿者-微软企业志愿.png`，微软探索日原始活动海报                                            | 明确为活动设计介绍，只使用主题、原定日期、地点与参与安排，不把招募人数写成实际参与人数 |
+| 文章地址                                         | 原始资料与核对位置                                                                            | 写作边界                                                                               |
+| ------------------------------------------------ | --------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| `/cases/singapore-social-innovation-camp-2026/`  | 2026 暑期新加坡营营前会 PPT，第 30 至 45 页等，详见[来源记录](singapore-camp-2026-sources.md) | 以新 PPT 的六天行程设计为准，不混用旧成长报告的营期或把计划写成完成成果                |
+| `/cases/hong-kong-social-innovation-camp-2026/`  | `7.19-7.24香港研学营学员成长报告.docx` 及家长版 PDF，第 1–5 页和行程记录                      | 只整理参访、体验、服务与课题过程，不使用个体评价和联系方式                             |
+| `/cases/blind-football-social-innovation-pbl/`   | `HSHS第一模块盲人足球体验活动 PBL 项目化学习实施报告.docx`，第 1–4 节                         | 写明高一、三次课、体验、访谈、痛点地图和公益海报；不引用未经核验的社会统计数据         |
+| `/cases/huasheng-huaishao-speaking-program/`     | `上海嘉定区民办华盛怀少学校×Empact演讲合作项目202604.pdf`，第 1–2 页                          | 明确为课程与活动方案；不声称已执行，不公开报价、内部预算或联系人手机号                 |
+| `/cases/microsoft-accessible-youth-exploration/` | `志愿者-微软企业志愿.png`，微软探索日原始活动海报                                             | 明确为活动设计介绍，只使用主题、原定日期、地点与参与安排，不把招募人数写成实际参与人数 |
 
 企业十篇文章均据用户补充的 `assets/杨祯慧Maggie博士课程介绍26.9.15.pptx` 编写，编号及子业务归属以工作簿为准。Case06 未列入工作簿，本次不扩展加入；Case12 已有圣华紫竹的明确推文链接，保持直接跳转。
 
@@ -93,7 +93,7 @@
 
 ### 图片
 
-2026-09-20 后续已补全 11 个默认封面，包括 AI 思辨课、波克年度沙龙等 10 篇推文图片及盲人足球 PBL 的报告内现场照。当前仅新加坡 2026 暑期研学营待补专属图片，最新来源和待补清单见[案例封面补全记录](case-cover-sources-2026-09-20.md)。以下为此前导入时的图片记录。
+2026-09-20 后续已补全全部 12 个默认封面，包括 10 篇推文图片、盲人足球 PBL 的报告内现场照，以及按用户要求从企业微信取得的新加坡营合影。新加坡封面明确注明 2025 年 2 月，正文依据新提供的 2026 暑期营前会 PPT 按六天重写，并加入 5 张资料配图。最新来源见[案例封面补全记录](case-cover-sources-2026-09-20.md)及[新加坡文章来源](singapore-camp-2026-sources.md)。以下为此前导入时的图片记录。
 
 沿用已核对的 Office Camp、香港研学、少年说和朝夕有爱素材。缺少已核实活动图的卡片使用明确标注的 Empact 品牌标识，不把其他活动照片当作现场证据。媒体复制到 `packages/content/fixtures/media/directory-*`，原素材不改动。
 
