@@ -1,5 +1,9 @@
 import type { Entry, Media, Segment } from "./schema.js";
 import { enterpriseArticles } from "./business-directory-enterprise.js";
+import {
+  singaporeCampArticle,
+  singaporeCampMedia,
+} from "./business-directory-singapore.js";
 
 // Content source and unresolved material requests: docs/business-directory-sync.md.
 // Keep stable slugs for existing business pages while adopting the workbook labels.
@@ -239,7 +243,7 @@ const linkedCases: LinkedCase[] = [
     summary:
       "在波克城市交流 AI 时代的成长与教育路径，听取行业分享和青年圆桌对话。",
     url: "https://mp.weixin.qq.com/s/XspoRsoKczDRSR6Sfvb3VQ",
-    imageId: "directory-empact-brand",
+    imageId: "directory-boke-annual-salon",
   },
   {
     slug: "office-camp",
@@ -251,6 +255,7 @@ const linkedCases: LinkedCase[] = [
   },
   {
     slug: "tedx",
+    imageId: "directory-tedx",
     title: "TEDx",
     business: "public-speaking",
     summary: "从观点整理到面向听众的分享，了解 TEDx 相关活动。",
@@ -266,6 +271,7 @@ const linkedCases: LinkedCase[] = [
   },
   {
     slug: "speaking-social-innovation-camp",
+    imageId: "directory-speaking-social-innovation-camp",
     title: "演讲×社会创新赋能营",
     business: "public-speaking",
     summary: "把社会创新议题与演讲表达结合起来，了解项目介绍。",
@@ -273,6 +279,7 @@ const linkedCases: LinkedCase[] = [
   },
   {
     slug: "ai-pbl-course",
+    imageId: "directory-ai-pbl-course",
     title: "AI×PBL",
     business: "ai-and-theme-courses",
     summary: "围绕具体项目学习与使用 AI，查看课程介绍。",
@@ -280,6 +287,7 @@ const linkedCases: LinkedCase[] = [
   },
   {
     slug: "ai-critical-thinking-camp",
+    imageId: "directory-ai-critical-thinking-camp",
     title: "AI×思辨线上课程",
     business: "ai-and-theme-courses",
     summary: "查看 Empact AI 思辨营回顾，了解课程内容。",
@@ -287,6 +295,7 @@ const linkedCases: LinkedCase[] = [
   },
   {
     slug: "vibe-coding-camp",
+    imageId: "directory-vibe-coding-camp",
     title: "Vibe Coding 线下创造营",
     business: "ai-and-theme-courses",
     summary: "查看 AI 少年创造营的路演邀请与项目介绍。",
@@ -294,6 +303,7 @@ const linkedCases: LinkedCase[] = [
   },
   {
     slug: "ai-public-interest-course",
+    imageId: "directory-ai-public-interest-course",
     title: "AI公益课",
     business: "ai-and-theme-courses",
     summary: "围绕 AI 与社会问题展开学习，查看公益课程内容。",
@@ -301,6 +311,7 @@ const linkedCases: LinkedCase[] = [
   },
   {
     slug: "ai-competition-training",
+    imageId: "directory-ai-competition-training",
     title: "白名单赛事培训",
     business: "ai-and-theme-courses",
     summary: "了解相关赛事介绍及参与方式，具体要求以原文为准。",
@@ -308,6 +319,7 @@ const linkedCases: LinkedCase[] = [
   },
   {
     slug: "shenghua-zizhu-family-communication",
+    imageId: "directory-shenghua-zizhu-family-communication",
     title: "圣华紫竹 · 我怎么说，爸妈才会听",
     business: "coaching-parents-mentors",
     summary: "从青少年的表达出发，了解亲子沟通课程。",
@@ -315,6 +327,7 @@ const linkedCases: LinkedCase[] = [
   },
   {
     slug: "community-volunteer-opportunities",
+    imageId: "directory-community-volunteer-opportunities",
     title: "社区志愿者机会",
     business: "community-volunteering",
     summary: "查看社区志愿服务介绍，了解参与方式。",
@@ -331,7 +344,7 @@ const linkedCases: LinkedCase[] = [
 ];
 
 const hostedCases: Array<
-  LinkedCase & { bodyHtml: string; sourceName: string }
+  LinkedCase & { bodyHtml: string; sourceName: string; bodyMediaIds?: string[] }
 > = [
   ...enterpriseArticles,
   {
@@ -350,24 +363,7 @@ const hostedCases: Array<
       <h2>用活动资料记录项目设计</h2>
       <p>本页根据当期活动海报介绍项目主题与参与安排。科技探索与家庭志愿参与构成这项活动的设计方向，现场交流和陪伴是共同参与的重点。</p>`,
   },
-  {
-    slug: "singapore-social-innovation-camp-2026",
-    title: "新加坡研学营 · 从理解议题到参与行动",
-    business: "monthly-camp",
-    summary:
-      "走进社会企业与共融社区，在服务、AI 学习和课题汇报中连接观察与行动。",
-    url: "",
-    sourceName: "Empact 2026 暑假新加坡社创及可持续发展研学营学员成长报告",
-    bodyHtml: `<p>2026 年暑假，Empact 新加坡社创及可持续发展研学营把学习带进大学、社会企业和社区。学员在不同现场观察社会需求，参与服务，再把途中积累的问题带回小组讨论与结营汇报。</p>
-      <h2>让社会议题有具体的面貌</h2>
-      <p>在新加坡国立大学，学员通过校园参访和主题分享接触社会创新。在社会企业餐厅厨尊，学习与服务紧密相连，活动包括手语学习、餐食分装与分发。滨海湾的永续发展参访，则把可持续发展目标放进城市日常，让学员观察理念如何进入公共空间。</p>
-      <p>行程还走进 HCSA 和淡马锡基金会相关场所，通过机构参访与故事分享了解社会支持的不同方式。黑暗中对话和 Enabling Village 的共融体验，让学员从自己的感受出发，继续思考不同群体在生活中遇到的需求。</p>
-      <h2>把经历整理成可以分享的成果</h2>
-      <p>项目以“知道、做到、悟到”组织学习目标。了解 SDGs、当地文化与 AI for Good，是认识问题的起点；复盘、AI 工具使用和团队协作，把观察推进到实际任务；同理心与个人方向的讨论，帮助学员重新理解自己想参与的改变。</p>
-      <p>学员在营中参与 AI 学习，并以小组课题汇报整理所见、所想与方案。复盘采用 Facts、Feelings、Findings、Future 四个角度，依次回看事实、感受、发现和下一步行动，让一次参访留下可以继续讨论的问题。</p>
-      <h2>把成长记录留给下一次实践</h2>
-      <p>项目通过营前与营后问卷记录学员对自己学习状态的观察，并结合活动反馈与课题产出整理成长报告。这些记录用于理解一次具体学习经历，也为后续陪伴提供讨论的依据。</p>`,
-  },
+  singaporeCampArticle,
   {
     slug: "hong-kong-social-innovation-camp-2026",
     title: "香港研学营 · 在城市现场理解社会创新",
@@ -388,6 +384,7 @@ const hostedCases: Array<
   },
   {
     slug: "blind-football-social-innovation-pbl",
+    imageId: "directory-blind-football-social-innovation-pbl",
     title: "盲人足球 PBL · 从体验到公益倡导",
     business: "ai-social-innovation-pbl",
     summary:
@@ -450,6 +447,7 @@ export const directoryCases: Entry[] = [
   ...hostedCases.map((item, index) => ({
     ...caseBase(item, linkedCases.length + index),
     bodyHtml: item.bodyHtml,
+    ...(item.bodyMediaIds ? { bodyMediaIds: item.bodyMediaIds } : {}),
     sourceName: item.sourceName,
   })),
 ];
@@ -457,6 +455,106 @@ export const directoryCases: Entry[] = [
 // Use an explicitly labelled brand cover when a verified activity photograph is
 // unavailable. Never borrow a different event's photo as documentary evidence.
 export const directoryMedia: Media[] = [
+  ...singaporeCampMedia,
+  {
+    id: "directory-boke-annual-salon",
+    filename: "directory-boke-annual-salon.webp",
+    alt: "波克游戏年度沙龙嘉宾合影，取自活动回顾推文封面",
+    width: 1242,
+    height: 698,
+    mimeType: "image/webp",
+    approved: false,
+  },
+  {
+    id: "directory-tedx",
+    filename: "directory-tedx.webp",
+    alt: "TEDx OpenMic 活动合影，取自回顾推文封面",
+    width: 1080,
+    height: 460,
+    mimeType: "image/webp",
+    approved: false,
+  },
+  {
+    id: "directory-speaking-social-innovation-camp",
+    filename: "directory-speaking-social-innovation-camp.webp",
+    alt: "SDGs 演讲赋能营推文封面的学员合影",
+    width: 1280,
+    height: 544,
+    mimeType: "image/webp",
+    approved: false,
+  },
+  {
+    id: "directory-ai-pbl-course",
+    filename: "directory-ai-pbl-course.webp",
+    alt: "Empact AI 实战 PBL 课程原推文宣传封面",
+    width: 1280,
+    height: 543,
+    mimeType: "image/webp",
+    approved: false,
+  },
+  {
+    id: "directory-ai-critical-thinking-camp",
+    filename: "directory-ai-critical-thinking-camp.webp",
+    alt: "Empact AI 思辨营原推文课程封面",
+    width: 800,
+    height: 340,
+    mimeType: "image/webp",
+    approved: false,
+  },
+  {
+    id: "directory-vibe-coding-camp",
+    filename: "directory-vibe-coding-camp.webp",
+    alt: "AI影响力少年创造营 Vibe Coding 路演邀请海报",
+    width: 1242,
+    height: 699,
+    mimeType: "image/webp",
+    approved: false,
+  },
+  {
+    id: "directory-ai-public-interest-course",
+    filename: "directory-ai-public-interest-course.webp",
+    alt: "AI公益课原推文中的数字艺术示意图",
+    width: 1080,
+    height: 603,
+    mimeType: "image/webp",
+    approved: false,
+  },
+  {
+    id: "directory-ai-competition-training",
+    filename: "directory-ai-competition-training.webp",
+    alt: "全国青少年人工智能辅助生成数字艺术创作者大赛原推文海报",
+    width: 1080,
+    height: 1658,
+    mimeType: "image/webp",
+    approved: false,
+  },
+  {
+    id: "directory-shenghua-zizhu-family-communication",
+    filename: "directory-shenghua-zizhu-family-communication.webp",
+    alt: "圣华紫竹亲子沟通课程现场，投影主题为我怎么说爸妈才会听",
+    width: 1280,
+    height: 1280,
+    mimeType: "image/webp",
+    approved: false,
+  },
+  {
+    id: "directory-community-volunteer-opportunities",
+    filename: "directory-community-volunteer-opportunities.webp",
+    alt: "朝夕有爱志愿者为老人铺设防滑地垫，取自原推文封面",
+    width: 1080,
+    height: 458,
+    mimeType: "image/webp",
+    approved: false,
+  },
+  {
+    id: "directory-blind-football-social-innovation-pbl",
+    filename: "directory-blind-football-social-innovation-pbl.webp",
+    alt: "盲人足球 PBL 课程中学生蒙眼控球的体验现场",
+    width: 1080,
+    height: 720,
+    mimeType: "image/webp",
+    approved: false,
+  },
   {
     id: "directory-waic-suanfeng-visit",
     filename: "directory-waic-suanfeng-visit.webp",
