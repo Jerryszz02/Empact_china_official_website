@@ -300,7 +300,10 @@ const block = (
 });
 
 /** Preserve the source's block structure and nested inline formatting. */
-export function htmlToLexical(html: string): Record<string, unknown> {
+export function htmlToLexical(
+  html: string,
+  mediaBySrc: ReadonlyMap<string, string | number> = new Map(),
+): Record<string, unknown> {
   const $ = load(html, null, false);
   function convert(node: any, format = 0): any[] {
     if (node.type === "text") return [textNode(node.data, format)];
@@ -358,10 +361,31 @@ export function htmlToLexical(html: string): Record<string, unknown> {
           ),
         ),
       ];
-    if (name === "img")
-      throw new Error(
-        "Source inline images need an explicit media mapping before import",
-      );
+    if (name === "figure") {
+      const image = $(node).children("img");
+      if (image.length !== 1)
+        throw new Error("Source figures must contain exactly one image");
+      const upload = convert(image[0])[0];
+      upload.fields.caption = $(node).children("figcaption").text();
+      return [upload];
+    }
+    if (name === "img") {
+      const id = mediaBySrc.get(node.attribs.src);
+      if (id === undefined)
+        throw new Error(
+          "Source inline images need an explicit media mapping before import",
+        );
+      return [
+        {
+          type: "upload",
+          version: 3,
+          relationTo: "media",
+          value: id,
+          fields: { alt: node.attribs.alt ?? "" },
+          format: "",
+        },
+      ];
+    }
     return children();
   }
   const nodes = $.root()
@@ -370,7 +394,7 @@ export function htmlToLexical(html: string): Record<string, unknown> {
     .flatMap((node: any) => convert(node));
   const children: any[] = [];
   for (const node of nodes) {
-    if (["paragraph", "heading", "list", "quote"].includes(node.type))
+    if (["paragraph", "heading", "list", "quote", "upload"].includes(node.type))
       children.push(node);
     else if (node.type !== "text" || node.text.trim())
       children.push(block("paragraph", [node]));
@@ -389,13 +413,14 @@ function relationId(value: unknown): string | undefined {
 function entryData(
   entry: Entry,
   maps: { entries: Map<string, string>; media: Map<string, string> },
+  mediaBySrc?: ReadonlyMap<string, string | number>,
 ) {
   const data: Record<string, unknown> = {
     kind: entry.kind,
     title: entry.title,
     slug: entry.slug,
     summary: entry.summary,
-    body: htmlToLexical(entry.bodyHtml),
+    body: htmlToLexical(entry.bodyHtml, mediaBySrc),
     approved: false,
   };
   const optional = [
@@ -496,57 +521,69 @@ export async function migrateBusinessContent(
       report.missingBody.push(entry.slug);
     if (entry.kind === "case" && !entry.imageId)
       report.missingMedia.push(`${entry.slug}:cover`);
-    if (!entry.imageId || maps.media.has(entry.imageId)) continue;
-    const item = mediaById.get(entry.imageId);
-    const path =
-      item && options.mediaDir
-        ? join(options.mediaDir, basename(item.filename))
-        : undefined;
-    if (
-      !item ||
-      !path ||
-      !(await stat(path).catch(() => undefined))?.isFile()
-    ) {
-      report.missingMedia.push(`${entry.slug}:${entry.imageId}`);
-      continue;
-    }
-    if (options.dryRun) {
-      maps.media.set(item.id, `dry-run-media:${item.id}`);
+    const mediaIds = new Set([
+      ...(entry.imageId ? [entry.imageId] : []),
+      ...(entry.bodyMediaIds ?? []),
+    ]);
+    for (const mediaId of mediaIds) {
+      if (maps.media.has(mediaId)) continue;
+      const item = mediaById.get(mediaId);
+      const path =
+        item && options.mediaDir
+          ? join(options.mediaDir, basename(item.filename))
+          : undefined;
+      if (
+        !item ||
+        !path ||
+        !(await stat(path).catch(() => undefined))?.isFile()
+      ) {
+        report.missingMedia.push(`${entry.slug}:${mediaId}`);
+        continue;
+      }
+      if (options.dryRun) {
+        maps.media.set(item.id, `dry-run-media:${item.id}`);
+        report.mediaImported++;
+        continue;
+      }
+      const marker = `migration-source:${item.id}`;
+      const already = storedMedia.docs.find(
+        (doc: any) => doc.usageApproval === marker,
+      );
+      if (already) {
+        maps.media.set(item.id, String(already.id));
+        continue;
+      }
+      const data = await readFile(path);
+      const created = await payload.create({
+        collection: "media",
+        data: { alt: item.alt, approved: false, usageApproval: marker },
+        file: {
+          data,
+          mimetype:
+            item.mimeType ??
+            (item.filename.endsWith(".png") ? "image/png" : "image/jpeg"),
+          name: basename(item.filename),
+          size: data.length,
+        },
+        overrideAccess: true,
+      } as any);
+      maps.media.set(item.id, String(created.id));
       report.mediaImported++;
-      continue;
     }
-    const marker = `migration-source:${item.id}`;
-    const already = storedMedia.docs.find(
-      (doc: any) => doc.usageApproval === marker,
-    );
-    if (already) {
-      maps.media.set(item.id, String(already.id));
-      continue;
-    }
-    const data = await readFile(path);
-    const created = await payload.create({
-      collection: "media",
-      data: { alt: item.alt, approved: false, usageApproval: marker },
-      file: {
-        data,
-        mimetype:
-          item.mimeType ??
-          (item.filename.endsWith(".png") ? "image/png" : "image/jpeg"),
-        name: basename(item.filename),
-        size: data.length,
-      },
-      overrideAccess: true,
-    } as any);
-    maps.media.set(item.id, String(created.id));
-    report.mediaImported++;
   }
+  const mediaBySrc = new Map(
+    [...mediaById.values()].flatMap((item): [string, number][] => {
+      const id = maps.media.get(item.id);
+      return id ? [[`/media/${item.filename}`, Number(id)]] : [];
+    }),
+  );
   for (const entry of pending) {
     const key = `${entry.kind}:${entry.slug}`;
     if (options.dryRun) maps.entries.set(entry.id, `dry-run:${key}`);
     else {
       const created = await payload.create({
         collection: "content",
-        data: entryData({ ...entry, relatedIds: undefined }, maps),
+        data: entryData({ ...entry, relatedIds: undefined }, maps, mediaBySrc),
         overrideAccess: true,
       } as any);
       maps.entries.set(entry.id, String(created.id));
