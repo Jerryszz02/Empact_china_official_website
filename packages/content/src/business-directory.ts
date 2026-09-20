@@ -279,6 +279,13 @@ const linkedCases: LinkedCase[] = [
     url: "https://mp.weixin.qq.com/s/id_ez_EPeSetTWOOuz5A-w",
   },
   {
+    slug: "ai-critical-thinking-camp",
+    title: "AI×思辨线上课程",
+    business: "ai-and-theme-courses",
+    summary: "查看 Empact AI 思辨营回顾，了解课程内容。",
+    url: "https://mp.weixin.qq.com/s/z7Cqv_67MsGGJ5DZ_k5Z2Q",
+  },
+  {
     slug: "vibe-coding-camp",
     title: "Vibe Coding 线下创造营",
     business: "ai-and-theme-courses",

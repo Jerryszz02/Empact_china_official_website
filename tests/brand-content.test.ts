@@ -41,8 +41,8 @@ test("brand content preview has the approved shape", () => {
   const cases = previewSnapshot.entries.filter(
     (entry) => entry.kind === "case",
   );
-  assert.equal(cases.length, 38);
-  assert.equal(cases.filter((entry) => entry.detailUrl).length, 23);
+  assert.equal(cases.length, 39);
+  assert.equal(cases.filter((entry) => entry.detailUrl).length, 24);
   assert.equal(cases.filter((entry) => !entry.detailUrl).length, 15);
   for (const entry of cases) {
     assert.ok(businesses.some((business) => business.id === entry.parentId));
@@ -95,6 +95,20 @@ test("directory covers exist and links in the workbook's extra columns are retai
       (entry) => entry.slug === "ai-public-interest-course",
     )?.detailUrl,
     "https://mp.weixin.qq.com/s/uFAridjXbU396-tp27qrEw",
+  );
+  const criticalThinking = previewSnapshot.entries.find(
+    (entry) => entry.slug === "ai-critical-thinking-camp",
+  );
+  assert.equal(
+    criticalThinking?.detailUrl,
+    "https://mp.weixin.qq.com/s/z7Cqv_67MsGGJ5DZ_k5Z2Q",
+  );
+  assert.equal(
+    criticalThinking?.parentId,
+    previewSnapshot.entries.find(
+      (entry) =>
+        entry.kind === "business" && entry.slug === "ai-and-theme-courses",
+    )?.id,
   );
 });
 
