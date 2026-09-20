@@ -14,6 +14,7 @@
 sudo install -d -o root -g root -m 0755 /usr/local/lib/empact
 sudo install -o root -g root -m 0755 deploy/backup.sh /usr/local/lib/empact/backup.sh
 sudo install -o root -g root -m 0755 deploy/auto-update.py /usr/local/lib/empact/auto-update.py
+sudo install -o root -g root -m 0755 deploy/publication-lock.py /usr/local/lib/empact/publication-lock.py
 sudo install -o root -g root -m 0755 deploy/deploy.sh /usr/local/lib/empact/deploy.sh
 sudo install -o root -g root -m 0644 deploy/empact-deploy.service /etc/systemd/system/empact-deploy.service
 sudo install -o root -g root -m 0644 deploy/empact-deploy.timer /etc/systemd/system/empact-deploy.timer
@@ -25,3 +26,5 @@ sudo systemctl enable --now empact-deploy.timer
 安装前确认 `/etc/empact/website.env`、`empact` 用户、`/usr/local/lib/empact/backup.sh`、Node 22、持久化 swap 和现有官网服务均已由维护人配置。需要调整构建堆时可在 `/etc/default/empact-deploy` 设置 `EMPACT_BUILD_HEAP_MB=...`。网站环境文件由 Node 的 `--env-file` 读取，自动部署脚本不会 shell source 它。
 
 轮询器兼容服务器现有 Python 3.6，只访问公开 GitHub 仓库，不需要新增 SSH key、token 或对外 webhook。固定安装路径中的脚本不会被代码更新自行替换；修改部署器后由维护人检查并重新安装。数据库结构变更会停止自动部署，需要人工完成迁移评估。失败只写入 systemd 日志，目前没有另设外部通知渠道。
+
+维护前先获取与 CMS 共用的 `publish.lock`，最多等待 4 分钟；正在发布时不会直接停止 CMS。持有维护锁后停止 CMS 和截止任务，再备份；服务停止后释放维护锁，让重建 CLI 获取自己的发布锁。超时保留正在发布的任务与原站，不删除其他进程的锁。

@@ -12,6 +12,7 @@ readonly PUBLIC_CURRENT=$SITE_RUNTIME/current
 readonly ENV_FILE=/etc/empact/website.env
 readonly BACKUP=/usr/local/lib/empact/backup.sh
 readonly AUTO_UPDATE=/usr/local/lib/empact/auto-update.py
+readonly PUBLICATION_LOCK=/usr/local/lib/empact/publication-lock.py
 readonly REPO=Jerryszz02/Empact_china_official_website
 readonly BUILD_HEAP_MB=${EMPACT_BUILD_HEAP_MB:-768}
 
@@ -123,6 +124,7 @@ systemctl is-active --quiet empact-public.service && was_public=true || true
 previous_public=''
 previous_code=$current_code
 maintenance=false
+lock_token="deploy-$sha-$$"
 
 restore_pointer() {
   local link=$1
@@ -133,7 +135,11 @@ restore_pointer() {
   mv -Tf "$next" "$link"
 }
 restore_services() {
-  if $was_public; then systemctl restart empact-public.service || true; fi
+  if $was_public; then
+    systemctl restart empact-public.service || true
+  else
+    systemctl stop empact-public.service || true
+  fi
   $was_cms && systemctl start empact-cms.service || true
   $was_expiry && systemctl start empact-expiry.service || true
   $was_timer && systemctl start empact-expiry.timer || true
@@ -154,6 +160,7 @@ wait_for() {
 rollback() {
   local status=${1:-1}
   trap - EXIT ERR TERM
+  "$PUBLICATION_LOCK" release "$SITE_RUNTIME" "$lock_token" || true
   if ! $maintenance; then
     exit "$status"
   fi
@@ -177,13 +184,16 @@ runuser -u empact -- env NODE_OPTIONS="--max-old-space-size=$BUILD_HEAP_MB" NODE
 "$AUTO_UPDATE" --check-only --expected-sha "$sha"
 [[ -x $BACKUP ]] || { echo "trusted backup not installed: $BACKUP" >&2; exit 1; }
 backup_dir="$ROOT/backups/auto-$sha-$timestamp"
-"$BACKUP" "$backup_dir"
 
-# Stop mutable services only after the candidate build succeeds. Capture pointers
-# after CMS is stopped, so the rollback pair is consistent.
+# Wait for any editor/expiry publication and block new publications before either
+# CMS stop. The backup sees inactive services and therefore cannot restart them.
+[[ -x $PUBLICATION_LOCK ]] || { echo 'trusted publication lock helper not installed' >&2; exit 1; }
+"$PUBLICATION_LOCK" acquire "$SITE_RUNTIME" "$lock_token"
 maintenance=true
 systemctl stop empact-expiry.timer empact-expiry.service empact-cms.service
 if [[ -e $PUBLIC_CURRENT ]]; then previous_public=$(readlink -f "$PUBLIC_CURRENT"); fi
+"$BACKUP" "$backup_dir"
+"$PUBLICATION_LOCK" release "$SITE_RUNTIME" "$lock_token"
 cd "$candidate"
 runuser -u empact -- env NODE_ENV=production REPOSITORY_DIR="$candidate" SITE_CODE_REVISION="$sha" \
   RUNTIME_DIR="$SITE_RUNTIME" MEDIA_DIR="$ROOT/data/media" PUBLIC_HEALTH_URL=http://127.0.0.1:4322/release.json \

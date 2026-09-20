@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 import importlib.util
 import tempfile
+import threading
+import subprocess
 import unittest
 from pathlib import Path
 from unittest.mock import patch
@@ -11,6 +13,11 @@ spec = importlib.util.spec_from_file_location("auto_update", MODULE_PATH)
 auto_update = importlib.util.module_from_spec(spec)
 assert spec.loader
 spec.loader.exec_module(auto_update)
+lock_spec = importlib.util.spec_from_file_location(
+    "publication_lock", MODULE_PATH.with_name("publication-lock.py")
+)
+publication_lock = importlib.util.module_from_spec(lock_spec)
+lock_spec.loader.exec_module(publication_lock)
 
 SHA = "a" * 40
 OTHER = "b" * 40
@@ -31,6 +38,49 @@ def run(sha=SHA, **extra):
 
 
 class AutoDeployTests(unittest.TestCase):
+    def test_rollback_restores_public_service_running_state(self):
+        source = MODULE_PATH.with_name("deploy.sh").read_text()
+        restore_function = source.split("restore_services() {", 1)[1].split("\n}\n", 1)[0]
+        for was_public, expected in [("false", "stop"), ("true", "restart")]:
+            script = (
+                "set -eu\n"
+                'systemctl() { printf "%s\\n" "$*"; }\n'
+                "was_public=" + was_public + "\n"
+                "was_cms=false; was_expiry=false; was_timer=false\n"
+                "restore_services() {" + restore_function + "\n}\nrestore_services\n"
+            )
+            result = subprocess.run(
+                ["bash", "-c", script], stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE, universal_newlines=True, check=True,
+            )
+            self.assertEqual(result.stdout.strip(), expected + " empact-public.service")
+
+    def test_maintenance_waits_for_publication_and_releases_its_own_lock(self):
+        with tempfile.TemporaryDirectory() as directory:
+            lock = Path(directory) / "publish.lock"
+            lock.write_text('{"pid":123}')
+            publisher_finishes = threading.Timer(0.1, lock.unlink)
+            publisher_finishes.start()
+            try:
+                publication_lock.acquire(directory, "maintenance", timeout=2)
+            finally:
+                publisher_finishes.join()
+            self.assertIn('"maintenanceToken": "maintenance"', lock.read_text())
+            publication_lock.release(directory, "maintenance")
+            # A subsequent normal CMS publication can acquire the same lock.
+            with lock.open("x") as handle:
+                handle.write('{"pid":456}')
+
+    def test_maintenance_never_removes_another_publications_lock(self):
+        with tempfile.TemporaryDirectory() as directory:
+            lock = Path(directory) / "publish.lock"
+            lock.write_text('{"pid":123}')
+            with self.assertRaises(RuntimeError):
+                publication_lock.acquire(directory, "maintenance", timeout=0)
+            with self.assertRaises(RuntimeError):
+                publication_lock.release(directory, "maintenance")
+            self.assertEqual(lock.read_text(), '{"pid":123}')
+
     def test_pending_failed_wrong_event_or_sha_is_rejected(self):
         for candidate in [
             run(status="in_progress", conclusion=None),
