@@ -1,4 +1,10 @@
 import { aboutBodyHtml, aboutSummary } from "./about.js";
+import {
+  privacyBodyHtml,
+  privacySummary,
+  termsBodyHtml,
+  termsSummary,
+} from "./legal.js";
 import type { Snapshot, Entry } from "./schema.js";
 import {
   directoryBusinesses,
@@ -69,8 +75,8 @@ const pages: Entry[] = [
     kind: "page",
     slug: "privacy",
     title: "隐私政策",
-    summary: "了解我们如何处理信息。",
-    bodyHtml: "<p>我们仅在必要范围内处理信息。</p>",
+    summary: privacySummary,
+    bodyHtml: privacyBodyHtml,
     approved: false,
   },
   {
@@ -78,8 +84,8 @@ const pages: Entry[] = [
     kind: "page",
     slug: "terms",
     title: "使用条款",
-    summary: "网站使用条款。",
-    bodyHtml: "<p>请在使用服务前阅读本条款。</p>",
+    summary: termsSummary,
+    bodyHtml: termsBodyHtml,
     approved: false,
   },
   {

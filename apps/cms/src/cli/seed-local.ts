@@ -5,7 +5,8 @@ import { previewSnapshot } from "@empact/content/fixtures";
 import { randomBytes } from "node:crypto";
 import { writeFile, mkdir } from "node:fs/promises";
 import { resolve } from "node:path";
-import { migrateBusinessContent } from "../content-migration.js";
+import { htmlToLexical, migrateBusinessContent } from "../content-migration.js";
+import type { Content } from "../payload-types.js";
 
 if (process.env.NODE_ENV === "production")
   throw new Error("结构草稿只允许在本机开发环境初始化。");
@@ -46,35 +47,6 @@ if (existing.totalDocs === 0) {
     (entry) => entry.kind !== "case",
   );
   for (const entry of frameworkEntries) {
-    const body = {
-      root: {
-        type: "root",
-        version: 1,
-        direction: null,
-        format: "" as const,
-        indent: 0,
-        children: [
-          {
-            type: "paragraph",
-            version: 1,
-            direction: null,
-            format: "",
-            indent: 0,
-            children: [
-              {
-                type: "text",
-                version: 1,
-                text: entry.bodyHtml.replace(/<[^>]+>/g, ""),
-                format: 0,
-                detail: 0,
-                mode: "normal",
-                style: "",
-              },
-            ],
-          },
-        ],
-      },
-    };
     const doc = await payload.create({
       collection: "content",
       overrideAccess: true,
@@ -88,7 +60,7 @@ if (existing.totalDocs === 0) {
           .enum(["media", "partner", "official", "company", "sponsored"])
           .optional()
           .parse(entry.sourceType),
-        body,
+        body: htmlToLexical(entry.bodyHtml) as Content["body"],
         approved: false,
         featured: entry.featured,
         segment: entry.segment,
