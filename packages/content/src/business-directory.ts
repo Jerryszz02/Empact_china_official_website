@@ -239,7 +239,7 @@ const linkedCases: LinkedCase[] = [
     summary:
       "在波克城市交流 AI 时代的成长与教育路径，听取行业分享和青年圆桌对话。",
     url: "https://mp.weixin.qq.com/s/XspoRsoKczDRSR6Sfvb3VQ",
-    imageId: "directory-empact-brand",
+    imageId: "directory-boke-annual-salon",
   },
   {
     slug: "office-camp",
@@ -251,6 +251,7 @@ const linkedCases: LinkedCase[] = [
   },
   {
     slug: "tedx",
+    imageId: "directory-tedx",
     title: "TEDx",
     business: "public-speaking",
     summary: "从观点整理到面向听众的分享，了解 TEDx 相关活动。",
@@ -266,6 +267,7 @@ const linkedCases: LinkedCase[] = [
   },
   {
     slug: "speaking-social-innovation-camp",
+    imageId: "directory-speaking-social-innovation-camp",
     title: "演讲×社会创新赋能营",
     business: "public-speaking",
     summary: "把社会创新议题与演讲表达结合起来，了解项目介绍。",
@@ -273,6 +275,7 @@ const linkedCases: LinkedCase[] = [
   },
   {
     slug: "ai-pbl-course",
+    imageId: "directory-ai-pbl-course",
     title: "AI×PBL",
     business: "ai-and-theme-courses",
     summary: "围绕具体项目学习与使用 AI，查看课程介绍。",
@@ -280,6 +283,7 @@ const linkedCases: LinkedCase[] = [
   },
   {
     slug: "ai-critical-thinking-camp",
+    imageId: "directory-ai-critical-thinking-camp",
     title: "AI×思辨线上课程",
     business: "ai-and-theme-courses",
     summary: "查看 Empact AI 思辨营回顾，了解课程内容。",
@@ -287,6 +291,7 @@ const linkedCases: LinkedCase[] = [
   },
   {
     slug: "vibe-coding-camp",
+    imageId: "directory-vibe-coding-camp",
     title: "Vibe Coding 线下创造营",
     business: "ai-and-theme-courses",
     summary: "查看 AI 少年创造营的路演邀请与项目介绍。",
@@ -294,6 +299,7 @@ const linkedCases: LinkedCase[] = [
   },
   {
     slug: "ai-public-interest-course",
+    imageId: "directory-ai-public-interest-course",
     title: "AI公益课",
     business: "ai-and-theme-courses",
     summary: "围绕 AI 与社会问题展开学习，查看公益课程内容。",
@@ -301,6 +307,7 @@ const linkedCases: LinkedCase[] = [
   },
   {
     slug: "ai-competition-training",
+    imageId: "directory-ai-competition-training",
     title: "白名单赛事培训",
     business: "ai-and-theme-courses",
     summary: "了解相关赛事介绍及参与方式，具体要求以原文为准。",
@@ -308,6 +315,7 @@ const linkedCases: LinkedCase[] = [
   },
   {
     slug: "shenghua-zizhu-family-communication",
+    imageId: "directory-shenghua-zizhu-family-communication",
     title: "圣华紫竹 · 我怎么说，爸妈才会听",
     business: "coaching-parents-mentors",
     summary: "从青少年的表达出发，了解亲子沟通课程。",
@@ -315,6 +323,7 @@ const linkedCases: LinkedCase[] = [
   },
   {
     slug: "community-volunteer-opportunities",
+    imageId: "directory-community-volunteer-opportunities",
     title: "社区志愿者机会",
     business: "community-volunteering",
     summary: "查看社区志愿服务介绍，了解参与方式。",
@@ -388,6 +397,7 @@ const hostedCases: Array<
   },
   {
     slug: "blind-football-social-innovation-pbl",
+    imageId: "directory-blind-football-social-innovation-pbl",
     title: "盲人足球 PBL · 从体验到公益倡导",
     business: "ai-social-innovation-pbl",
     summary:
@@ -457,6 +467,105 @@ export const directoryCases: Entry[] = [
 // Use an explicitly labelled brand cover when a verified activity photograph is
 // unavailable. Never borrow a different event's photo as documentary evidence.
 export const directoryMedia: Media[] = [
+  {
+    id: "directory-boke-annual-salon",
+    filename: "directory-boke-annual-salon.webp",
+    alt: "波克游戏年度沙龙嘉宾合影，取自活动回顾推文封面",
+    width: 1242,
+    height: 698,
+    mimeType: "image/webp",
+    approved: false,
+  },
+  {
+    id: "directory-tedx",
+    filename: "directory-tedx.webp",
+    alt: "TEDx OpenMic 活动合影，取自回顾推文封面",
+    width: 1080,
+    height: 460,
+    mimeType: "image/webp",
+    approved: false,
+  },
+  {
+    id: "directory-speaking-social-innovation-camp",
+    filename: "directory-speaking-social-innovation-camp.webp",
+    alt: "SDGs 演讲赋能营推文封面的学员合影",
+    width: 1280,
+    height: 544,
+    mimeType: "image/webp",
+    approved: false,
+  },
+  {
+    id: "directory-ai-pbl-course",
+    filename: "directory-ai-pbl-course.webp",
+    alt: "Empact AI 实战 PBL 课程原推文宣传封面",
+    width: 1280,
+    height: 543,
+    mimeType: "image/webp",
+    approved: false,
+  },
+  {
+    id: "directory-ai-critical-thinking-camp",
+    filename: "directory-ai-critical-thinking-camp.webp",
+    alt: "Empact AI 思辨营原推文课程封面",
+    width: 800,
+    height: 340,
+    mimeType: "image/webp",
+    approved: false,
+  },
+  {
+    id: "directory-vibe-coding-camp",
+    filename: "directory-vibe-coding-camp.webp",
+    alt: "AI影响力少年创造营 Vibe Coding 路演邀请海报",
+    width: 1242,
+    height: 699,
+    mimeType: "image/webp",
+    approved: false,
+  },
+  {
+    id: "directory-ai-public-interest-course",
+    filename: "directory-ai-public-interest-course.webp",
+    alt: "AI公益课原推文中的数字艺术示意图",
+    width: 1080,
+    height: 603,
+    mimeType: "image/webp",
+    approved: false,
+  },
+  {
+    id: "directory-ai-competition-training",
+    filename: "directory-ai-competition-training.webp",
+    alt: "全国青少年人工智能辅助生成数字艺术创作者大赛原推文海报",
+    width: 1080,
+    height: 1658,
+    mimeType: "image/webp",
+    approved: false,
+  },
+  {
+    id: "directory-shenghua-zizhu-family-communication",
+    filename: "directory-shenghua-zizhu-family-communication.webp",
+    alt: "圣华紫竹亲子沟通课程现场，投影主题为我怎么说爸妈才会听",
+    width: 1280,
+    height: 1280,
+    mimeType: "image/webp",
+    approved: false,
+  },
+  {
+    id: "directory-community-volunteer-opportunities",
+    filename: "directory-community-volunteer-opportunities.webp",
+    alt: "朝夕有爱志愿者为老人铺设防滑地垫，取自原推文封面",
+    width: 1080,
+    height: 458,
+    mimeType: "image/webp",
+    approved: false,
+  },
+  {
+    id: "directory-blind-football-social-innovation-pbl",
+    filename: "directory-blind-football-social-innovation-pbl.webp",
+    alt: "盲人足球 PBL 课程中学生蒙眼控球的体验现场",
+    width: 1080,
+    height: 720,
+    mimeType: "image/webp",
+    approved: false,
+  },
   {
     id: "directory-waic-suanfeng-visit",
     filename: "directory-waic-suanfeng-visit.webp",
