@@ -1,0 +1,17 @@
+[Unit]
+Description=Poll and deploy CI-approved Empact website revisions
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+EnvironmentFile=-/etc/default/empact-deploy
+ExecStart=/usr/local/lib/empact/auto-update.py
+NoNewPrivileges=false
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=full
+ReadWritePaths=/srv/empact /run/lock
+TimeoutStartSec=900
+MemoryMax=1400M

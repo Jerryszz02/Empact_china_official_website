@@ -1,6 +1,13 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtemp, writeFile, rm, mkdir, access } from "node:fs/promises";
+import {
+  mkdtemp,
+  writeFile,
+  readFile,
+  rm,
+  mkdir,
+  access,
+} from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { frameworkSnapshot as previewSnapshot } from "./helpers/content-fixture.js";
@@ -13,6 +20,7 @@ import {
   mergeSelectedLive,
   listReceipts,
   cleanupExpiredPreviews,
+  currentRelease,
 } from "../apps/cms/src/publisher.js";
 
 function fixture(version: string): Snapshot {
@@ -43,6 +51,37 @@ function fixture(version: string): Snapshot {
 const build = async (_snapshot: string, out: string) => {
   await writeFile(join(out, "index.html"), "<h1>Isolated build</h1>");
 };
+
+test("content publications retain code revision and reject an invalid revision", async () => {
+  const runtimeDir = await mkdtemp(join(tmpdir(), "empact-revision-"));
+  const previous = process.env.SITE_CODE_REVISION;
+  const options = { runtimeDir, build, health: async () => true };
+  try {
+    process.env.SITE_CODE_REVISION = "a".repeat(40);
+    for (const version of ["one", "two"]) {
+      assert.equal(
+        (await publishSnapshot(fixture(version), options)).state,
+        "published",
+      );
+      const output = await currentRelease(runtimeDir);
+      const receipt = JSON.parse(
+        await readFile(join(output!, "release.json"), "utf8"),
+      );
+      assert.equal(receipt.codeRevision, "a".repeat(40));
+      assert.equal(receipt.version, version);
+    }
+    process.env.SITE_CODE_REVISION = "main";
+    assert.equal(
+      (await publishSnapshot(fixture("three"), options)).state,
+      "failed",
+    );
+    assert.equal((await readLiveSnapshot(runtimeDir))?.version, "two");
+  } finally {
+    if (previous === undefined) delete process.env.SITE_CODE_REVISION;
+    else process.env.SITE_CODE_REVISION = previous;
+    await rm(runtimeDir, { recursive: true, force: true });
+  }
+});
 
 test("build failure and post-switch failure preserve exact previous snapshot", async () => {
   const runtimeDir = await mkdtemp(join(tmpdir(), "empact-publish-"));

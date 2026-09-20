@@ -248,7 +248,19 @@ export async function buildSite(
     await mkdir(join(output, "media"), { recursive: true });
     await copyFile(source, join(output, "media", item.filename));
   }
+  const codeRevision = (
+    process.env.SITE_CODE_REVISION ||
+    (await readFile(join(repository, ".code-revision"), "utf8").catch(
+      (error) => {
+        if (error.code !== "ENOENT") throw error;
+        return "";
+      },
+    ))
+  ).trim();
+  if (codeRevision && !/^[a-f0-9]{40}$/.test(codeRevision))
+    throw new Error("代码发布版本必须是完整 Git SHA。");
   const metadata = {
+    ...(codeRevision ? { codeRevision } : {}),
     version: snapshot.version,
     generatedAt: snapshot.generatedAt,
     mode: snapshot.mode,
