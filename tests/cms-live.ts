@@ -10,6 +10,8 @@ import { previewSnapshot as directorySnapshot } from "@empact/content/fixtures";
 import { frameworkSnapshot as previewSnapshot } from "./helpers/content-fixture.js";
 import { verifyCmsUI } from "./cms-ui-scenarios.js";
 import { verifyBusinessWorkflow } from "./business-cms-scenarios.js";
+import { load } from "cheerio";
+import { serializeLexicalBody } from "../apps/cms/src/cms-data.js";
 const execute = promisify(execFile),
   repository = resolve("."),
   cms = join(repository, "apps/cms");
@@ -286,6 +288,39 @@ try {
       body: JSON.stringify(data),
     });
   const seeded = await request("/api/content?limit=100");
+  for (const slug of ["privacy", "terms"]) {
+    const source = directorySnapshot.entries.find(
+      (entry) => entry.kind === "page" && entry.slug === slug,
+    );
+    const actual = seeded.docs.find(
+      (doc: { kind: string; slug: string }) =>
+        doc.kind === "page" && doc.slug === slug,
+    );
+    assert.ok(source && actual, `seeded legal page ${slug}`);
+    const expectedHtml = load(source.bodyHtml);
+    const storedHtml = load((await serializeLexicalBody(actual.body, [])).html);
+    for (const selector of ["h2", "p", "ul", "li", "strong", "br"])
+      assert.equal(
+        storedHtml(selector).length,
+        expectedHtml(selector).length,
+        `seeded ${slug} preserves ${selector}`,
+      );
+    assert.equal(
+      storedHtml.text().replace(/\s/g, ""),
+      expectedHtml.text().replace(/\s/g, ""),
+      `seeded ${slug} preserves policy text`,
+    );
+    assert.deepEqual(
+      storedHtml("a")
+        .map((_, link) => storedHtml(link).attr("href"))
+        .get(),
+      expectedHtml("a")
+        .map((_, link) => expectedHtml(link).attr("href"))
+        .get(),
+      `seeded ${slug} preserves cross-page links`,
+    );
+    assert.equal(actual.approved, false);
+  }
   const seededCases = seeded.docs.filter(
     (entry: { kind: string }) => entry.kind === "case",
   );
