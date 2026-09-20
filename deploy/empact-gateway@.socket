@@ -1,0 +1,12 @@
+[Unit]
+Description=Empact gateway bridge socket on port %i
+After=docker.service
+Requires=docker.service
+
+[Socket]
+# Install an instance drop-in with the verified Docker gateway address.
+# Example: ListenStream=172.18.0.1:4322 for empact-gateway@4322.socket.
+NoDelay=true
+
+[Install]
+WantedBy=sockets.target

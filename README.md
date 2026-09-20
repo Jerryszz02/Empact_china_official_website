@@ -2,7 +2,7 @@
 
 中文内容官网：Astro 静态页面 + Payload 图形内容后台。青少年项目与企业服务各有总览和下拉导航，另设学校、社区入口；业务页展示案例卡片，案例详情可使用站内图文或外链，ChatCircle 使用独立平台入口。
 
-**当前提供可运行的工程与受保护草稿。源码已录入公司主体、联系邮箱、地址和备案号；首发内容、图片授权、隐私审批及公网发布仍须分别核验，生产发布会阻止未批准内容。**
+**官网已部署至 [empact.cn](https://empact.cn/)，公开内容来自已批准的正式快照；草稿仍受后台鉴权保护。在线咨询邮件服务尚未开启，部署与验收详情见 [首次服务器部署记录](docs/deployment-2026-09-20.md)。**
 
 ## 本机启动
 
@@ -71,8 +71,8 @@ npm audit --omit=dev --audit-level=high
 - `scripts`、`tests`：静态服务、SMTP 接收、页面检查和自动验收。
 - `deploy`：复用现有 Caddy 的配置片段、官网独立服务/定时截止检查、备份恢复脚本。
 
-目标是 ECS 106.15.44.81 / empact.cn；仓库交付记录尚未提供目标服务器部署验收，本次文档同步未连接服务器，不能据此确认公网版本或服务器访问权限。
+目标是 ECS 106.15.44.81 / empact.cn；2026-09-20 已连接 ECS 并安装官网独立服务。服务器、内容版本及公网解析验收分别记录在 [首次服务器部署记录](docs/deployment-2026-09-20.md)。
 
-上线前执行 `npm run migrate -w @empact/cms` 初始化或升级独立数据库；升级前备份。代码构建由 CI 验证，运营内容更新在官网服务账号下的独立子进程构建并原子切换。`RUNTIME_DIR/current` 只指向成功检查的静态产物，CMS 暂不可用时旧站仍可读。
+空白数据库通过 `npm run migrate -w @empact/cms` 初始化；已有数据库升级前先备份并核对迁移基线。本次导入库有 schema-push 历史，不能直接重放初始化迁移链，具体边界见部署记录。代码构建由 CI 验证，运营内容更新在官网服务账号下的独立子进程构建并原子切换。`RUNTIME_DIR/current` 只指向成功检查的静态产物，CMS 暂不可用时旧站仍可读。
 
 详见 [实施计划](docs/planning/implementation.md)、[内容补充表](docs/content-checklist.md)、[运行与恢复](docs/operations.md)、[依赖审查](docs/dependency-review.md) 和 [交付验收状态](docs/readiness.md)。
