@@ -33,6 +33,10 @@ jobs:
       - run: npm run test:dev
       - run: npm run test:browser
       - run: npm audit --omit=dev --audit-level=high
+      - name: Check automatic deployment scripts
+        run: |
+          python3 tests/deploy-auto.test.py
+          bash -n deploy/deploy.sh
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
