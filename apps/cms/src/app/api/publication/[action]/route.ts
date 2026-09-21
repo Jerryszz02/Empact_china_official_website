@@ -1,6 +1,6 @@
 import { getPayload } from "payload";
 import config from "@payload-config";
-import { mkdir, writeFile, readFile, rename, rm } from "node:fs/promises";
+import { mkdir, writeFile, readFile, rename } from "node:fs/promises";
 import { join } from "node:path";
 import { randomUUID } from "node:crypto";
 import { isDeepStrictEqual } from "node:util";
@@ -14,6 +14,7 @@ import {
   buildSite,
   cleanupExpiredPreviews,
   snapshotDigest,
+  removeFailedPreview,
 } from "../../../../publisher.js";
 import { readDraftSnapshot } from "../../../../cms-data.js";
 import { entryPath, validateSnapshot } from "@empact/content/schema";
@@ -166,7 +167,7 @@ export async function POST(
         );
         await rename(building, directory);
       } catch (error) {
-        await rm(building, { recursive: true, force: true });
+        await removeFailedPreview(building);
         throw error;
       }
       return Response.json(

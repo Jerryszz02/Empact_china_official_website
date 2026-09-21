@@ -1,0 +1,125 @@
+name: Deploy production
+on:
+  workflow_run:
+    workflows: [Website checks]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+  deployments: write
+
+jobs:
+  deploy:
+    if: >-
+      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') ||
+      (github.event_name == 'workflow_run' &&
+       github.event.workflow_run.event == 'push' &&
+       github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.head_repository.full_name == github.repository)
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    # Keep the running release and only the latest waiting request. Selection is
+    # repeated after acquiring this slot, because events can arrive out of order.
+    concurrency:
+      group: empact-production-deploy
+      cancel-in-progress: false
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GITHUB_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          # workflow_run uses trusted default-branch code, never PR artifacts.
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Select latest CI-approved main
+        id: target
+        run: python3 deploy/actions-client.py select
+
+      - name: Record exact deployment revision
+        if: steps.target.outputs.ready == 'true'
+        id: record
+        env:
+          TARGET_SHA: ${{ steps.target.outputs.sha }}
+        run: |
+          jq -n --arg sha "$TARGET_SHA" '{ref: $sha, environment: "production", auto_merge: false, required_contexts: [], description: "Verified main release to ECS"}' > "$RUNNER_TEMP/deployment.json"
+          id=$(gh api "repos/$GITHUB_REPOSITORY/deployments" --input "$RUNNER_TEMP/deployment.json" --jq .id)
+          echo "id=$id" >> "$GITHUB_OUTPUT"
+          gh api "repos/$GITHUB_REPOSITORY/deployments/$id/statuses" -f state=in_progress -f environment_url=https://empact.cn -f log_url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" > /dev/null
+
+      - name: Configure restricted deployment connection
+        if: steps.target.outputs.ready == 'true'
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.EMPACT_DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.EMPACT_DEPLOY_KNOWN_HOSTS }}
+          DEPLOY_HOST: ${{ vars.EMPACT_DEPLOY_HOST }}
+        run: |
+          test -n "$DEPLOY_SSH_KEY" && test -n "$DEPLOY_KNOWN_HOSTS" && test -n "$DEPLOY_HOST"
+          [[ "$DEPLOY_HOST" =~ ^[a-zA-Z0-9][a-zA-Z0-9.-]*$ ]]
+          install -d -m 700 "$RUNNER_TEMP/empact-ssh"
+          umask 077
+          printf '%s\n' "$DEPLOY_SSH_KEY" > "$RUNNER_TEMP/empact-ssh/key"
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > "$RUNNER_TEMP/empact-ssh/known_hosts"
+
+      - name: Deploy pinned revision on ECS
+        if: steps.target.outputs.ready == 'true'
+        id: release
+        env:
+          TARGET_SHA: ${{ steps.target.outputs.sha }}
+          DEPLOY_HOST: ${{ vars.EMPACT_DEPLOY_HOST }}
+        run: |
+          set +e
+          printf '%s\n' "$TARGET_SHA" | ssh -T \
+            -i "$RUNNER_TEMP/empact-ssh/key" \
+            -o IdentitiesOnly=yes -o BatchMode=yes -o StrictHostKeyChecking=yes \
+            -o UserKnownHostsFile="$RUNNER_TEMP/empact-ssh/known_hosts" \
+            -o ConnectTimeout=15 -o ServerAliveInterval=15 -o ServerAliveCountMax=4 \
+            "empact-deploy@$DEPLOY_HOST" deploy
+          result=$?
+          set -e
+          if [ "$result" -eq 3 ]; then
+            echo 'superseded=true' >> "$GITHUB_OUTPUT"
+            echo 'Skipped before deployment: main advanced while this request was starting.' >> "$GITHUB_STEP_SUMMARY"
+          elif [ "$result" -ne 0 ]; then
+            echo 'Deployment failed or connection was lost. Inspect the server unit before retrying; a disconnected release continues under systemd.' >> "$GITHUB_STEP_SUMMARY"
+            exit "$result"
+          fi
+
+      - name: Verify public revision and key pages
+        if: steps.target.outputs.ready == 'true' && steps.release.outputs.superseded != 'true'
+        env:
+          TARGET_SHA: ${{ steps.target.outputs.sha }}
+        run: python3 deploy/actions-client.py verify "$TARGET_SHA"
+
+      - name: Publish deployment result
+        if: always() && steps.record.outputs.id != ''
+        env:
+          DEPLOYMENT_ID: ${{ steps.record.outputs.id }}
+          RESULT: ${{ job.status }}
+          SUPERSEDED: ${{ steps.release.outputs.superseded }}
+        run: |
+          if [ "$SUPERSEDED" = true ]; then
+            state=inactive
+            description='Superseded before deployment; no release occurred'
+          elif [ "$RESULT" = success ]; then
+            state=success
+            description='Public revision and key pages verified'
+          elif [ "$RESULT" = cancelled ]; then
+            state=error
+            description="Workflow interrupted; server release may continue, inspect its unit"
+          else
+            state=failure
+            description='Deployment or public verification failed; inspect workflow logs'
+          fi
+          gh api "repos/$GITHUB_REPOSITORY/deployments/$DEPLOYMENT_ID/statuses" \
+            -f state="$state" -f description="$description" \
+            -f environment_url=https://empact.cn \
+            -f log_url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" > /dev/null
+          echo "Deployment result: **$state** — $description" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Remove temporary connection files
+        if: always()
+        run: rm -rf "$RUNNER_TEMP/empact-ssh"

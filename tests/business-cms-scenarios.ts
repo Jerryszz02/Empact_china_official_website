@@ -149,7 +149,10 @@ export async function verifyBusinessWorkflow(options: {
   assert.equal(items.find((item: any) => item.id === id).modified, true);
   const otherBusiness = items.find(
     (item: any) =>
-      item.kind === "business" && item.live && item.id !== businessId,
+      item.kind === "business" &&
+      item.slug !== "international-talent-model" &&
+      item.live &&
+      item.id !== businessId,
   );
   assert.ok(otherBusiness);
   await request(`/api/content/${id}`, "PATCH", {

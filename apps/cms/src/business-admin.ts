@@ -8,6 +8,7 @@ import {
   publishSnapshot,
   readLiveSnapshot,
   runtimeDir,
+  removeFailedPreview,
 } from "./publisher.js";
 import {
   entryPath,
@@ -17,7 +18,7 @@ import {
   type Snapshot,
 } from "@empact/content/schema";
 import { readDraftSnapshot } from "./cms-data.js";
-import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
 export type BusinessAdminAction =
@@ -220,7 +221,7 @@ export async function businessAdminMutation(
       await buildSite(snapshot, building, options);
       await rename(building, directory);
     } catch (error) {
-      await rm(building, { recursive: true, force: true });
+      await removeFailedPreview(building);
       throw error;
     }
     return {

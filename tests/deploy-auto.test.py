@@ -111,7 +111,7 @@ class AutoDeployTests(unittest.TestCase):
             with self.assertRaises(auto_update.GateError):
                 auto_update.approved_run(SHA)
 
-    def test_current_revision_skips_before_ci_query(self):
+    def test_current_revision_still_checks_ci_before_shortcut(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             target = root / SHA
@@ -129,7 +129,86 @@ class AutoDeployTests(unittest.TestCase):
             ):
                 self.assertEqual(auto_update.current_revision(current), SHA)
                 self.assertEqual(auto_update.main(), 0)
-                gate.assert_not_called()
+            gate.assert_called_once_with(SHA)
+
+    def test_start_then_finish_accepts_normal_main_advance(self):
+        target = OTHER
+        current = SHA
+        with patch.object(auto_update, "latest_main_sha", side_effect=[target, "c" * 40]), patch.object(
+            auto_update, "approved_run", return_value=run(target)
+        ), patch.object(auto_update, "compare_status", side_effect=["ahead", "ahead", "ahead"]):
+            auto_update.start_gate(target, current)
+            auto_update.finish_gate(target, current)
+
+    def test_initial_release_without_code_pointer_can_finish(self):
+        with patch.object(auto_update, "latest_main_sha", return_value=SHA), patch.object(
+            auto_update, "approved_run", return_value=run(SHA)
+        ), patch.object(auto_update, "compare_status", return_value="identical") as compare:
+            auto_update.start_gate(SHA, None)
+            auto_update.finish_gate(SHA, None)
+            compare.assert_called_once_with(SHA, SHA)
+
+    def test_stale_finish_is_a_failure_after_build_started(self):
+        args = type(
+            "Args", (), {"check_only": True, "expected_sha": None, "pinned_sha": OTHER,
+                           "current": "/missing", "installer": "/installer"}
+        )()
+        with patch.object(auto_update.argparse.ArgumentParser, "parse_args", return_value=args), patch.object(
+            auto_update, "latest_main_sha", return_value="c" * 40
+        ), patch.object(auto_update, "approved_run", return_value=run(OTHER)), patch.object(
+            auto_update, "compare_status", return_value="behind"
+        ):
+            self.assertEqual(auto_update.main(), 1)
+
+    def test_stale_expected_start_is_neutral_and_never_installs(self):
+        args = type(
+            "Args", (), {"check_only": True, "expected_sha": SHA, "pinned_sha": None,
+                           "current": "/missing", "installer": "/installer"}
+        )()
+        with patch.object(auto_update.argparse.ArgumentParser, "parse_args", return_value=args), patch.object(
+            auto_update, "latest_main_sha", return_value=OTHER
+        ), patch.object(auto_update, "deploy") as installer:
+            self.assertEqual(auto_update.main(), 3)
+            installer.assert_not_called()
+
+    def test_failed_rerun_after_start_blocks_finish(self):
+        with patch.object(auto_update, "latest_main_sha", side_effect=[OTHER, OTHER]), patch.object(
+            auto_update, "approved_run", side_effect=[run(OTHER), auto_update.GateError("failed rerun")]
+        ), patch.object(auto_update, "compare_status", return_value="ahead"):
+            auto_update.start_gate(OTHER, SHA)
+            with self.assertRaises(auto_update.GateError):
+                auto_update.finish_gate(OTHER, SHA)
+
+    def test_installed_newer_revision_is_rejected_by_finish_gate(self):
+        with patch.object(auto_update, "latest_main_sha", return_value=OTHER), patch.object(
+            auto_update, "approved_run", return_value=run(SHA)
+        ), patch.object(auto_update, "compare_status", side_effect=["identical", "behind"]):
+            with self.assertRaises(auto_update.GateError):
+                auto_update.finish_gate(SHA, OTHER)
+
+    def test_invalid_sha_never_reaches_github_compare(self):
+        with patch.object(auto_update, "github_json") as api:
+            with self.assertRaises(auto_update.GateError):
+                auto_update.compare_status("../etc/passwd", SHA)
+            api.assert_not_called()
+
+    def test_cli_gate_sha_validation_and_mode_requirements(self):
+        cases = [
+            (type("Args", (), {"check_only": True, "expected_sha": "bad", "pinned_sha": None,
+                                "current": "/missing", "installer": "/installer"})(), 1),
+            (type("Args", (), {"check_only": True, "expected_sha": None, "pinned_sha": "bad",
+                                "current": "/missing", "installer": "/installer"})(), 1),
+            (type("Args", (), {"check_only": False, "expected_sha": SHA, "pinned_sha": None,
+                                "current": "/missing", "installer": "/installer"})(), 1),
+            (type("Args", (), {"check_only": True, "expected_sha": SHA, "pinned_sha": OTHER,
+                                "current": "/missing", "installer": "/installer"})(), 1),
+        ]
+        for args, expected in cases:
+            with self.subTest(args=args), patch.object(
+                auto_update.argparse.ArgumentParser, "parse_args", return_value=args
+            ), patch.object(auto_update, "latest_main_sha") as api:
+                self.assertEqual(auto_update.main(), expected)
+                api.assert_not_called()
 
     def test_successful_check_only_does_not_invoke_installer(self):
         with patch.object(auto_update, "latest_main_sha", return_value=SHA), patch.object(
@@ -151,6 +230,20 @@ class AutoDeployTests(unittest.TestCase):
             installer.assert_called_once_with(
                 ["/usr/local/lib/empact/deploy.sh", SHA], check=True
             )
+
+    def test_deploy_lock_contention_is_a_failure_status(self):
+        source = MODULE_PATH.with_name("deploy.sh").read_text()
+        lock_clause = next(line.strip() for line in source.splitlines() if "flock -n 9 ||" in line)
+        with tempfile.TemporaryDirectory() as directory:
+            script = """\
+flock() {{ return 1; }}
+{clause}
+""".format(clause=lock_clause)
+            result = subprocess.run(
+                ["bash", "-c", script], stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE, universal_newlines=True,
+            )
+            self.assertEqual(result.returncode, 75)
 
 
 if __name__ == "__main__":

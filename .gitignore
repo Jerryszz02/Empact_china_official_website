@@ -5,6 +5,7 @@ node_modules/
 !.env.example
 .next/
 .astro/
+.cms-build-*/
 dist/
 .data/
 artifacts/

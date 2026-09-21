@@ -67,14 +67,29 @@ export async function verifyCmsUI({
     }
     const state = await request("/api/business-admin/state");
     const parent = state.items.find(
-      (item: any) => item.kind === "business" && item.live,
+      (item: any) =>
+        item.kind === "business" &&
+        item.slug !== "international-talent-model" &&
+        item.live,
     );
     assert.ok(parent);
+    const model = state.items.find(
+      (item: any) => item.slug === "international-talent-model",
+    );
+    assert.ok(model, "the fixed model content is preserved");
     await page.getByRole("button", { name: "新增项目", exact: true }).click();
-    await page
+    const parentSelect = page
       .getByRole("dialog", { name: "新增项目", exact: true })
-      .getByLabel("所属业务类型（必填）")
-      .selectOption(parent.id);
+      .getByLabel("所属业务类型（必填）");
+    await expect(
+      parentSelect.locator(`option[value="${model.id}"]`),
+    ).toHaveCount(0);
+    await expect(parentSelect.locator("option")).toHaveCount(
+      state.items.filter(
+        (item: any) => item.kind === "business" && item.id !== model.id,
+      ).length + 1,
+    );
+    await parentSelect.selectOption(parent.id);
     await page
       .locator('dialog[open] input[name="title"]')
       .fill("浏览器案例工作流");
