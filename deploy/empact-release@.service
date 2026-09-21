@@ -1,0 +1,18 @@
+[Unit]
+Description=Deploy verified Empact revision %i from GitHub Actions
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+User=root
+EnvironmentFile=-/etc/default/empact-deploy
+ExecStart=/usr/local/lib/empact/deploy.sh %i
+SuccessExitStatus=3
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=full
+ReadWritePaths=/srv/empact /run/lock
+TimeoutStartSec=900
+MemoryMax=1400M

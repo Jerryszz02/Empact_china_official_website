@@ -19,14 +19,18 @@ readonly BUILD_HEAP_MB=${EMPACT_BUILD_HEAP_MB:-768}
 [[ ${EUID} -eq 0 ]] || { echo 'must run as root' >&2; exit 2; }
 [[ $# -eq 1 && $1 =~ $SHA_RE ]] || { echo 'Usage: deploy.sh <full 40-character commit SHA>' >&2; exit 2; }
 sha=$1
-install -d -o root -g root -m 755 "$CODE_ROOT"
-install -d -o root -g root -m 700 "$ROOT/staging" "$ROOT/receipts" "$ROOT/backups"
-
 exec 9>/run/lock/empact-deploy.lock
-flock -n 9 || { echo 'another deployment is already running' >&2; exit 0; }
+flock -n 9 || { echo 'another deployment is already running' >&2; exit 75; }
 
 current_code=''
 if [[ -e $CURRENT ]]; then current_code=$(readlink -f "$CURRENT"); fi
+[[ -x $AUTO_UPDATE ]] || { echo "trusted gate not installed: $AUTO_UPDATE" >&2; exit 1; }
+# Pin the event SHA at the start of the locked run. This checks current main,
+# the latest same-SHA push CI attempt, and that the installed revision is an
+# ancestor before downloading or building anything expensive.
+"$AUTO_UPDATE" --check-only --expected-sha "$sha" --current "$CURRENT"
+install -d -o root -g root -m 755 "$CODE_ROOT"
+install -d -o root -g root -m 700 "$ROOT/staging" "$ROOT/receipts" "$ROOT/backups"
 if [[ -n $current_code && $(basename "$current_code") == "$sha" ]]; then
   echo "already deployed: $sha"
   exit 0
@@ -180,8 +184,9 @@ runuser -u empact -- env NODE_OPTIONS="--max-old-space-size=$BUILD_HEAP_MB" NODE
   /usr/bin/node --env-file="$ENV_FILE" /usr/bin/npm run build:cms --prefix "$candidate"
 
 # Re-read main and its latest successful check after the potentially long build.
-[[ -x $AUTO_UPDATE ]] || { echo "trusted gate not installed: $AUTO_UPDATE" >&2; exit 1; }
-"$AUTO_UPDATE" --check-only --expected-sha "$sha"
+# The target may remain valid while main advances normally; a removed target,
+# failed rerun, or installed downgrade fails closed here.
+"$AUTO_UPDATE" --check-only --pinned-sha "$sha" --current "$CURRENT"
 [[ -x $BACKUP ]] || { echo "trusted backup not installed: $BACKUP" >&2; exit 1; }
 backup_dir="$ROOT/backups/auto-$sha-$timestamp"
 
