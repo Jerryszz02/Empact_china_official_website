@@ -1,8 +1,16 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { mkdtemp, mkdir, writeFile, rm } from "node:fs/promises";
+import {
+  mkdtemp,
+  mkdir,
+  writeFile,
+  readFile,
+  readdir,
+  stat,
+  rm,
+} from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { frameworkSnapshot as previewSnapshot } from "./helpers/content-fixture.js";
 import { validateSnapshot, sanitizeBodyHtml } from "@empact/content/schema";
 import { businessAdminMutation } from "../apps/cms/src/business-admin.js";
@@ -345,4 +353,52 @@ test("body images require known local media and preserve safe captions", () => {
     ),
     /figcaption/,
   );
+});
+
+test("failed previews retain a private build log and remove incomplete pages", async () => {
+  const f = await fixture();
+  try {
+    const before = await readLiveSnapshot(f.options.runtimeDir);
+    await assert.rejects(
+      () =>
+        businessAdminMutation(f.payload, "preview", String(f.parent.id), {
+          ...f.options,
+          build: async (_snapshot, output) => {
+            await writeFile(join(output, "index.html"), "incomplete preview");
+            await writeFile(
+              join(dirname(output), "build.log"),
+              "EXDEV diagnostic",
+              { mode: 0o600 },
+            );
+            throw new Error("页面构建失败");
+          },
+        }),
+      /页面构建失败/,
+    );
+    const logs = join(f.options.runtimeDir, "build-logs");
+    const names = await readdir(logs);
+    assert.equal(names.length, 1);
+    assert.equal(
+      await readFile(join(logs, names[0]), "utf8"),
+      "EXDEV diagnostic",
+    );
+    assert.equal((await stat(logs)).mode & 0o777, 0o700);
+    assert.equal((await stat(join(logs, names[0]))).mode & 0o777, 0o600);
+    assert.deepEqual(await readdir(join(f.options.runtimeDir, "previews")), []);
+    assert.deepEqual(await readLiveSnapshot(f.options.runtimeDir), before);
+    // A failure before the log is created must still report the build error.
+    await assert.rejects(
+      () =>
+        businessAdminMutation(f.payload, "preview", String(f.parent.id), {
+          ...f.options,
+          build: async () => {
+            throw new Error("early build failure");
+          },
+        }),
+      /early build failure/,
+    );
+    assert.deepEqual(await readdir(join(f.options.runtimeDir, "previews")), []);
+  } finally {
+    await rm(f.root, { recursive: true, force: true });
+  }
 });

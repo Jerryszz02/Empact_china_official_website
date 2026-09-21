@@ -1,5 +1,7 @@
 import {
   mkdir,
+  mkdtemp,
+  cp,
   open,
   readFile,
   writeFile,
@@ -81,6 +83,19 @@ export async function currentRelease(runtime = runtimeDir()) {
   } catch {
     return undefined;
   }
+}
+export async function removeFailedPreview(directory: string) {
+  const logs = join(dirname(dirname(directory)), "build-logs");
+  try {
+    await mkdir(logs, { recursive: true, mode: 0o700 });
+    await copyFile(
+      join(directory, "build.log"),
+      join(logs, `${basename(directory)}.log`),
+    );
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+  }
+  await rm(directory, { recursive: true, force: true });
 }
 export async function readLiveSnapshot(
   runtime = runtimeDir(),
@@ -207,7 +222,11 @@ export async function buildSite(
   if (options.build) await options.build(snapshotPath, output);
   else {
     const log = await open(join(release, "build.log"), "w", 0o600);
+    let staging: string | undefined;
     try {
+      // Astro moves prerender assets with rename(). Keep that build inside its
+      // cwd, then copy the finished files across the CMS code/data mounts.
+      staging = await mkdtemp(join(repository, "apps/site/.cms-build-"));
       await new Promise<void>((done, fail) => {
         const child = spawn("npm", ["run", "build", "-w", "@empact/site"], {
           cwd: repository,
@@ -217,7 +236,7 @@ export async function buildSite(
             ...process.env,
             SITE_MODE: snapshot.mode,
             SNAPSHOT_PATH: snapshotPath,
-            BUILD_OUT_DIR: output,
+            BUILD_OUT_DIR: staging,
             ASTRO_TELEMETRY_DISABLED: "1",
           },
         });
@@ -236,8 +255,10 @@ export async function buildSite(
             : fail(new Error("页面构建失败，详情见受保护的构建日志。"));
         });
       });
+      await cp(staging, output, { recursive: true });
     } finally {
       await log.close();
+      if (staging) await rm(staging, { recursive: true, force: true });
     }
   }
   for (const item of snapshot.media) {
