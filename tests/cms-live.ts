@@ -404,8 +404,25 @@ try {
   await request(`/api/content/${approvalDocId}`, "PATCH", { approved: true });
   assert.equal((await request(`/api/content/${approvalDocId}`)).approved, true);
   const state = await request("/api/publication/state");
-  const business = state.items.find(
-    (item: { kind: string }) => item.kind === "business",
+  const businessState = await request("/api/business-admin/state");
+  const business = businessState.items.find(
+    (item: { kind: string; slug: string }) =>
+      item.kind === "business" && item.slug !== "international-talent-model",
+  );
+  const model = businessState.items.find(
+    (item: { slug: string }) => item.slug === "international-talent-model",
+  );
+  assert.ok(model, "the fixed model remains in CMS content");
+  await assert.rejects(
+    request("/api/content", "POST", {
+      kind: "case",
+      title: "模型关联拒绝验收",
+      summary: "固定模型不作为项目业务类型。",
+      parent: Number(model.id),
+      approved: false,
+    }),
+    /400/,
+    "the fixed model cannot be selected as a project parent",
   );
   await request("/api/globals/company", "POST", {
     name: "隔离验收",
