@@ -281,9 +281,11 @@ test(
         await readFile(join(out, "cases", "case-test", "index.html"), "utf8"),
       );
       assert.match(caseArticle("main").text(), /案例行动与结果正文/);
+      assert.equal(caseArticle(".article-source").length, 0);
+      assert.doesNotMatch(caseArticle("main").text(), /原有来源/);
       assert.equal(
-        caseArticle(".article-source a").attr("href"),
-        "https://example.invalid/case-source",
+        caseArticle('a[href="https://example.invalid/case-source"]').length,
+        0,
       );
       assert.equal(
         caseArticle('link[rel="canonical"]').attr("href"),

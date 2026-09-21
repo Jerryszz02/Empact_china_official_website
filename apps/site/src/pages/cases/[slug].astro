@@ -64,22 +64,6 @@ const relatedCases = [
       <CaseImage entry={entry} class="article-cover" />
       <div class="prose" set:html={entry.bodyHtml} />
     </article>
-    {(entry.sourceName || entry.sourceUrl) && (
-      <section class="article-source">
-        <h2>来源</h2>
-        <p class="detail-meta">
-          {entry.sourceName && <span>{entry.sourceName}</span>}
-          {sourceTypeLabel(entry.sourceType) && (
-            <span>{sourceTypeLabel(entry.sourceType)}</span>
-          )}
-          {entry.sourceUrl && (
-            <a href={entry.sourceUrl} rel="noopener noreferrer">
-              查看原文 ↗
-            </a>
-          )}
-        </p>
-      </section>
-    )}
     {coverage.length > 0 && (
       <section id="coverage" class="embedded-section">
         <h2>相关报道与合作记录</h2>

@@ -196,11 +196,6 @@ export interface Content {
     };
     [k: string]: unknown;
   } | null;
-  sourceName?: string | null;
-  /**
-   * 作为站内文章的引用来源，不改变详情跳转。
-   */
-  sourceUrl?: string | null;
   kind: 'page' | 'business' | 'project' | 'news' | 'coverage' | 'case';
   slug: string;
   approved?: boolean | null;
@@ -213,6 +208,8 @@ export interface Content {
   deadline?: string | null;
   registrationUrl?: string | null;
   publishedAt?: string | null;
+  sourceName?: string | null;
+  sourceUrl?: string | null;
   sourceType?: ('media' | 'partner' | 'official' | 'company' | 'sponsored') | null;
   eventDate?: string | null;
   related?: (number | Content)[] | null;
@@ -394,8 +391,6 @@ export interface ContentSelect<T extends boolean = true> {
   image?: T;
   detailUrl?: T;
   body?: T;
-  sourceName?: T;
-  sourceUrl?: T;
   kind?: T;
   slug?: T;
   approved?: T;
@@ -408,6 +403,8 @@ export interface ContentSelect<T extends boolean = true> {
   deadline?: T;
   registrationUrl?: T;
   publishedAt?: T;
+  sourceName?: T;
+  sourceUrl?: T;
   sourceType?: T;
   eventDate?: T;
   related?: T;

@@ -126,9 +126,9 @@ export async function verifyBusinessWorkflow(options: {
   const firstDate = (await request(`/api/content/${id}`)).publishedAt;
   assert.ok(firstDate);
   assert.match(await publicText(url), /案例原版正文/);
-  assert.match(
+  assert.doesNotMatch(
     await publicText(url),
-    /href="https:\/\/example.invalid\/case-source"/,
+    /项目原有来源|href="https:\/\/example.invalid\/case-source"/,
   );
   assert.match(await publicText(url), /活动现场图注/);
   assert.match(await publicText(url), new RegExp(image.filename));
