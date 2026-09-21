@@ -64,13 +64,54 @@ test("unified youth model preserves the diagram and combines the course approach
   await page
     .locator(".youth-model")
     .screenshot({ path: testInfo.outputPath("model-diagram.png") });
-  for (const width of [360, 768, 1024, 1440]) {
+  for (const width of [360, 390, 700, 701, 768, 1024, 1440]) {
     await page.setViewportSize({ width, height: 1000 });
     expect(
       await page.evaluate(
         () => document.documentElement.scrollWidth <= window.innerWidth,
       ),
     ).toBe(true);
+    const geometry = await page.evaluate(() => {
+      const copy = document
+        .querySelector(".approach-section .section-copy")!
+        .getBoundingClientRect();
+      const ring = document
+        .querySelector(".model-rings")!
+        .getBoundingClientRect();
+      const core = document
+        .querySelector(".model-core-copy")!
+        .getBoundingClientRect();
+      const items = [...document.querySelectorAll(".model-item")].map((item) =>
+        item.getBoundingClientRect(),
+      );
+      const traits = document.querySelector(".traits")!.getBoundingClientRect();
+      return {
+        copyCenter: copy.left + copy.width / 2,
+        copyWidth: copy.width,
+        coreOffset: Math.abs(
+          core.top + core.height / 2 - ring.top - ring.height / 2,
+        ),
+        itemsFit: items.every(
+          (item) => item.left >= 0 && item.right <= innerWidth,
+        ),
+        mobileListBelowTraits: items[0].top >= traits.bottom,
+        listSeparated: items
+          .slice(1)
+          .every((item, index) => item.top >= items[index].bottom),
+      };
+    });
+    expect(Math.abs(geometry.copyCenter - width / 2)).toBeLessThan(2);
+    expect(geometry.coreOffset).toBeLessThan(2);
+    expect(geometry.itemsFit).toBe(true);
+    if (width <= 700) {
+      expect(geometry.mobileListBelowTraits).toBe(true);
+      expect(geometry.listSeparated).toBe(true);
+      await expect(page.locator(".model-item").first()).toHaveCSS(
+        "position",
+        "static",
+      );
+    }
+    if (width === 1440) expect(geometry.copyWidth).toBeGreaterThan(900);
   }
   await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
     "href",
