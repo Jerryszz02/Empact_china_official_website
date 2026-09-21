@@ -7,6 +7,7 @@ type Item = {
   id: string;
   title: string;
   kind: string;
+  slug: string;
   segment?: "youth" | "corporate" | "school" | "community";
   parentId?: string;
   summary?: string;
@@ -98,6 +99,9 @@ export function BusinessAdminDashboard() {
   const businesses = items
     .filter((item) => item.kind === "business")
     .sort((a, b) => (a.order || 0) - (b.order || 0));
+  const projectBusinesses = businesses.filter(
+    (business) => business.slug !== "international-talent-model",
+  );
   const projects = items
     .filter((item) => item.kind === "case")
     .sort(
@@ -222,10 +226,10 @@ export function BusinessAdminDashboard() {
             <p>
               标题、摘要和所属业务类型必填。创建后可继续添加封面，填写外链或站内网页正文。
             </p>
-            {businesses.length ? (
+            {projectBusinesses.length ? (
               <CreateContentButton
                 kind="case"
-                businesses={businesses}
+                businesses={projectBusinesses}
                 label="新增项目"
               />
             ) : (
