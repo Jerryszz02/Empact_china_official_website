@@ -588,15 +588,6 @@ h3 {
 .contact-period {
   color: var(--red);
 }
-.contact-project {
-  display: inline-flex;
-  min-height: 2.75rem;
-  align-items: center;
-  font:
-    700 1.5rem Arial,
-    sans-serif;
-  margin-top: 2rem;
-}
 .contact-form {
   display: grid;
   gap: 0.6rem;
@@ -841,9 +832,6 @@ h3 {
   }
   .contact-intro h1 {
     font-size: clamp(2.6rem, 9vw, 4.5rem);
-  }
-  .contact-project {
-    margin-top: 0.5rem;
   }
   .contact-form {
     padding: 1.1rem;
