@@ -158,7 +158,24 @@ test("youth directory has six workbook categories and linked and hosted cases", 
     "SEL社会情感学习",
     "学员故事与家长说",
   ]);
-  await expect(page.locator(".service-list a")).toHaveCount(6);
+  await expect(page.locator(".service-list a")).toHaveText([
+    "公益社创体验",
+    "演讲类表达",
+    "AI学习力课程",
+    "SEL社会情感学习",
+    "学员故事与家长说",
+  ]);
+  const modelButton = page.locator(".model-intro").getByRole("link", {
+    name: "了解国际人才培养模型",
+  });
+  await expect(modelButton).toBeVisible();
+  await expect(modelButton).toHaveAttribute(
+    "href",
+    "/youth/international-talent-model/",
+  );
+  await expect(
+    page.locator('main a[href="/youth/international-talent-model/"]'),
+  ).toHaveCount(1);
   await page.locator('.service-list a[href="/youth/monthly-camp/"]').click();
   await expect(page.locator("h1")).toHaveText("公益社创体验");
   await expect(page.locator("#office-camp")).toHaveAttribute(
