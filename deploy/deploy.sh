@@ -38,6 +38,15 @@ check_disk_space() {
   echo "Deployment disk headroom: ${available_kb} KiB / ${available_inodes} inodes available."
 }
 
+cleanup_failed_preparation() {
+  rm -f "$archive"
+  if $candidate_created && [[ "$candidate" != "$current_code" && ! -L "$candidate" && -f "$candidate/.code-revision" ]]; then
+    if [[ $(<"$candidate/.code-revision") == "$sha" ]]; then
+      rm -rf "$candidate"
+    fi
+  fi
+}
+
 [[ ${EUID} -eq 0 ]] || { echo 'must run as root' >&2; exit 2; }
 [[ $# -eq 1 && $1 =~ $SHA_RE ]] || { echo 'Usage: deploy.sh <full 40-character commit SHA>' >&2; exit 2; }
 sha=$1
@@ -59,13 +68,15 @@ if [[ -n $current_code && $(basename "$current_code") == "$sha" ]]; then
 fi
 
 timestamp=$(date -u +%Y%m%dT%H%M%SZ)
+archive="$ROOT/staging/$sha.tar.gz"
+candidate="$CODE_ROOT/$sha"
+candidate_created=false
+tmp="$ROOT/staging/$sha.$$.tmp"
+# A previous interrupted download must not keep a retry below the threshold.
+rm -f "$archive"
 [[ -x $PRUNE_BUILD_CACHE ]] || { echo 'trusted build-cache cleanup helper is not installed' >&2; exit 1; }
 "$PRUNE_BUILD_CACHE" "$sha" --apply --lock-fd 9
 check_disk_space
-archive="$ROOT/staging/$sha.tar.gz"
-candidate="$CODE_ROOT/$sha"
-tmp="$ROOT/staging/$sha.$$.tmp"
-rm -f "$archive"
 curl --fail --location --silent --show-error --retry 2 \
   --connect-timeout 15 --max-time 300 \
   "https://codeload.github.com/$REPO/tar.gz/$sha" -o "$archive"
@@ -112,8 +123,10 @@ if [[ -e $candidate ]]; then
   rm -rf "$tmp"
 else
   mv "$source_dir" "$candidate"
+  candidate_created=true
   rm -rf "$tmp"
 fi
+rm -f "$archive"
 
 schema_manifest() {
   local root_dir=$1 file
@@ -218,7 +231,10 @@ rollback() {
 trap 'status=$?; if (( status != 0 )); then rollback "$status"; fi' EXIT
 trap 'exit 143' TERM
 
-check_disk_space
+if ! check_disk_space; then
+  cleanup_failed_preparation
+  exit 1
+fi
 runuser -u empact -- env npm_config_include=dev npm ci --prefix "$candidate" --no-audit --no-fund
 runuser -u empact -- env NODE_OPTIONS="--max-old-space-size=$BUILD_HEAP_MB" NODE_ENV=production \
   CMS_DEV_SCHEMA_PUSH=false REPOSITORY_DIR="$candidate" SITE_CODE_REVISION="$sha" \

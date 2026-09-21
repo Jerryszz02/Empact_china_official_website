@@ -40,6 +40,29 @@ def run(sha=SHA, **extra):
 
 
 class AutoDeployTests(unittest.TestCase):
+    def test_headroom_failure_discards_only_this_attempts_new_candidate(self):
+        source = MODULE_PATH.with_name("deploy.sh").read_text()
+        function = source.split("cleanup_failed_preparation() {", 1)[1].split("\n}\n", 1)[0]
+        for created, is_current, marker_matches, removed in [
+            (True, False, True, True), (False, False, True, False),
+            (True, True, True, False), (True, False, False, False),
+        ]:
+            with self.subTest(created=created, is_current=is_current, marker=marker_matches), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                candidate = root / SHA
+                candidate.mkdir()
+                (candidate / ".code-revision").write_text(SHA if marker_matches else OTHER)
+                archive = root / (SHA + ".tar.gz")
+                archive.write_text("downloaded archive")
+                script = 'set -euo pipefail\ncleanup_failed_preparation() {' + function + '\n}\ncleanup_failed_preparation\n'
+                subprocess.run(["bash", "-c", script], check=True, env=dict(
+                    os.environ, candidate=str(candidate), archive=str(archive), sha=SHA,
+                    candidate_created="true" if created else "false",
+                    current_code=str(candidate) if is_current else str(root / OTHER),
+                ))
+                self.assertEqual(candidate.exists(), not removed)
+                self.assertFalse(archive.exists())
+
     def test_disk_precheck_blocks_low_space_inodes_and_unreadable_metrics(self):
         source = MODULE_PATH.with_name("deploy.sh").read_text()
         function = source.split("check_disk_space() {", 1)[1].split("\n}\n", 1)[0]
