@@ -41,9 +41,25 @@ test("brand content preview has the approved shape", () => {
   const cases = previewSnapshot.entries.filter(
     (entry) => entry.kind === "case",
   );
-  assert.equal(cases.length, 39);
+  assert.equal(cases.length, 40);
   assert.equal(cases.filter((entry) => entry.detailUrl).length, 24);
-  assert.equal(cases.filter((entry) => !entry.detailUrl).length, 15);
+  assert.equal(cases.filter((entry) => !entry.detailUrl).length, 16);
+  const yangpu = cases.find(
+    (entry) => entry.slug === "yangpu-bilingual-ai-social-innovation",
+  );
+  assert.ok(yangpu);
+  assert.equal(
+    businesses.find((entry) => entry.id === yangpu.parentId)?.slug,
+    "ai-social-innovation-pbl",
+  );
+  assert.equal(
+    entryUrl(yangpu),
+    "/cases/yangpu-bilingual-ai-social-innovation/",
+  );
+  assert.equal(
+    yangpu.sourceUrl,
+    "https://c.xiumius.cn/board/v5/6KG6T/725012062",
+  );
   for (const entry of cases) {
     assert.ok(businesses.some((business) => business.id === entry.parentId));
     assert.ok(entry.imageId);

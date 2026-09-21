@@ -383,6 +383,26 @@ const hostedCases: Array<
       <p>项目以营前营后问卷、活动反馈与开放问题记录学员的自我观察，并据此形成成长报告。营后的交流可以从这些具体经历继续，回看哪些问题仍在牵动自己，以及下一次可以尝试怎样的行动。</p>`,
   },
   {
+    slug: "yangpu-bilingual-ai-social-innovation",
+    imageId: "directory-yangpu-bilingual-ai-social-innovation",
+    title: "杨浦双语 AI 社创课程 · 从真实问题到创作实践",
+    business: "ai-social-innovation-pbl",
+    summary:
+      "面向小学四至五年级，将 SDGs、盲人足球体验与真实问题探究融入 AI 海报、播客和互动网页的课程设计。",
+    url: "https://c.xiumius.cn/board/v5/6KG6T/725012062",
+    sourceName: "杨浦双语 AI 社创课程方案；Empact是谁？2026 重新认识我们",
+    bodyHtml: `<p>Empact 为杨浦双语学校小学部四至五年级设计 AI 与社会创新融合的 PBL 课程。学生从身边与社会中的真实问题出发，在体验、讨论和小组创作中学习使用 AI，让工具应用与自己的观察、判断和表达相连接。</p>
+      <p>课程方案安排一学期十二期、每周一次、每期一个半小时，由 AI 老师与社创老师协作。以下介绍方案中的学习路径与作品设计，具体开课时间和实施安排由学校与项目团队确认。</p>
+      <p>封面为推文中的杨浦双语课程课堂配图。</p>
+      <h2>从社会议题形成自己的主张</h2>
+      <p>第一模块围绕 SDGs 同理心展开。学生通过 SDGs Hero 桌游认识可持续发展议题，再以小组讨论和研究确定关心的问题。海报创作将议题理解、AI 配图、文案与排版连接起来，帮助学生练习向他人说明自己的主张。</p>
+      <h2>把真实体验带进声音创作</h2>
+      <p>第二模块以盲人足球为切入点。蒙眼体验之后，学生记录感受、开展复盘，讨论播客的主题、采访问题和角色分工，再尝试脚本润色、真人录音与音频剪辑。方案强调，真实经历和感受应来自学生，AI 用于辅助整理与润色。</p>
+      <h2>用互动网页回应自己的问题</h2>
+      <p>第三模块邀请学生从学习、生活和身边的社会现象中发现问题，明确作品面向谁、希望回应什么需求。小组通过调研、网页策划、AI 辅助制作和用户测试，逐步完善互动网页，并在展示中说明自己的选择。</p>
+      <p>海报、播客和互动网页构成方案中的三类作品。课程把小组协作、阶段展示与反馈贯穿其中，同时讨论创作署名、数据核实和 AI 使用说明，让学生练习检验工具输出，并为自己的表达负责。</p>`,
+  },
+  {
     slug: "blind-football-social-innovation-pbl",
     imageId: "directory-blind-football-social-innovation-pbl",
     title: "盲人足球 PBL · 从体验到公益倡导",
@@ -449,6 +469,7 @@ export const directoryCases: Entry[] = [
     bodyHtml: item.bodyHtml,
     ...(item.bodyMediaIds ? { bodyMediaIds: item.bodyMediaIds } : {}),
     sourceName: item.sourceName,
+    ...(item.url ? { sourceUrl: item.url } : {}),
   })),
 ];
 
@@ -456,6 +477,15 @@ export const directoryCases: Entry[] = [
 // unavailable. Never borrow a different event's photo as documentary evidence.
 export const directoryMedia: Media[] = [
   ...singaporeCampMedia,
+  {
+    id: "directory-yangpu-bilingual-ai-social-innovation",
+    filename: "directory-yangpu-bilingual-ai-social-innovation.webp",
+    alt: "杨浦双语课程课堂配图，投影主题为 AI 与表达力 PBL 项目制课堂，取自 Empact 介绍推文",
+    width: 1080,
+    height: 676,
+    mimeType: "image/webp",
+    approved: false,
+  },
   {
     id: "directory-boke-annual-salon",
     filename: "directory-boke-annual-salon.webp",

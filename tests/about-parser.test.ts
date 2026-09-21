@@ -25,6 +25,12 @@ test("about body is parsed into the nine designed CMS groups", () => {
     "让每一份善意，被世界看见",
   );
   assert.match(groups[3].html, /企业 ESG 战略咨询/);
+  assert.match(groups[2].html, /2023 年，Empact 通过/);
+  assert.deepEqual(
+    groups[5].items.map((item) => item.headingHtml),
+    ["2011", "2014 — 2018", "2022", "2023", "2024 — 2026"],
+  );
+  assert.match(groups[5].items[3].content.join(""), /进入中国大陆/);
 });
 
 test("edited or legacy CMS bodies fall back to generic rendering", () => {

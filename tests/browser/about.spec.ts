@@ -10,7 +10,18 @@ test("about demo keeps grouped content and usable links across screen sizes", as
   await expect(page.locator(".stat").last()).toContainText("新加坡总统级奖项");
   await expect(page.locator(".card-grid .card")).toHaveCount(3);
   await expect(page.locator(".metric")).toHaveCount(4);
-  await expect(page.locator(".tl-item")).toHaveCount(6);
+  await expect(page.locator(".tl-year")).toHaveText([
+    "2011",
+    "2014 — 2018",
+    "2022",
+    "2023",
+    "2024 — 2026",
+  ]);
+  await expect(
+    page
+      .locator(".tl-item")
+      .filter({ has: page.getByText("2023", { exact: true }) }),
+  ).toContainText("进入中国大陆");
   await expect(page.locator(".award")).toHaveCount(4);
   await expect(page.locator(".person")).toHaveCount(2);
   await expect(page.locator("main")).not.toContainText(/DEMO 预览|文案细节待/);
