@@ -46,6 +46,56 @@ test("static server preserves real 404, blocks private files, switches release a
       (await fetch(url + "/%2fabout", { redirect: "manual" })).status,
       404,
     );
+    // A generated meta-refresh file must still be served as an HTTP redirect.
+    await mkdir(join(dir, "one/youth/development-model"), { recursive: true });
+    await mkdir(join(dir, "one/youth/international-talent-model"), {
+      recursive: true,
+    });
+    await writeFile(
+      join(dir, "one/youth/development-model/index.html"),
+      '<meta http-equiv="refresh" content="0;url=/youth/international-talent-model/">',
+    );
+    await writeFile(
+      join(dir, "one/youth/international-talent-model/index.html"),
+      "<h1>国际人才培养模型</h1>",
+    );
+    for (const path of [
+      "/youth/development-model",
+      "/youth/development-model/",
+      "/youth/development-model/index.html",
+    ]) {
+      for (const search of ["", "?source=bookmark&topic=learning"]) {
+        for (const method of ["GET", "HEAD"]) {
+          const redirect = await fetch(url + path + search, {
+            method,
+            redirect: "manual",
+          });
+          assert.equal(redirect.status, 301);
+          assert.equal(
+            redirect.headers.get("location"),
+            "/youth/international-talent-model/" + search,
+          );
+          assert.equal(await redirect.text(), "");
+        }
+      }
+    }
+    const model = await fetch(url + "/youth/development-model/");
+    assert.equal(model.status, 200);
+    assert.equal(model.url, url + "/youth/international-talent-model/");
+    assert.match(await model.text(), /国际人才培养模型/);
+    assert.equal(
+      (await fetch(url + "/youth/development-model/unknown")).status,
+      404,
+    );
+    assert.equal(
+      (
+        await fetch(url + "/youth/development-model/", {
+          method: "POST",
+          redirect: "manual",
+        })
+      ).status,
+      405,
+    );
     for (const path of [
       "/projects/chatcircle",
       "/projects/chatcircle/",
