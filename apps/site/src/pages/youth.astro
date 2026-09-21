@@ -2,10 +2,11 @@
 import BaseLayout from "@/layouts/BaseLayout.astro";
 import { businesses, pageBySlug, pathFor } from "@/lib/content";
 const entry = pageBySlug("youth");
-const services = businesses.filter((item) => item.segment === "youth");
-const model = services.find(
+const youthBusinesses = businesses.filter((item) => item.segment === "youth");
+const model = youthBusinesses.find(
   (item) => item.slug === "international-talent-model",
 );
+const services = youthBusinesses.filter((item) => item !== model);
 ---
 
 <BaseLayout
