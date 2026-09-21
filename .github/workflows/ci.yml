@@ -46,6 +46,7 @@ jobs:
           python3 tests/deploy-auto.test.py
           python3 tests/deploy-actions.test.py
           python3 tests/deploy-preflight.test.py
+          python3 tests/deploy-prune.test.py
           bash -n deploy/deploy.sh
       - uses: actions/upload-artifact@v4
         if: failure()
