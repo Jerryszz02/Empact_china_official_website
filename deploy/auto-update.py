@@ -126,8 +126,6 @@ def finish_gate(sha: str, current: Optional[str]) -> None:
     approved_run(sha)
     if compare_status(sha, main_sha) not in ("ahead", "identical"):
         raise GateError("deployment target is no longer an ancestor of current main")
-    if current is None:
-        raise GateError("installed revision is unavailable for finish gate")
     ensure_ancestor(current, sha, "installed revision is newer than the deployment target")
 
 

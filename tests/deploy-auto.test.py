@@ -140,6 +140,14 @@ class AutoDeployTests(unittest.TestCase):
             auto_update.start_gate(target, current)
             auto_update.finish_gate(target, current)
 
+    def test_initial_release_without_code_pointer_can_finish(self):
+        with patch.object(auto_update, "latest_main_sha", return_value=SHA), patch.object(
+            auto_update, "approved_run", return_value=run(SHA)
+        ), patch.object(auto_update, "compare_status", return_value="identical") as compare:
+            auto_update.start_gate(SHA, None)
+            auto_update.finish_gate(SHA, None)
+            compare.assert_called_once_with(SHA, SHA)
+
     def test_stale_finish_is_a_failure_after_build_started(self):
         args = type(
             "Args", (), {"check_only": True, "expected_sha": None, "pinned_sha": OTHER,
