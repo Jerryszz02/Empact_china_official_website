@@ -1,13 +1,6 @@
 ---
 import BaseLayout from "@/layouts/BaseLayout.astro";
-import {
-  snapshot,
-  businesses,
-  pageBySlug,
-  projects,
-  pathFor,
-} from "@/lib/content";
-const chatCircle = projects.find((item) => item.slug === "chatcircle");
+import { snapshot, businesses, pageBySlug } from "@/lib/content";
 const enabled =
   snapshot.company.contactEnabled &&
   snapshot.company.approved &&
@@ -35,11 +28,6 @@ const entry = pageBySlug("contact");
         <p>
           <a href={`mailto:${fallback}`}>{fallback}</a>
         </p>
-      )}
-      {chatCircle && (
-        <a class="contact-project" href={pathFor(chatCircle)}>
-          ChatCircle <span aria-hidden="true">↗</span>
-        </a>
       )}
     </div>
     <form
@@ -111,6 +99,8 @@ const entry = pageBySlug("contact");
     <h2>从你的关注出发</h2>
     <a href="/youth/">查看青少年项目 ↗</a>
     <a href="/corporate/">查看企业服务 ↗</a>
+    <a href="/school/">查看学校业务 ↗</a>
+    <a href="/community/">查看社区业务 ↗</a>
   </section>
   <script>
     const form = document.querySelector<HTMLFormElement>("[data-contact-form]");
