@@ -148,7 +148,10 @@ const contentFields: Field[] = [
             label: "所属业务",
             type: "relationship" as const,
             relationTo: "content",
-            filterOptions: { kind: { equals: "business" } },
+            filterOptions: {
+              kind: { equals: "business" },
+              slug: { not_equals: "international-talent-model" },
+            },
             admin: {
               condition: (_: unknown, siblingData: Record<string, unknown>) =>
                 ["project", "news", "case", "coverage"].includes(
