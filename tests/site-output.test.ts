@@ -196,8 +196,24 @@ test(
         assert.ok(!html("#cases").text().includes("相关案例"));
       }
       const model = load(
+        await readFile(
+          join(out, "youth/international-talent-model/index.html"),
+          "utf8",
+        ),
+      );
+      assert.equal(model(".model-items li").length, 6);
+      assert.equal(model(".growth-path li").length, 5);
+      assert.match(model("#approach-title").text(), /真实的行动/);
+      assert.match(model(".source-note").text(), /开物 KAIWU/);
+      assert.equal(model(".project-planning").length, 0);
+      const legacyModel = load(
         await readFile(join(out, "youth/development-model/index.html"), "utf8"),
       );
+      assert.match(
+        legacyModel('meta[http-equiv="refresh"]').attr("content") ?? "",
+        /url=\/youth\/international-talent-model\//,
+      );
+      assert.equal(legacyModel(".youth-model").length, 0);
       const breadcrumbs = model('script[type="application/ld+json"]')
         .toArray()
         .map((element) => JSON.parse(model(element).text()))
@@ -207,13 +223,10 @@ test(
         [
           "https://empact.cn/",
           "https://empact.cn/youth/",
-          "https://empact.cn/youth/development-model/",
+          "https://empact.cn/youth/international-talent-model/",
         ],
       );
-      assert.equal(
-        breadcrumbs.itemListElement.at(-1).name,
-        "国际化人才培养模型",
-      );
+      assert.equal(breadcrumbs.itemListElement.at(-1).name, "国际人才培养模型");
       const business = load(
         await readFile(
           join(out, parent.segment!, parent.slug, "index.html"),
@@ -344,12 +357,29 @@ test(
         { code: "ENOENT" },
       );
       const sitemap = await readFile(join(out, "sitemap.xml"), "utf8");
+      assert.ok(
+        sitemap.includes("https://empact.cn/youth/international-talent-model/"),
+      );
+      assert.ok(!sitemap.includes("/youth/development-model/"));
       assert.ok(!sitemap.includes("chatcircle"));
       assert.ok(!sitemap.includes("external-case"));
       assert.ok(!sitemap.includes("example.invalid/project-details"));
       assert.ok(sitemap.includes("/cases/case-test/"));
       assert.ok(sitemap.includes("/cases/case-no-image/"));
       assert.ok(!sitemap.includes("/coverage-test/"));
+      // Redirect pages must not bypass output validation when their target is
+      // missing or points back to the legacy URL itself.
+      for (const slug of ["missing-model", "development-model"]) {
+        await writeFile(
+          join(out, "youth/development-model/index.html"),
+          legacyModel.html().replaceAll("international-talent-model", slug),
+        );
+        assert.ok(
+          (await checkOutput(out, true)).some((error) =>
+            error.includes("Invalid static redirect:"),
+          ),
+        );
+      }
     } finally {
       await rm(temporary, { recursive: true, force: true });
     }

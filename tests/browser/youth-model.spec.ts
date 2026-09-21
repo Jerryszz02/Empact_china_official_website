@@ -1,13 +1,25 @@
 import { test, expect } from "@playwright/test";
 
-test("legacy youth model reference remains readable and responsive", async ({
+test("unified youth model preserves the diagram and combines the course approach", async ({
   page,
 }, testInfo) => {
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
-  await page.goto("/youth/development-model/");
-  await expect(page).toHaveURL(/\/youth\/development-model\/$/);
-  await expect(page.locator("h1")).toHaveText("国际化人才培养模型");
+  await page.goto("/youth/international-talent-model/");
+  await expect(page).toHaveURL(/\/youth\/international-talent-model\/$/);
+  await expect(page.locator("h1")).toHaveText("国际人才培养模型");
+  await expect(page.locator("#approach-title")).toBeVisible();
+  await expect(page.getByText(/Peter Yang/)).toContainText("David Wang");
+  await expect(
+    page.locator('a[href="https://innerdevelopmentgoals.org/"]'),
+  ).toBeVisible();
+  await expect(
+    page.locator(
+      'a[href="https://www.oecd.org/en/about/projects/future-of-education-and-skills-2030.html"]',
+    ),
+  ).toBeVisible();
+  await expect(page.locator(".source-note")).toContainText("开物 KAIWU");
+  await expect(page.locator(".project-planning")).toHaveCount(0);
   for (const title of [
     "复合身份认同力",
     "技术人文主义力",
@@ -62,9 +74,24 @@ test("legacy youth model reference remains readable and responsive", async ({
   }
   await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
     "href",
-    "https://empact.cn/youth/development-model/",
+    "https://empact.cn/youth/international-talent-model/",
   );
   await page.getByRole("link", { name: "探索青少年项目" }).click();
   await expect(page).toHaveURL(/\/youth\/$/);
   expect(errors).toEqual([]);
+});
+
+test("old model bookmarks and youth entry lead to the same complete page", async ({
+  page,
+}) => {
+  await page.goto("/youth/development-model/");
+  await expect(page).toHaveURL(/\/youth\/international-talent-model\/$/);
+  await expect(page.locator(".model-items li")).toHaveCount(6);
+  await page.goto("/youth/");
+  await page.getByRole("link", { name: "了解国际人才培养模型" }).click();
+  await expect(page).toHaveURL(/\/youth\/international-talent-model\/$/);
+  await expect(page.locator(".model-items li")).toHaveCount(6);
+  await expect(page.locator('a[href="/youth/development-model/"]')).toHaveCount(
+    0,
+  );
 });
