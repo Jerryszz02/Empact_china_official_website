@@ -41,6 +41,18 @@ export async function verifyCmsUI({
     const project = rows.filter({ hasText: "浏览器案例 Empact 工作流" });
     await expect(rows).toHaveCount(projects.length);
     await expect(clear).toBeDisabled();
+    const fixedModel = items.find(
+      (item: any) => item.slug === "international-talent-model",
+    );
+    assert.ok(fixedModel, "the fixed model remains in CMS data");
+    await expect(
+      business.locator(`option[value="${fixedModel.id}"]`),
+    ).toHaveCount(0);
+    await expect(business.locator("option")).toHaveCount(
+      items.filter(
+        (item: any) => item.kind === "business" && item.id !== fixedModel.id,
+      ).length + 1,
+    );
     await business.selectOption(parentId);
     const related = projects.filter((item: any) => item.parentId === parentId);
     await expect(rows).toHaveCount(related.length);

@@ -285,7 +285,7 @@ export function BusinessAdminDashboard() {
                     onChange={(event) => setBusinessId(event.target.value)}
                   >
                     <option value="">全部业务类型</option>
-                    {businesses.map((business) => (
+                    {projectBusinesses.map((business) => (
                       <option key={business.id} value={business.id}>
                         {business.segment
                           ? `${segmentLabels[business.segment]} · `
