@@ -1,13 +1,6 @@
 ---
 import BaseLayout from "@/layouts/BaseLayout.astro";
-import {
-  snapshot,
-  businesses,
-  pageBySlug,
-  projects,
-  pathFor,
-} from "@/lib/content";
-const chatCircle = projects.find((item) => item.slug === "chatcircle");
+import { snapshot, businesses, pageBySlug } from "@/lib/content";
 const enabled =
   snapshot.company.contactEnabled &&
   snapshot.company.approved &&
@@ -35,11 +28,6 @@ const entry = pageBySlug("contact");
         <p>
           <a href={`mailto:${fallback}`}>{fallback}</a>
         </p>
-      )}
-      {chatCircle && (
-        <a class="contact-project" href={pathFor(chatCircle)}>
-          ChatCircle <span aria-hidden="true">↗</span>
-        </a>
       )}
     </div>
     <form

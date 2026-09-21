@@ -318,9 +318,14 @@ test(
       for (const file of ["index.html", "contact/index.html"]) {
         const html = load(await readFile(join(out, file), "utf8"));
         assert.ok(
-          html('a[href="https://chatcircle.empact.cn"]').length >=
-            (file === "index.html" ? 1 : 2),
+          html('a[href="https://chatcircle.empact.cn"]').length >= 1,
         );
+        if (file === "contact/index.html") {
+          assert.equal(
+            html('.contact-intro a[href="https://chatcircle.empact.cn"]').length,
+            0,
+          );
+        }
         assert.equal(html('a[href="/projects/chatcircle/"]').length, 0);
         assert.equal(
           html('.site-nav > a[href="https://chatcircle.empact.cn"]').length,
@@ -330,6 +335,17 @@ test(
           html('#nav-community a[href="https://chatcircle.empact.cn"]').length,
           1,
         );
+      }
+      for (const segment of ["youth", "corporate", "school", "community"]) {
+        const landing = load(
+          await readFile(join(out, segment, "index.html"), "utf8"),
+        );
+        assert.equal(landing(".content-wrap > .prose").length, 0);
+        assert.doesNotMatch(
+          landing("main").text(),
+          /仅用于自动检查页面输出的隔离正文。/,
+        );
+        assert.ok(landing(".service-list a").length > 0);
       }
       const community = load(
         await readFile(join(out, "community/index.html"), "utf8"),

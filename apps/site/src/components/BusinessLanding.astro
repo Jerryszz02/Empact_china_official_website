@@ -19,7 +19,6 @@ const summary = entry?.summary ?? "欢迎与我们交流你的需求，探讨合
     <p class="page-summary">{summary}</p>
   </section>
   <section class="content-wrap">
-    {entry?.bodyHtml && <article class="prose" set:html={entry.bodyHtml} />}
     {services.length > 0 && (
       <div class="service-list service-list-spaced">
         {services.map((item) => (

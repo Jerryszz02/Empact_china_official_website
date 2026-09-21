@@ -19,13 +19,6 @@ const services = businesses.filter((item) => item.segment === "corporate");
     </p>
   </section>
   <section class="content-wrap">
-    <article
-      class="prose"
-      set:html={
-        entry?.bodyHtml ??
-        "<p>我们与企业、学校及公共组织合作，设计适合实际处境的支持方式。</p>"
-      }
-    />
     {services.length > 0 && (
       <div class="service-list service-list-spaced">
         {services.map((item) => (
