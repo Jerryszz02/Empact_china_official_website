@@ -65,6 +65,8 @@ export function BusinessAdminDashboard() {
   const [message, setMessage] = useState("");
   const [resultUrl, setResultUrl] = useState("");
   const [error, setError] = useState("");
+  const [businessId, setBusinessId] = useState("");
+  const [search, setSearch] = useState("");
 
   async function refresh() {
     setLoading(true);
@@ -112,8 +114,23 @@ export function BusinessAdminDashboard() {
   const published = projects.filter((item) => item.live);
   const drafts = projects.filter((item) => !item.live);
   const currentPart = parts.find((item) => item.id === part)!;
-  const visibleItems =
+  const isProjectList = part === "published" || part === "drafts";
+  const listItems =
     part === "published" ? published : part === "drafts" ? drafts : businesses;
+  const query = search.trim().toLocaleLowerCase();
+  const hasFilters = Boolean(businessId || query);
+  const visibleItems = isProjectList
+    ? listItems.filter(
+        (item) =>
+          (!businessId || item.parentId === businessId) &&
+          (!query || item.title.toLocaleLowerCase().includes(query)),
+      )
+    : listItems;
+
+  function clearFilters() {
+    setBusinessId("");
+    setSearch("");
+  }
 
   async function action(
     type: "preview" | "publish" | "unpublish" | "delete",
@@ -254,20 +271,73 @@ export function BusinessAdminDashboard() {
                 已发布项目的修改仍在这里管理；保存草稿后，点击“发布更新”才会更新官网。
               </p>
             )}
+            {isProjectList && (
+              <div
+                className="admin-filters"
+                role="search"
+                aria-label="筛选项目"
+              >
+                <div className="admin-filters__field">
+                  <label htmlFor="project-business-filter">业务类型</label>
+                  <select
+                    id="project-business-filter"
+                    value={businessId}
+                    onChange={(event) => setBusinessId(event.target.value)}
+                  >
+                    <option value="">全部业务类型</option>
+                    {businesses.map((business) => (
+                      <option key={business.id} value={business.id}>
+                        {business.segment
+                          ? `${segmentLabels[business.segment]} · `
+                          : ""}
+                        {business.title}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="admin-filters__field">
+                  <label htmlFor="project-name-search">项目名称</label>
+                  <input
+                    id="project-name-search"
+                    type="search"
+                    placeholder="输入项目名称关键词"
+                    value={search}
+                    onChange={(event) => setSearch(event.target.value)}
+                  />
+                </div>
+                <button
+                  type="button"
+                  className="button button--quiet"
+                  disabled={!businessId && !search}
+                  onClick={clearFilters}
+                >
+                  清空筛选
+                </button>
+                <p className="admin-filters__count" role="status">
+                  显示 {visibleItems.length} / {listItems.length} 个项目
+                </p>
+              </div>
+            )}
             <div className="case-list">
               {visibleItems.length === 0 ? (
                 <div className="empty-state">
                   <strong>
-                    {part === "published"
-                      ? "还没有已发布项目"
-                      : part === "drafts"
-                        ? "目前没有项目草稿"
-                        : "还没有业务类型"}
+                    {isProjectList && hasFilters
+                      ? "没有符合筛选条件的项目"
+                      : part === "published"
+                        ? "还没有已发布项目"
+                        : part === "drafts"
+                          ? "目前没有项目草稿"
+                          : "还没有业务类型"}
                   </strong>
-                  {part !== "business-types" && (
-                    <a className="text-link" href="#new-project">
-                      新增一个项目 →
-                    </a>
+                  {isProjectList && hasFilters ? (
+                    <p>请调整业务类型或名称关键词，或清空筛选查看全部项目。</p>
+                  ) : (
+                    part !== "business-types" && (
+                      <a className="text-link" href="#new-project">
+                        新增一个项目 →
+                      </a>
+                    )
                   )}
                 </div>
               ) : (

@@ -150,6 +150,44 @@
   gap: 10px;
   margin-top: 24px;
 }
+.admin-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 14px;
+  margin-top: 24px;
+}
+.admin-filters__field {
+  display: grid;
+  flex: 1 1 220px;
+  min-width: 0;
+  gap: 8px;
+  font-size: 13px;
+}
+.admin-filters input,
+.admin-filters select {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  min-height: 40px;
+  padding: 8px 10px;
+  border: 1px solid var(--empact-line);
+  border-radius: 9px;
+  color: var(--empact-ink);
+  background: white;
+  font: inherit;
+}
+.admin-filters input:focus-visible,
+.admin-filters select:focus-visible {
+  outline: 2px solid var(--empact-blue);
+  outline-offset: 2px;
+}
+.admin-filters .admin-filters__count {
+  flex-basis: 100%;
+  margin: 0;
+  color: #64798a;
+  font-size: 13px;
+}
 .admin-part {
   display: grid;
   gap: 8px;

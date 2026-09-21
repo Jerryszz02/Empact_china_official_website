@@ -24,6 +24,84 @@ export async function verifyCmsUI({
   page.on("dialog", (dialog) => void dialog.accept());
   let id: string | undefined;
   const businessIds: string[] = [];
+  async function verifyProjectFilters(
+    part: "published" | "drafts",
+    parentId: string,
+  ) {
+    const { items } = await request("/api/business-admin/state");
+    const projects = items.filter(
+      (item: any) =>
+        item.kind === "case" && Boolean(item.live) === (part === "published"),
+    );
+    const rows = page.locator(".case-row");
+    const filters = page.getByRole("search", { name: "筛选项目" });
+    const business = filters.getByLabel("业务类型", { exact: true });
+    const name = filters.getByLabel("项目名称", { exact: true });
+    const clear = filters.getByRole("button", { name: "清空筛选" });
+    const project = rows.filter({ hasText: "浏览器案例 Empact 工作流" });
+    await expect(rows).toHaveCount(projects.length);
+    await expect(clear).toBeDisabled();
+    await business.selectOption(parentId);
+    const related = projects.filter((item: any) => item.parentId === parentId);
+    await expect(rows).toHaveCount(related.length);
+    for (const row of await rows.all()) {
+      await expect(row).toContainText(
+        `所属业务：${items.find((item: any) => item.id === parentId).title}`,
+      );
+    }
+    await name.fill("  案例 empact 工  ");
+    await expect(rows).toHaveCount(1);
+    await expect(project).toBeVisible();
+    await expect(filters.getByRole("status")).toHaveText(
+      `显示 1 / ${projects.length} 个项目`,
+    );
+    // A matching name under a different business must not leak into results.
+    await business.selectOption(businessIds[0]);
+    await expect(rows).toHaveCount(0);
+    await expect(
+      page.getByText("没有符合筛选条件的项目", { exact: true }),
+    ).toBeVisible();
+    await business.selectOption(parentId);
+    await expect(project).toBeVisible();
+    await page.getByRole("button", { name: "刷新", exact: true }).click();
+    await expect(project).toBeVisible();
+    await expect(business).toHaveValue(parentId);
+    await expect(name).toHaveValue("  案例 empact 工  ");
+    await page
+      .getByRole("link", {
+        name: part === "published" ? /管理草稿/ : /管理已发布项目/,
+      })
+      .click();
+    await expect(project).toHaveCount(0);
+    await expect(name).toHaveValue("  案例 empact 工  ");
+    await page
+      .getByRole("link", {
+        name: part === "published" ? /管理已发布项目/ : /管理草稿/,
+      })
+      .click();
+    await expect(project).toBeVisible();
+    await clear.click();
+    await expect(rows).toHaveCount(projects.length);
+    await expect(business).toHaveValue("");
+    await expect(name).toHaveValue("");
+    // Search is by project name, not summary or business name.
+    await name.fill("由实际浏览器录入的案例摘要");
+    await expect(project).toHaveCount(0);
+    await name.fill("  EMpaCT  ");
+    await expect(project).toBeVisible();
+    await name.fill("不存在的项目名称-筛选验收");
+    await expect(rows).toHaveCount(0);
+    await clear.click();
+    await expect(rows).toHaveCount(projects.length);
+    await page.getByRole("link", { name: /新增业务类型/ }).click();
+    await expect(filters).toHaveCount(0);
+    await page
+      .getByRole("link", {
+        name: part === "published" ? /管理已发布项目/ : /管理草稿/,
+      })
+      .click();
+    await expect(rows).toHaveCount(projects.length);
+  }
   try {
     await page.goto(base + "/admin/login");
     await page.locator('input[name="username"]').fill(username);
@@ -92,7 +170,7 @@ export async function verifyCmsUI({
     await parentSelect.selectOption(parent.id);
     await page
       .locator('dialog[open] input[name="title"]')
-      .fill("浏览器案例工作流");
+      .fill("浏览器案例 Empact 工作流");
     await page
       .locator('dialog[open] textarea[name="summary"]')
       .fill("由实际浏览器录入的案例摘要。");
@@ -114,11 +192,12 @@ export async function verifyCmsUI({
     ).toBeVisible();
     await page.goto(base + "/admin#drafts");
     await expect(
-      page.locator(".case-row").filter({ hasText: "浏览器案例工作流" }),
+      page.locator(".case-row").filter({ hasText: "浏览器案例 Empact 工作流" }),
     ).toBeVisible();
+    await verifyProjectFilters("drafts", parent.id);
     await page
       .locator(".case-row")
-      .filter({ hasText: "浏览器案例工作流" })
+      .filter({ hasText: "浏览器案例 Empact 工作流" })
       .getByRole("link", { name: "编辑", exact: true })
       .click();
     await expect(
@@ -163,11 +242,12 @@ export async function verifyCmsUI({
     ).toBeVisible();
     await page.goto(base + "/admin#published");
     await expect(
-      page.locator(".case-row").filter({ hasText: "浏览器案例工作流" }),
+      page.locator(".case-row").filter({ hasText: "浏览器案例 Empact 工作流" }),
     ).toBeVisible();
+    await verifyProjectFilters("published", parent.id);
     await page.getByRole("link", { name: /管理草稿/ }).click();
     await expect(
-      page.locator(".case-row").filter({ hasText: "浏览器案例工作流" }),
+      page.locator(".case-row").filter({ hasText: "浏览器案例 Empact 工作流" }),
     ).toHaveCount(0);
     await page.goto(base + `/admin/collections/content/${id}`);
     await expect(
@@ -232,7 +312,7 @@ export async function verifyCmsUI({
     await page.goto(base + "/admin#published");
     const publishedRow = page
       .locator(".case-row")
-      .filter({ hasText: "浏览器案例工作流" });
+      .filter({ hasText: "浏览器案例 Empact 工作流" });
     await expect(
       publishedRow.getByRole("link", { name: "查看详情 ↗", exact: true }),
     ).toHaveAttribute("href", "https://example.invalid/browser-project");
@@ -242,11 +322,12 @@ export async function verifyCmsUI({
     await expect(publishedRow).toHaveCount(0, { timeout: 180000 });
     await page.getByRole("link", { name: /管理草稿/ }).click();
     await expect(
-      page.locator(".case-row").filter({ hasText: "浏览器案例工作流" }),
+      page.locator(".case-row").filter({ hasText: "浏览器案例 Empact 工作流" }),
     ).toBeVisible();
     await expect(
       page.getByRole("heading", { name: "项目管理", exact: true }),
     ).toBeVisible();
+    await verifyProjectFilters("drafts", parent.id);
     assert.equal(
       await page.evaluate(
         () => document.documentElement.scrollWidth <= window.innerWidth,
@@ -260,8 +341,14 @@ export async function verifyCmsUI({
     });
     assert.deepEqual(errors, []);
     console.log(
-      "PASS: four admin workflows, school/community business creation, required/optional fields, selected business, drafts/published transitions, external details, editor and mobile admin.",
+      "PASS: four admin workflows, project business/name filters and reset on desktop/mobile, school/community business creation, required/optional fields, selected business, drafts/published transitions, external details, editor and mobile admin.",
     );
+  } catch (error) {
+    await page.screenshot({
+      path: "test-results/cms-ui-failure.png",
+      fullPage: true,
+    });
+    throw error;
   } finally {
     await browser.close();
     if (id)
