@@ -113,8 +113,23 @@ PYDEPS
     (cd "$root_dir" && find apps/cms/src/migrations -type f -print0 | sort -z | xargs -0 -r sha256sum)
   fi
 }
+schema_change_allowed() {
+  local previous=$1 next=$2 previous_hash next_hash approval
+  [[ "$previous" == "$next" ]] && return 0
+  previous_hash=$(printf '%s\n' "$previous" | sha256sum)
+  next_hash=$(printf '%s\n' "$next" | sha256sum)
+  approval="${previous_hash%% *}:${next_hash%% *}"
+  if [[ "${EMPACT_APPROVED_SCHEMA_CHANGE:-}" != "$approval" ]]; then
+    echo "Reviewed non-schema changes require exact manifest approval: $approval" >&2
+    return 1
+  fi
+  echo "Using maintainer-approved non-schema manifest transition: $approval"
+}
 if [[ -n $current_code && -d $current_code ]]; then
-  if ! diff -u <(schema_manifest "$current_code") <(schema_manifest "$candidate"); then
+  previous_schema=$(schema_manifest "$current_code")
+  next_schema=$(schema_manifest "$candidate")
+  if ! schema_change_allowed "$previous_schema" "$next_schema"; then
+    diff -u <(printf '%s\n' "$previous_schema") <(printf '%s\n' "$next_schema") || true
     echo 'CMS schema files changed; automatic deployment is fail-closed.' >&2
     exit 1
   fi

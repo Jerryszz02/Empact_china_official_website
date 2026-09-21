@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 import importlib.util
+import hashlib
+import os
 import tempfile
 import threading
 import subprocess
@@ -38,6 +40,33 @@ def run(sha=SHA, **extra):
 
 
 class AutoDeployTests(unittest.TestCase):
+    def test_schema_approval_only_allows_the_exact_reviewed_transition(self):
+        source = MODULE_PATH.with_name("deploy.sh").read_text()
+        function = source.split("schema_change_allowed() {", 1)[1].split("\n}\n", 1)[0]
+        previous = "collections=old\npayload=3.0\nmigration=old"
+        reviewed = "collections=filter-only\npayload=3.0\nmigration=old"
+        digest = lambda value: hashlib.sha256((value + "\n").encode()).hexdigest()
+        approval = digest(previous) + ":" + digest(reviewed)
+        for before, after, approved, allowed in [
+            (previous, previous, "", True),
+            (previous, reviewed, "", False),
+            (previous, reviewed, "true", False),
+            (previous, reviewed, approval, True),
+            (reviewed, previous, approval, False),
+            (previous + "-different", reviewed, approval, False),
+            (previous, reviewed + "\nnew-column", approval, False),
+            (previous, reviewed.replace("payload=3.0", "payload=4.0"), approval, False),
+            (previous, reviewed.replace("migration=old", "migration=new"), approval, False),
+        ]:
+            with self.subTest(before=before, after=after, approved=approved):
+                script = "set -euo pipefail\nschema_change_allowed() {" + function + '\n}\nschema_change_allowed "$1" "$2"\n'
+                result = subprocess.run(
+                    ["bash", "-c", script, "schema-check", before, after],
+                    env=dict(os.environ, EMPACT_APPROVED_SCHEMA_CHANGE=approved),
+                    stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True,
+                )
+                self.assertEqual(result.returncode == 0, allowed, result.stderr)
+
     def test_rollback_restores_public_service_running_state(self):
         source = MODULE_PATH.with_name("deploy.sh").read_text()
         restore_function = source.split("restore_services() {", 1)[1].split("\n}\n", 1)[0]
