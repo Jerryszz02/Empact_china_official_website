@@ -5,9 +5,10 @@ export const GET: APIRoute = ({ site }) => {
     ? []
     : [
         ...new Set(
-          [...entries.map(pathFor), "/youth/development-model/"].filter(
-            (path) => path.startsWith("/"),
-          ),
+          [
+            ...entries.map(pathFor),
+            "/youth/international-talent-model/",
+          ].filter((path) => path.startsWith("/")),
         ),
       ];
   const base = (site ?? "https://empact.cn").toString().replace(/\/$/, "");

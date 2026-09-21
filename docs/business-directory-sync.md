@@ -13,7 +13,7 @@
 | 学校业务   | 教练型智慧父母&青少年成长导师；AI×社会创新×PBL课程；演讲比赛及演讲辅导                                                     |
 | 社区业务   | 社区志愿者机会；朝夕有爱社区公益                                                                                           |
 
-保留现有 `monthly-camp`、`public-speaking`、`ai-and-theme-courses`、`student-stories`、`volunteering` 的地址。旧企业 CSR 分类并入企业志愿者、CSR与公益咨询，跨文化支持不再单列。新目录中的国际人才培养模型使用 `/youth/international-talent-model/`；历史 `/youth/development-model/` 参考页保留原来源说明，不把旧页的第三方六维模型改署为 Empact 自研模型。
+保留现有 `monthly-camp`、`public-speaking`、`ai-and-theme-courses`、`student-stories`、`volunteering` 的地址。旧企业 CSR 分类并入企业志愿者、CSR与公益咨询，跨文化支持不再单列。新目录中的国际人才培养模型使用 `/youth/international-talent-model/`；2026-09-21 按用户确认，将原完整模型页与新版培养理念合并至此地址，历史 `/youth/development-model/` 仅做跳转。统一页保留原六维模型图、能力名称和开物 KAIWU 来源说明，补充培养方向与课程学习方式；不把第三方图示改署为 Empact 自研模型。
 
 ## 已整理的案例
 

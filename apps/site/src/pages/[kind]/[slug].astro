@@ -16,7 +16,9 @@ export function getStaticPaths() {
     .filter(
       (entry) =>
         ["business", "project", "news"].includes(entry.kind) &&
-        pathFor(entry).startsWith("/"),
+        pathFor(entry).startsWith("/") &&
+        // This business uses the complete, dedicated model page.
+        pathFor(entry) !== "/youth/international-talent-model/",
     )
     .map((entry) => ({
       params: {

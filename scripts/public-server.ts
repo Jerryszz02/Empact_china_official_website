@@ -119,6 +119,18 @@ export function createPublicServer(options: {
     )
       return json(res, 404, { message: "页面不存在。" });
     if (
+      pathname === "/youth/development-model" ||
+      pathname === "/youth/development-model/" ||
+      pathname === "/youth/development-model/index.html"
+    ) {
+      res.writeHead(301, {
+        Location:
+          "/youth/international-talent-model/" +
+          new URL(req.url!, "http://localhost").search,
+      });
+      return res.end();
+    }
+    if (
       pathname === "/projects/chatcircle" ||
       pathname === "/projects/chatcircle/"
     ) {

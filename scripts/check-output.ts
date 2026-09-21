@@ -26,6 +26,39 @@ export async function checkOutput(
   for (const file of files.filter((f) => f.endsWith(".html"))) {
     const html = await readFile(file, "utf8");
     const $ = load(html);
+    const refresh = $('meta[http-equiv="refresh"]').attr("content");
+    if (refresh !== undefined) {
+      // Astro emits small noindex HTML redirects for static legacy routes.
+      // Validate their destination instead of treating them as content pages.
+      const destination = /^0;url=(\/[^\s]+)$/i.exec(refresh)?.[1];
+      try {
+        if (!destination || destination.startsWith("//"))
+          throw new Error("invalid destination");
+        const url = new URL(destination, "https://empact.cn");
+        const target = resolve(
+          directory,
+          `.${decodeURIComponent(url.pathname)}`,
+          "index.html",
+        );
+        if (
+          !target.startsWith(`${resolve(directory)}/`) ||
+          target === resolve(file)
+        )
+          throw new Error("invalid target");
+        const targetHtml = load(await readFile(target, "utf8"));
+        if (
+          targetHtml('meta[http-equiv="refresh"]').length ||
+          !$('meta[name="robots"]').attr("content")?.includes("noindex") ||
+          $('link[rel="canonical"]').attr("href") !== url.href ||
+          targetHtml('link[rel="canonical"]').attr("href") !== url.href ||
+          !$(`a[href="${destination}"]`).length
+        )
+          throw new Error("invalid redirect metadata");
+      } catch {
+        errors.push(`Invalid static redirect: ${file}`);
+      }
+      continue;
+    }
     const title = $("title").text().trim();
     if (!title || titles.has(title))
       errors.push(`Missing/duplicate title: ${file}`);
