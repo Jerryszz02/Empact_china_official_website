@@ -4,6 +4,7 @@ import argparse
 import importlib.util
 import json
 import os
+import re
 from pathlib import Path
 import sys
 import urllib.request
@@ -40,6 +41,26 @@ def select_target(sha, runs):
 def output(name, value):
     with open(os.environ["GITHUB_OUTPUT"], "a") as handle:
         handle.write("{}={}\n".format(name, value))
+
+
+def check_connection():
+    names = {
+        "DEPLOY_SSH_KEY": "EMPACT_DEPLOY_SSH_KEY (Actions secret)",
+        "DEPLOY_KNOWN_HOSTS": "EMPACT_DEPLOY_KNOWN_HOSTS (Actions secret)",
+        "DEPLOY_HOST": "EMPACT_DEPLOY_HOST (Actions variable)",
+    }
+    errors = ["Missing " + label for key, label in names.items()
+              if not os.environ.get(key, "").strip()]
+    host = os.environ.get("DEPLOY_HOST", "")
+    if host and not re.fullmatch(r"[a-zA-Z0-9][a-zA-Z0-9.-]*", host):
+        errors.append("Invalid EMPACT_DEPLOY_HOST: expected a hostname or IPv4 address")
+    if errors:
+        message = "Deployment connection is not configured:\n" + "\n".join(errors)
+        if os.environ.get("GITHUB_STEP_SUMMARY"):
+            with open(os.environ["GITHUB_STEP_SUMMARY"], "a") as handle:
+                handle.write("## Deployment configuration failure\n\n" + message +
+                             "\n\nCorrect the named repository settings before retrying.\n")
+        raise ValueError(message)
 
 
 def select():
@@ -95,10 +116,13 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest="command")
     commands.add_parser("select")
+    commands.add_parser("check-connection")
     verification = commands.add_parser("verify")
     verification.add_argument("sha")
     args = parser.parse_args()
-    if args.command == "select":
+    if args.command == "check-connection":
+        check_connection()
+    elif args.command == "select":
         select()
     elif args.command == "verify":
         release = verify(args.sha)
@@ -107,7 +131,7 @@ def main():
                 args.sha, release.get("version", "unknown")
             ))
     else:
-        parser.error("select or verify is required")
+        parser.error("select, check-connection or verify is required")
 
 
 if __name__ == "__main__":

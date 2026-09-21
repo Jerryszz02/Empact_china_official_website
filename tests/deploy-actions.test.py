@@ -2,6 +2,7 @@
 import importlib.util
 import io
 import json
+import os
 from pathlib import Path
 import subprocess
 import unittest
@@ -21,6 +22,31 @@ client = load("actions-client")
 command = load("actions-command")
 SHA = "a" * 40
 NEWER = "b" * 40
+
+
+class ConnectionConfigurationTests(unittest.TestCase):
+    def test_reports_missing_setting_names_without_exposing_other_values(self):
+        with patch.dict(os.environ, {"DEPLOY_SSH_KEY": "private-key-content"}, clear=True):
+            with self.assertRaises(ValueError) as error:
+                client.check_connection()
+            message = str(error.exception)
+            self.assertIn("EMPACT_DEPLOY_KNOWN_HOSTS", message)
+            self.assertIn("EMPACT_DEPLOY_HOST", message)
+            self.assertNotIn("private-key-content", message)
+            self.assertNotIn("EMPACT_DEPLOY_SSH_KEY", message)
+
+    def test_valid_configuration_and_invalid_host(self):
+        for host, valid in [("example.com", True), ("127.0.0.1", True),
+                            ("-option", False), ("host;id", False), ("host\n", False)]:
+            with self.subTest(host=host), patch.dict(os.environ, {
+                "DEPLOY_SSH_KEY": "private-key-content", "DEPLOY_KNOWN_HOSTS": "host-key",
+                "DEPLOY_HOST": host,
+            }, clear=True):
+                if valid:
+                    client.check_connection()
+                else:
+                    with self.assertRaisesRegex(ValueError, "Invalid EMPACT_DEPLOY_HOST"):
+                        client.check_connection()
 
 
 def run(sha=SHA, **changes):

@@ -57,8 +57,7 @@ jobs:
           DEPLOY_KNOWN_HOSTS: ${{ secrets.EMPACT_DEPLOY_KNOWN_HOSTS }}
           DEPLOY_HOST: ${{ vars.EMPACT_DEPLOY_HOST }}
         run: |
-          test -n "$DEPLOY_SSH_KEY" && test -n "$DEPLOY_KNOWN_HOSTS" && test -n "$DEPLOY_HOST"
-          [[ "$DEPLOY_HOST" =~ ^[a-zA-Z0-9][a-zA-Z0-9.-]*$ ]]
+          python3 deploy/actions-client.py check-connection
           install -d -m 700 "$RUNNER_TEMP/empact-ssh"
           umask 077
           printf '%s\n' "$DEPLOY_SSH_KEY" > "$RUNNER_TEMP/empact-ssh/key"

@@ -17,6 +17,14 @@ jobs:
       ASTRO_TELEMETRY_DISABLED: '1'
     steps:
       - uses: actions/checkout@v4
+      - name: Report production deployment prerequisites
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD_SHA: ${{ github.sha }}
+        run: |
+          [[ "$BASE_SHA" =~ ^[0-9a-f]{40}$ && "$BASE_SHA" != 0000000000000000000000000000000000000000 ]]
+          git fetch --no-tags --depth=1 origin "$BASE_SHA"
+          python3 deploy/preflight.py "$BASE_SHA" "$HEAD_SHA"
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
@@ -37,6 +45,7 @@ jobs:
         run: |
           python3 tests/deploy-auto.test.py
           python3 tests/deploy-actions.test.py
+          python3 tests/deploy-preflight.test.py
           bash -n deploy/deploy.sh
       - uses: actions/upload-artifact@v4
         if: failure()
