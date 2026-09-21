@@ -23,9 +23,11 @@ def manifest(revision):
     if not re.fullmatch(r"[0-9a-f]{40}", revision):
         raise ValueError("preflight requires full commit SHAs")
     paths = git("ls-tree", "-r", "--name-only", revision, "--",
-                "apps/cms/src/migrations").decode().splitlines()
-    files = {}
-    for path in [*PROTECTED, *sorted(paths)]:
+                *PROTECTED, "apps/cms/src/migrations").decode().splitlines()
+    # Match the server manifest: a missing protected file is a state to review,
+    # not an unreadable revision. ls-tree still fails for an invalid commit.
+    files = {path: None for path in PROTECTED}
+    for path in sorted(paths):
         files[path] = hashlib.sha256(git("show", revision + ":" + path)).hexdigest()
     dependencies = json.loads(git("show", revision + ":apps/cms/package.json"))["dependencies"]
     return files, {name: dependencies[name] for name in DEPENDENCIES}

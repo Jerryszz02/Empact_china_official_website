@@ -74,6 +74,19 @@ class PreflightTests(unittest.TestCase):
         self.assertIn("migrations/initial.json", summary)
         self.assertIn("migrations/new.ts", summary)
 
+    def test_deleted_protected_file_warns_instead_of_aborting(self):
+        (self.root / "apps/cms/src/collections.ts").unlink()
+        summary, annotation = self.report()
+        self.assertIn("apps/cms/src/collections.ts", summary)
+        self.assertIn("::warning", annotation)
+
+    def test_renamed_protected_file_warns_instead_of_aborting(self):
+        (self.root / "apps/cms/src/payload-types.ts").rename(
+            self.root / "apps/cms/src/generated-types.ts")
+        summary, annotation = self.report()
+        self.assertIn("apps/cms/src/payload-types.ts", summary)
+        self.assertIn("::warning", annotation)
+
     def test_database_dependency_change_is_reported(self):
         self.write("apps/cms/package.json", json.dumps({"dependencies": {
             "payload": "4.0.0", "@payloadcms/db-sqlite": "3.90.1", "other": "2",
