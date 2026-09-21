@@ -25,29 +25,37 @@ const stages = [
     </p>
   </section>
   <div class="model-page">
-    <section class="model-section" aria-labelledby="approach-title">
+    <section
+      class="model-section approach-section"
+      aria-labelledby="approach-title"
+    >
       <div class="section-copy">
         <span class="eyebrow">我们的培养理念</span>
         <h2 id="approach-title">把对世界的理解，带进真实的行动。</h2>
-        <p>
-          Empact 的国际人才培养方向由创始人 Peter Yang 与人力资源及青年赋能专家
-          David Wang
-          共同研发，关注认知、能力与价值观之间的联系。我们希望青少年在理解自己与世界的过程中，逐步形成自主选择、与人协作和创造价值的能力。
-        </p>
-        <p>
-          在研学与社会实践中，学员先了解真实议题，再通过服务、协作与项目创作尝试行动，并在复盘中整理自己的收获。体验式学习、服务式学习和项目式学习，把培养目标带进具体活动，也让下面的六维能力有了可以练习的场景。
-        </p>
-        <p>
-          课程设计结合
-          <a href="https://innerdevelopmentgoals.org/">IDG 内在发展目标</a>与
-          <a href="https://www.oecd.org/en/about/projects/future-of-education-and-skills-2030.html">
-            OECD 未来教育与技能框架
-          </a>
-          ，将内在成长与面向未来的实践连接起来。
-        </p>
+        <div class="approach-body">
+          <p>
+            Empact 的国际人才培养方向由创始人 Peter Yang
+            与人力资源及青年赋能专家 David Wang
+            共同研发，关注认知、能力与价值观之间的联系。我们希望青少年在理解自己与世界的过程中，逐步形成自主选择、与人协作和创造价值的能力。
+          </p>
+          <p>
+            在研学与社会实践中，学员先了解真实议题，再通过服务、协作与项目创作尝试行动，并在复盘中整理自己的收获。体验式学习、服务式学习和项目式学习，把培养目标带进具体活动，也让下面的六维能力有了可以练习的场景。
+          </p>
+          <p>
+            课程设计结合
+            <a href="https://innerdevelopmentgoals.org/">IDG 内在发展目标</a>与
+            <a href="https://www.oecd.org/en/about/projects/future-of-education-and-skills-2030.html">
+              OECD 未来教育与技能框架
+            </a>
+            ，将内在成长与面向未来的实践连接起来。
+          </p>
+        </div>
       </div>
     </section>
-    <section class="model-section" aria-labelledby="overview-title">
+    <section
+      class="model-section overview-section"
+      aria-labelledby="overview-title"
+    >
       <div class="section-copy">
         <span class="eyebrow">六维发展模型 · 6D Development Model</span>
         <h2 id="overview-title">成长，从自己出发，在行动中发生。</h2>
@@ -127,6 +135,31 @@ const stages = [
   .section-copy {
     max-width: 45rem;
   }
+  .approach-section,
+  .overview-section {
+    background: #f6f9f9;
+  }
+  .approach-section .section-copy,
+  .overview-section .section-copy {
+    max-width: 65rem;
+    margin-inline: auto;
+    text-align: center;
+  }
+  .approach-body {
+    margin-top: 1.6rem;
+    padding: 1.7rem 2.5rem;
+    border-top: 0.45rem solid var(--green);
+    background: #fff;
+    box-shadow: 0 0.35rem 0 #d9e7e8;
+  }
+  .approach-body p {
+    font-size: clamp(1rem, 1.6vw, 1.28rem);
+    line-height: 1.9;
+    margin-bottom: 0.6em;
+  }
+  .overview-section {
+    padding-top: 2rem;
+  }
   h2 {
     font-size: clamp(1.7rem, 3vw, 2.4rem);
     line-height: 1.45;
@@ -200,6 +233,13 @@ const stages = [
   @media (max-width: 760px) {
     .model-section {
       padding-block: 2.5rem;
+    }
+    .approach-body {
+      padding: 1.2rem 1rem;
+    }
+    .approach-section,
+    .overview-section {
+      padding-inline: 1.25rem;
     }
     .roots-grid {
       grid-template-columns: 1fr;
