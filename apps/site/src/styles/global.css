@@ -493,19 +493,6 @@ h3 {
   max-height: 48rem;
   object-fit: contain;
 }
-.article-source {
-  border-top: 1px solid var(--dark-line);
-  margin-top: 2rem;
-  padding-top: 1.5rem;
-}
-.article-source h2 {
-  font-size: 1.25rem;
-}
-.article-source .detail-meta a {
-  display: inline-flex;
-  align-items: center;
-  min-height: 2.75rem;
-}
 .prose figure {
   margin: 2rem 0;
 }

@@ -204,7 +204,20 @@ const contentFields: Field[] = [
             admin: { hidden: true },
           },
           { ...text("sourceName", "来源名称"), admin: { hidden: true } },
-          { ...text("sourceUrl", "原文链接"), admin: { hidden: true } },
+          {
+            ...text("sourceUrl", "原文链接"),
+            admin: { hidden: true },
+            validate: (value: unknown) =>
+              !value || isHttpUrl(String(value))
+                ? true
+                : "请填写有效的 http:// 或 https:// 来源链接，或留空。",
+            hooks: {
+              beforeValidate: [
+                ({ value }: { value?: string }) =>
+                  typeof value === "string" ? value.trim() : value,
+              ],
+            },
+          },
           {
             name: "sourceType",
             label: "来源类型",
@@ -279,8 +292,6 @@ const visible = [
   "image",
   "detailUrl",
   "body",
-  "sourceName",
-  "sourceUrl",
 ];
 const businessContentFields: Field[] = [
   {
@@ -297,13 +308,7 @@ const businessContentFields: Field[] = [
       (field) => "name" in field && field.name === name,
     )!;
     const onlyBusiness = ["segment", "order"].includes(name),
-      onlyCase = [
-        "parent",
-        "image",
-        "detailUrl",
-        "sourceName",
-        "sourceUrl",
-      ].includes(name);
+      onlyCase = ["parent", "image", "detailUrl"].includes(name);
     return {
       ...field,
       label:
@@ -317,8 +322,6 @@ const businessContentFields: Field[] = [
             image: "项目封面（发布时必填）",
             order: "展示顺序（选填，数字越小越靠前）",
             detailUrl: "外链（与网页正文二选一）",
-            sourceName: "来源名称（选填）",
-            sourceUrl: "来源链接（选填）",
           } as Record<string, string>
         )[name] ?? ("label" in field ? field.label : undefined),
       admin: {
@@ -329,11 +332,7 @@ const businessContentFields: Field[] = [
               description:
                 "填写完整的 http:// 或 https:// 链接，访客点击详情时直接打开外链；留空则使用下方网页正文。已有正文会保留，清空外链后可继续编辑。",
             }
-          : name === "sourceUrl"
-            ? {
-                description: "作为站内文章的引用来源，不改变详情跳转。",
-              }
-            : {}),
+          : {}),
         condition: (_: unknown, data: Record<string, unknown>) =>
           name === "body" &&
           data.kind === "case" &&
@@ -345,14 +344,12 @@ const businessContentFields: Field[] = [
                 ? data.kind === "case"
                 : true,
       },
-      ...(["sourceUrl", "detailUrl"].includes(name)
+      ...(name === "detailUrl"
         ? {
             validate: (value: unknown) => {
               if (!value) return true;
               if (isHttpUrl(String(value))) return true;
-              return name === "detailUrl"
-                ? "请填写有效的 http:// 或 https:// 外链，或留空并填写网页正文。"
-                : "请填写有效的 http:// 或 https:// 来源链接，或留空。";
+              return "请填写有效的 http:// 或 https:// 外链，或留空并填写网页正文。";
             },
             hooks: {
               beforeValidate: [

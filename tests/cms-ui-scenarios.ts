@@ -198,10 +198,15 @@ export async function verifyCmsUI({
     ).toBeVisible();
     await expect(
       page.getByLabel("来源名称（选填）", { exact: true }),
-    ).toBeVisible();
+    ).toHaveCount(0);
     await expect(
       page.getByLabel("来源链接（选填）", { exact: true }),
-    ).toBeVisible();
+    ).toHaveCount(0);
+    await expect(
+      page.locator(
+        'input[name="sourceName"]:visible, input[name="sourceUrl"]:visible',
+      ),
+    ).toHaveCount(0);
     await page.goto(base + "/admin#drafts");
     await expect(
       page.locator(".case-row").filter({ hasText: "浏览器案例 Empact 工作流" }),
@@ -225,9 +230,6 @@ export async function verifyCmsUI({
       .getByRole("button", { name: "从现有中选择", exact: true })
       .click();
     await page.getByRole("button", { name: "隔离图片", exact: true }).click();
-    await page
-      .getByLabel("来源链接（选填）", { exact: true })
-      .fill("https://example.invalid/browser-source");
     await expect(page.locator('[contenteditable="true"]')).toBeVisible();
     await expect(
       page.getByRole("button", { name: "发布到官网", exact: true }),
@@ -238,7 +240,6 @@ export async function verifyCmsUI({
     ).toBeEnabled();
     const saved = await request("/api/content/" + id);
     assert.ok(saved.image);
-    assert.equal(saved.sourceUrl, "https://example.invalid/browser-source");
     assert.match(
       (await serializeLexicalBody(saved.body, [])).html,
       /浏览器图文原版正文/,

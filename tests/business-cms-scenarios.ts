@@ -74,7 +74,7 @@ export async function verifyBusinessWorkflow(options: {
     title: "图文案例验收",
     summary: "独立案例摘要。",
     sourceName: "项目原有来源",
-    sourceUrl: "https://example.invalid/case-source",
+    sourceUrl: "  https://example.invalid/case-source  ",
     body,
     parent: Number(businessId),
     image: coverId,
@@ -82,6 +82,26 @@ export async function verifyBusinessWorkflow(options: {
   });
   const id = String(created.doc.id),
     url = "/cases/business-workflow-case/";
+  assert.equal(created.doc.sourceUrl, "https://example.invalid/case-source");
+  const invalidSource = await fetch(base + `/api/content/${id}`, {
+    method: "PATCH",
+    headers: {
+      Cookie: cookies,
+      Origin: base,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ sourceUrl: "invalid-source-url" }),
+  });
+  assert.equal(
+    invalidSource.status,
+    400,
+    "invalid sources are rejected on save",
+  );
+  assert.equal(
+    (await request(`/api/content/${id}`)).sourceUrl,
+    "https://example.invalid/case-source",
+    "a rejected source edit must preserve the stored URL",
+  );
   assert.equal((await fetch(publicURL + url)).status, 404);
   const invalidBody = structuredClone(body);
   invalidBody.root.children.at(-1).value = 999999;
@@ -126,9 +146,9 @@ export async function verifyBusinessWorkflow(options: {
   const firstDate = (await request(`/api/content/${id}`)).publishedAt;
   assert.ok(firstDate);
   assert.match(await publicText(url), /案例原版正文/);
-  assert.match(
+  assert.doesNotMatch(
     await publicText(url),
-    /href="https:\/\/example.invalid\/case-source"/,
+    /项目原有来源|href="https:\/\/example.invalid\/case-source"/,
   );
   assert.match(await publicText(url), /活动现场图注/);
   assert.match(await publicText(url), new RegExp(image.filename));
