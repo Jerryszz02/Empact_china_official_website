@@ -204,7 +204,20 @@ const contentFields: Field[] = [
             admin: { hidden: true },
           },
           { ...text("sourceName", "来源名称"), admin: { hidden: true } },
-          { ...text("sourceUrl", "原文链接"), admin: { hidden: true } },
+          {
+            ...text("sourceUrl", "原文链接"),
+            admin: { hidden: true },
+            validate: (value: unknown) =>
+              !value || isHttpUrl(String(value))
+                ? true
+                : "请填写有效的 http:// 或 https:// 来源链接，或留空。",
+            hooks: {
+              beforeValidate: [
+                ({ value }: { value?: string }) =>
+                  typeof value === "string" ? value.trim() : value,
+              ],
+            },
+          },
           {
             name: "sourceType",
             label: "来源类型",
