@@ -40,6 +40,25 @@ def run(sha=SHA, **extra):
 
 
 class AutoDeployTests(unittest.TestCase):
+    def test_disk_precheck_blocks_low_space_inodes_and_unreadable_metrics(self):
+        source = MODULE_PATH.with_name("deploy.sh").read_text()
+        function = source.split("check_disk_space() {", 1)[1].split("\n}\n", 1)[0]
+        for free_kb, free_inodes, allowed in [
+            (3145728, 150000, True), (3145727, 150000, False),
+            (3145728, 149999, False), (0, 200000, False), ("unknown", 200000, False),
+        ]:
+            with self.subTest(free_kb=free_kb, free_inodes=free_inodes):
+                script = (
+                    'set -euo pipefail\nROOT=/unused\nMIN_FREE_KB=3145728\nMIN_FREE_INODES=150000\n'
+                    'df() { if [[ "$1" == -Pk ]]; then free=$FREE_KB; else free=$FREE_INODES; fi; '
+                    'printf "Filesystem Size Used Available\\nfixture 9999999 0 %s\\n" "$free"; }\n'
+                    'check_disk_space() {' + function + '\n}\ncheck_disk_space\n'
+                )
+                result = subprocess.run(["bash", "-c", script],
+                    env=dict(os.environ, FREE_KB=str(free_kb), FREE_INODES=str(free_inodes)),
+                    stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
+                self.assertEqual(result.returncode == 0, allowed, result.stderr)
+
     def test_schema_approval_only_allows_the_exact_reviewed_transition(self):
         source = MODULE_PATH.with_name("deploy.sh").read_text()
         function = source.split("schema_change_allowed() {", 1)[1].split("\n}\n", 1)[0]

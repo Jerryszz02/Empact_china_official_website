@@ -13,8 +13,30 @@ readonly ENV_FILE=/etc/empact/website.env
 readonly BACKUP=/usr/local/lib/empact/backup.sh
 readonly AUTO_UPDATE=/usr/local/lib/empact/auto-update.py
 readonly PUBLICATION_LOCK=/usr/local/lib/empact/publication-lock.py
+readonly PRUNE_BUILD_CACHE=/usr/local/lib/empact/prune-build-cache.py
 readonly REPO=Jerryszz02/Empact_china_official_website
 readonly BUILD_HEAP_MB=${EMPACT_BUILD_HEAP_MB:-768}
+readonly MIN_FREE_KB=${EMPACT_MIN_FREE_KB:-3145728}
+readonly MIN_FREE_INODES=${EMPACT_MIN_FREE_INODES:-150000}
+
+check_disk_space() {
+  local available_kb available_inodes
+  [[ "$MIN_FREE_KB" =~ ^[1-9][0-9]*$ && "$MIN_FREE_INODES" =~ ^[1-9][0-9]*$ ]] || {
+    echo 'Disk headroom thresholds must be positive integers.' >&2
+    return 1
+  }
+  available_kb=$(df -Pk "$ROOT" | awk 'NR==2 {print $4}')
+  available_inodes=$(df -Pi "$ROOT" | awk 'NR==2 {print $4}')
+  [[ "$available_kb" =~ ^[0-9]+$ && "$available_inodes" =~ ^[0-9]+$ ]] || {
+    echo 'Cannot determine deployment filesystem headroom.' >&2
+    return 1
+  }
+  if (( available_kb < MIN_FREE_KB || available_inodes < MIN_FREE_INODES )); then
+    echo "Insufficient deployment disk headroom: available ${available_kb} KiB / ${available_inodes} inodes; required ${MIN_FREE_KB} KiB / ${MIN_FREE_INODES} inodes. Current services are unchanged; inspect old build caches before retrying." >&2
+    return 1
+  fi
+  echo "Deployment disk headroom: ${available_kb} KiB / ${available_inodes} inodes available."
+}
 
 [[ ${EUID} -eq 0 ]] || { echo 'must run as root' >&2; exit 2; }
 [[ $# -eq 1 && $1 =~ $SHA_RE ]] || { echo 'Usage: deploy.sh <full 40-character commit SHA>' >&2; exit 2; }
@@ -37,6 +59,9 @@ if [[ -n $current_code && $(basename "$current_code") == "$sha" ]]; then
 fi
 
 timestamp=$(date -u +%Y%m%dT%H%M%SZ)
+[[ -x $PRUNE_BUILD_CACHE ]] || { echo 'trusted build-cache cleanup helper is not installed' >&2; exit 1; }
+"$PRUNE_BUILD_CACHE" "$sha" --apply --lock-fd 9
+check_disk_space
 archive="$ROOT/staging/$sha.tar.gz"
 candidate="$CODE_ROOT/$sha"
 tmp="$ROOT/staging/$sha.$$.tmp"
@@ -193,6 +218,7 @@ rollback() {
 trap 'status=$?; if (( status != 0 )); then rollback "$status"; fi' EXIT
 trap 'exit 143' TERM
 
+check_disk_space
 runuser -u empact -- env npm_config_include=dev npm ci --prefix "$candidate" --no-audit --no-fund
 runuser -u empact -- env NODE_OPTIONS="--max-old-space-size=$BUILD_HEAP_MB" NODE_ENV=production \
   CMS_DEV_SCHEMA_PUSH=false REPOSITORY_DIR="$candidate" SITE_CODE_REVISION="$sha" \

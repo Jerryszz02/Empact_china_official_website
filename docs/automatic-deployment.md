@@ -32,6 +32,12 @@ Actions 展示目标提交、对应 CI、服务器部署日志、公网验收和
 
 发布安装不可变代码目录 `/srv/empact/code/<SHA>`。候选版本改动 CMS schema、迁移或关键数据库依赖时停止，交维护人评估；不会自动执行 schema push、migration、reset 或 seed。
 
+安装器持有部署锁后、下载前，由 root 安装的 `prune-build-cache.py` 清理旧代码目录的 `node_modules` 和 `apps/cms/.next`。它保留当前线上版本、当前发布回执指定的上一回滚版本、本次候选版本及被运行中进程引用的版本；没有有效 `.code-revision` 的旧目录、符号链接和无法确认的状态不清理。缺失当前回执时停止，不能猜测回滚版本。所有源码、CMS 数据、媒体、公开快照及备份均保留。
+
+下载前和安装依赖前各检查一次空间，默认要求至少 3 GiB 可用容量和 150,000 个 inode；root 配置 `EMPACT_MIN_FREE_KB`、`EMPACT_MIN_FREE_INODES` 可调整阈值。空间不足时在维护切换前退出，避免安装到一半才报 ENOSPC。缓存清理不能解决源码归档和业务备份的无限增长，后续需要单独评估归档/备份保留策略，不能据此自动删除它们。
+
+人工检查同一清理计划可运行 `sudo /usr/local/lib/empact/prune-build-cache.py <候选完整SHA>`，默认只列出计划；经批准后添加 `--apply` 才清理。该命令与正常部署使用同一把锁，不能并行清理。
+
 若差异仅为已审查的非结构改动（例如关系字段的选项过滤），维护人可在 root 管理的 `/etc/default/empact-deploy` 中临时设置 `EMPACT_APPROVED_SCHEMA_CHANGE=<旧清单 SHA256>:<新清单 SHA256>`。清单由 `schema_manifest` 生成；指纹按 `printf '%s\n' "$manifest" | sha256sum` 计算，拒绝日志也会显示所需的精确指纹对。必须先核对线上与候选版本的全部清单差异，不能仅根据日志自动批准。
 
 批准只适用于这一个有方向的文件/依赖清单变化；源清单、目标清单、迁移或关键依赖再次变化时仍会拒绝。成功发布后删除此临时设置。真正的数据库结构变化仍须独立完成迁移评估，不能使用该设置替代迁移。
@@ -49,6 +55,7 @@ sudo install -d -o root -g root -m 0755 /usr/local/lib/empact
 sudo install -o root -g root -m 0755 deploy/backup.sh /usr/local/lib/empact/backup.sh
 sudo install -o root -g root -m 0755 deploy/auto-update.py /usr/local/lib/empact/auto-update.py
 sudo install -o root -g root -m 0755 deploy/publication-lock.py /usr/local/lib/empact/publication-lock.py
+sudo install -o root -g root -m 0755 deploy/prune-build-cache.py /usr/local/lib/empact/prune-build-cache.py
 sudo install -o root -g root -m 0755 deploy/deploy.sh /usr/local/lib/empact/deploy.sh
 sudo install -o root -g root -m 0755 deploy/actions-command.py /usr/local/lib/empact/actions-command.py
 sudo install -o root -g root -m 0644 deploy/empact-release@.service /etc/systemd/system/empact-release@.service
