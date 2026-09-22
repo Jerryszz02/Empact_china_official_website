@@ -23,6 +23,23 @@ test("about demo keeps grouped content and usable links across screen sizes", as
       .filter({ has: page.getByText("2023", { exact: true }) }),
   ).toContainText("进入中国大陆");
   await expect(page.locator(".award")).toHaveCount(4);
+  await expect(page.locator(".award img")).toHaveCount(3);
+  await expect(page.locator(".award").first()).toContainText("新加坡");
+  await expect(page.locator(".award").nth(1)).toContainText("Organisation");
+  await expect(page.locator(".award").nth(2)).toContainText("3 Hearts");
+  await expect(page.locator(".award").last()).toContainText("Empact 中国区");
+  await expect(page.locator(".business-boundary strong")).toHaveCount(2);
+  for (const picture of await page.locator(".award img").all()) {
+    await picture.scrollIntoViewIfNeeded();
+    await expect
+      .poll(() =>
+        picture.evaluate(
+          (image: HTMLImageElement) => image.complete && image.naturalWidth > 0,
+        ),
+      )
+      .toBe(true);
+    await expect(picture).toHaveAttribute("alt", /.+/);
+  }
   await expect(page.locator(".person")).toHaveCount(2);
   await expect(page.locator("main")).not.toContainText(/DEMO 预览|文案细节待/);
   await expect(page.locator('main a[href="#"]')).toHaveCount(0);
@@ -70,6 +87,16 @@ test("about demo keeps grouped content and usable links across screen sizes", as
     width: testInfo.project.name === "mobile" ? 390 : 1440,
     height: 1000,
   });
+  for (const picture of await page.locator(".award img").all()) {
+    await picture.scrollIntoViewIfNeeded();
+    await expect
+      .poll(() =>
+        picture.evaluate(
+          (image: HTMLImageElement) => image.complete && image.naturalWidth > 0,
+        ),
+      )
+      .toBe(true);
+  }
   await page.screenshot({
     path: `test-results/about-${testInfo.project.name}.png`,
     fullPage: true,

@@ -7,6 +7,7 @@ import { writeFile, mkdir } from "node:fs/promises";
 import { resolve } from "node:path";
 import { htmlToLexical, migrateBusinessContent } from "../content-migration.js";
 import type { Content } from "../payload-types.js";
+import { importAboutMedia } from "../experience-content-update.js";
 
 if (process.env.NODE_ENV === "production")
   throw new Error("结构草稿只允许在本机开发环境初始化。");
@@ -42,6 +43,10 @@ const existing = await payload.find({
   overrideAccess: true,
 });
 if (existing.totalDocs === 0) {
+  const mediaBySrc = await importAboutMedia(
+    payload,
+    resolve("../../packages/content/fixtures/media"),
+  );
   const ids = new Map<string, number>();
   const frameworkEntries = previewSnapshot.entries.filter(
     (entry) => entry.kind !== "case",
@@ -60,7 +65,7 @@ if (existing.totalDocs === 0) {
           .enum(["media", "partner", "official", "company", "sponsored"])
           .optional()
           .parse(entry.sourceType),
-        body: htmlToLexical(entry.bodyHtml) as Content["body"],
+        body: htmlToLexical(entry.bodyHtml, mediaBySrc) as Content["body"],
         approved: false,
         featured: entry.featured,
         segment: entry.segment,

@@ -16,6 +16,11 @@ export default async function Layout({ children }: { children: ReactNode }) {
       importMap={importMap}
       serverFunction={serverFunction}
     >
+      <nav className="cms-home-nav" aria-label="官网入口">
+        <a href="/" target="_blank" rel="noopener noreferrer">
+          返回官网首页 <span aria-hidden="true">↗</span>
+        </a>
+      </nav>
       {children}
     </RootLayout>
   );

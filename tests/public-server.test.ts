@@ -149,6 +149,37 @@ test("static server preserves real 404, blocks private files, switches release a
     );
     assert.equal((await post()).status, 200);
     assert.equal(deliveries, 1);
+    const detailed = JSON.stringify({
+      segment: "corporate",
+      business: "x".repeat(120),
+      businessTitle: "业".repeat(160),
+      name: "姓".repeat(80),
+      organization: "公".repeat(160),
+      role: "职".repeat(100),
+      contact: "test@example.com",
+      message: "需".repeat(3000),
+      goal: "目".repeat(1000),
+      location: "地".repeat(120),
+      timeline: "时".repeat(160),
+      participants: "人".repeat(100),
+      budget: "额".repeat(100),
+      referenceUrl: "https://example.com/" + "a".repeat(1900),
+      consent: true,
+      idempotencyKey: randomUUID(),
+    });
+    assert.ok(Buffer.byteLength(detailed) > 16_384);
+    const sendDetailed = (body: string) =>
+      fetch(url + "/api/contact", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Origin: "https://empact.cn",
+        },
+        body,
+      });
+    assert.equal((await sendDetailed(detailed)).status, 200);
+    assert.equal(deliveries, 2);
+    assert.equal((await sendDetailed("x".repeat(32_769))).status, 413);
   } finally {
     await new Promise<void>((resolve) => server.close(() => resolve()));
     await rm(dir, { recursive: true, force: true });

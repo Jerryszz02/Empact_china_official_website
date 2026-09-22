@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { aboutBodyHtml } from "../packages/content/src/about.js";
+import { aboutMedia } from "../packages/content/src/about-awards.js";
 import { parseAboutBodyHtml } from "../apps/site/src/lib/about.js";
 
 test("about body is parsed into the nine designed CMS groups", () => {
@@ -51,12 +52,40 @@ test("CMS edits flow through the structured view after sanitization", async () =
     .replace("152", "153")
     .replace("企业 ESG 战略咨询", "企业可持续发展咨询")
     .replace("让每一份善意，", "让更多善意，");
-  const groups = parseAboutBodyHtml(sanitizeBodyHtml(edited));
+  const groups = parseAboutBodyHtml(
+    sanitizeBodyHtml(edited, {
+      mediaFilenames: aboutMedia.map((item) => item.filename),
+    }),
+  );
   assert.ok(groups);
   assert.match(groups[0].headingHtml, /让更多善意，<br\s*\/?>(被世界看见)/);
   assert.equal(groups[4].items[0].headingHtml, "153");
   assert.equal(groups[3].items[0].headingHtml, "企业可持续发展咨询");
   assert.match(groups[8].html, /href="\/contact\/"/);
+});
+
+test("awards retain all details and figures while legacy two-paragraph cards still work", () => {
+  const groups = parseAboutBodyHtml(aboutBodyHtml)!;
+  assert.equal(groups[6].items.length, 4);
+  assert.equal(
+    groups[6].items.filter((item) =>
+      item.content.some((html) => html.startsWith("<figure>")),
+    ).length,
+    3,
+  );
+  assert.match(groups[6].html, /新加坡总统尚达曼/);
+  assert.match(groups[6].html, /Empact 中国区荣誉/);
+  const legacy = aboutBodyHtml.replace(
+    /<h2>来自外部的认可<\/h2>[\s\S]*?(?=<h2>创始人<\/h2>)/,
+    "<h2>来自外部的认可</h2><h3>2022</h3><p><strong>旧奖项名称</strong></p><p>旧说明</p>",
+  );
+  assert.equal(parseAboutBodyHtml(legacy)?.[6].items.length, 1);
+  assert.equal(
+    parseAboutBodyHtml(
+      aboutBodyHtml.replace("<figure>", "<h4>额外信息</h4><figure>"),
+    ),
+    undefined,
+  );
 });
 
 test("unsupported content structure is preserved by the prose fallback", () => {

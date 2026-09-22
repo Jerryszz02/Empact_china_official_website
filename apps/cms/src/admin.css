@@ -6,6 +6,22 @@
   --empact-line: #d9e4ec;
   --empact-ink: #173047;
 }
+.cms-home-nav {
+  display: flex;
+  justify-content: flex-end;
+  padding: 8px clamp(20px, 4vw, 64px);
+  border-bottom: 1px solid var(--empact-line);
+  background: white;
+}
+.cms-home-nav a {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  color: var(--empact-blue);
+  font-size: 13px;
+  font-weight: 600;
+}
 .business-admin-nav {
   display: flex;
   align-items: center;

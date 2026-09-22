@@ -1,4 +1,5 @@
 ---
+import { inquirySegments } from "@empact/content/inquiry";
 import BaseLayout from "@/layouts/BaseLayout.astro";
 import { snapshot, businesses, pageBySlug } from "@/lib/content";
 const enabled =
@@ -37,31 +38,138 @@ const entry = pageBySlug("contact");
       data-contact-form
     >
       <h2>咨询与合作</h2>
-      <label for="business">你想咨询什么</label>
-      <select id="business" name="business">
-        <option value="">请选择</option>
-        {businesses.map((item) => (
-          <option value={item.id}>{item.title}</option>
-        ))}
-        <option value="other">其他</option>
-      </select>
-      <label for="contact">联系方式</label>
-      <input
-        id="contact"
-        name="contact"
-        required
-        maxlength="160"
-        placeholder="邮箱、电话或微信号"
-      />
-      <label for="message">想聊的内容</label>
-      <textarea
-        id="message"
-        name="message"
-        required
-        minlength="10"
-        maxlength="3000"
-        placeholder="请简单描述你的问题"
-      ></textarea>
+      <p class="form-help">
+        带 * 为必填。留下一个联系方式即可，其余信息可按实际情况补充。
+      </p>
+      <fieldset>
+        <legend>01 / 咨询方向</legend>
+        <label for="segment">业务范围 *</label>
+        <select id="segment" name="segment" required>
+          <option value="">请选择业务范围</option>
+          {inquirySegments.map((item) => (
+            <option value={item.value}>{item.label}</option>
+          ))}
+        </select>
+        <label for="business">子业务 *</label>
+        <select id="business" name="business" required>
+          <option value="">请选择子业务</option>
+          {inquirySegments
+            .filter((item) => item.value !== "other")
+            .map((segment) => (
+              <optgroup label={segment.label}>
+                {businesses
+                  .filter((item) => item.segment === segment.value)
+                  .map((item) => (
+                    <option value={item.id} data-segment={item.segment}>
+                      {item.title}
+                    </option>
+                  ))}
+              </optgroup>
+            ))}
+          <option value="other">其他／暂不确定</option>
+        </select>
+      </fieldset>
+      <fieldset>
+        <legend>02 / 联系信息</legend>
+        <label for="name">如何称呼您 *</label>
+        <input
+          id="name"
+          name="name"
+          required
+          maxlength="80"
+          autocomplete="name"
+          placeholder="姓名或称呼"
+        />
+        <label for="contact">联系方式 *</label>
+        <input
+          id="contact"
+          name="contact"
+          required
+          minlength="3"
+          maxlength="160"
+          placeholder="邮箱、电话或微信号，填写一种即可"
+        />
+        <label for="organization">机构名称（选填）</label>
+        <input
+          id="organization"
+          name="organization"
+          maxlength="160"
+          autocomplete="organization"
+          placeholder="企业、学校或机构名称"
+        />
+        <label for="role">职位（选填）</label>
+        <input
+          id="role"
+          name="role"
+          maxlength="100"
+          autocomplete="organization-title"
+        />
+      </fieldset>
+      <fieldset>
+        <legend>03 / 合作需求</legend>
+        <label for="message">需求说明 *</label>
+        <textarea
+          id="message"
+          name="message"
+          required
+          minlength="10"
+          maxlength="3000"
+          placeholder="请用至少 10 个字介绍项目背景、目前的需求或想解决的问题。"
+        ></textarea>
+        <label for="goal">合作目标（选填）</label>
+        <textarea
+          id="goal"
+          name="goal"
+          maxlength="1000"
+          placeholder="希望通过这次合作带来什么改变？"
+        ></textarea>
+        <div class="contact-fields-grid">
+          <div>
+            <label for="location">地点（选填）</label>
+            <input
+              id="location"
+              name="location"
+              maxlength="120"
+              placeholder="城市或线上"
+            />
+          </div>
+          <div>
+            <label for="timeline">预计时间（选填）</label>
+            <input
+              id="timeline"
+              name="timeline"
+              maxlength="160"
+              placeholder="开始及结束时间，或尚未确定"
+            />
+          </div>
+          <div>
+            <label for="participants">人数（选填）</label>
+            <input
+              id="participants"
+              name="participants"
+              maxlength="100"
+              placeholder="预计人数或范围"
+            />
+          </div>
+          <div>
+            <label for="budget">预算（选填）</label>
+            <input
+              id="budget"
+              name="budget"
+              maxlength="100"
+              placeholder="预算范围及币种，或尚未确定"
+            />
+          </div>
+        </div>
+        <label for="referenceUrl">资料链接（选填）</label>
+        <input
+          id="referenceUrl"
+          name="referenceUrl"
+          type="url"
+          maxlength="2000"
+          placeholder="https://，请确认我们有权限查看"
+        />
+      </fieldset>
       <label class="consent">
         <input type="checkbox" name="consent" required />{" "}
         <span>
@@ -103,50 +211,6 @@ const entry = pageBySlug("contact");
     <a href="/community/">查看社区业务 ↗</a>
   </section>
   <script>
-    const form = document.querySelector<HTMLFormElement>("[data-contact-form]");
-    const status = document.querySelector<HTMLElement>("[data-form-status]");
-    const business = new URLSearchParams(location.search).get("business");
-    const select = form?.querySelector<HTMLSelectElement>(
-      'select[name="business"]',
-    );
-    if (business && select) select.value = business;
-    form
-      ?.querySelector<HTMLInputElement>('input[name="idempotencyKey"]')
-      ?.setAttribute("value", crypto.randomUUID());
-    form?.addEventListener("submit", async (e) => {
-      e.preventDefault();
-      if (!status) return;
-      status.textContent = "正在发送…";
-      const fields = new FormData(form);
-      const payload = {
-        business: String(fields.get("business") || ""),
-        contact: String(fields.get("contact") || ""),
-        message: String(fields.get("message") || ""),
-        consent:
-          form.querySelector<HTMLInputElement>('input[name="consent"]')
-            ?.checked === true,
-        website: String(fields.get("website") || ""),
-        idempotencyKey: String(fields.get("idempotencyKey") || ""),
-      };
-      try {
-        const response = await fetch("/api/contact", {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify(payload),
-        });
-        const data = await response.json();
-        if (!response.ok)
-          throw new Error(data.message || "暂时无法发送，请稍后再试。");
-        status.textContent = data.message || "咨询已受理。";
-        status.className = "form-status success";
-        form
-          .querySelector<HTMLButtonElement>("button")
-          ?.setAttribute("disabled", "true");
-      } catch (error) {
-        status.textContent =
-          error instanceof Error ? error.message : "暂时无法发送，请稍后再试。";
-        status.className = "form-status error";
-      }
-    });
+    import "@/lib/contact-form";
   </script>
 </BaseLayout>

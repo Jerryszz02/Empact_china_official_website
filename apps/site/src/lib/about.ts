@@ -100,7 +100,17 @@ export function parseAboutBodyHtml(bodyHtml: string): AboutGroup[] | undefined {
         !matches(group.content, layout.intro) ||
         (layout.item.length
           ? !group.items.length ||
-            group.items.some((entry) => !matches(entry.content, layout.item))
+            group.items.some((entry) =>
+              group.kind === "awards"
+                ? !matches(entry.content.slice(0, 2), ["p", "p"]) ||
+                  entry.content
+                    .slice(2)
+                    .some(
+                      (html) =>
+                        !matches([html], ["p"]) && !matches([html], ["figure"]),
+                    )
+                : !matches(entry.content, layout.item),
+            )
           : group.items.length > 0)
       );
     })

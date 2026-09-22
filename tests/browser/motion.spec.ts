@@ -1,6 +1,6 @@
 import { test, expect, type Page } from "@playwright/test";
 
-const scenes = ["brand", "pathways", "conversation"] as const;
+const scenes = ["brand", "about-intro", "pathways", "conversation"] as const;
 
 async function scrollY(page: Page): Promise<number> {
   return page.evaluate(() => window.scrollY);
@@ -26,6 +26,10 @@ async function settleAt(page: Page, id: string): Promise<void> {
     top,
   );
   await expect.poll(() => sceneOffset(page, id)).toBeLessThan(3);
+  await expect(page.locator(`#${id} .motion-scene-content`)).toHaveCSS(
+    "opacity",
+    "1",
+  );
 }
 
 async function enhancementDisabled(page: Page): Promise<boolean> {
@@ -78,13 +82,13 @@ async function overlayOpacity(page: Page): Promise<number> {
     );
 }
 
-test("three scenes keep real paths, hero copy and navigation without runtime errors", async ({
+test("four scenes keep real paths, hero copy and navigation without runtime errors", async ({
   page,
 }, testInfo) => {
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
   await page.goto("/");
-  await expect(page.locator(".motion-home > section")).toHaveCount(3);
+  await expect(page.locator(".motion-home > section")).toHaveCount(4);
   await expect(page.locator("#brand h1")).toBeVisible();
   await expect(page.locator("#brand h1")).toContainText(/赋能更大的\s*影响力/);
   await expect(page.locator("#brand")).toContainText(
@@ -93,6 +97,8 @@ test("three scenes keep real paths, hero copy and navigation without runtime err
   await expect(page.locator("#brand")).not.toContainText(
     "Empowering Greater Empact",
   );
+  await expect(page.locator("#about-intro")).toContainText("Who we are");
+  await expect(page.locator('#about-intro a[href="/about/"]')).toHaveCount(1);
   await expect(page.locator("[data-motion-canvas]")).toHaveAttribute(
     "aria-hidden",
     "true",
@@ -139,15 +145,17 @@ test("shared paper overlay fades between scenes while enhanced sections stay tra
   }
   await settleAt(page, "brand");
   await expect.poll(() => overlayOpacity(page)).toBeLessThan(0.05);
+  await settleAt(page, "about-intro");
+  await expect.poll(() => overlayOpacity(page)).toBeGreaterThan(0.95);
   await settleAt(page, "conversation");
   await expect.poll(() => overlayOpacity(page)).toBeLessThan(0.05);
   await settleAt(page, "pathways");
   await expect.poll(() => overlayOpacity(page)).toBeGreaterThan(0.95);
-  // Drive a real scroll from brand to pathways with wheel input while an
+  // Drive a real scroll from brand to about-intro with wheel input while an
   // in-page probe samples the overlay every frame: the paper must actually
   // pass through intermediate opacities, not jump between the endpoints.
   await settleAt(page, "brand");
-  const span = await sceneTop(page, "pathways");
+  const span = await sceneTop(page, "about-intro");
   await page.evaluate(() => {
     const probe = window as unknown as {
       motionSamples: number[];
@@ -196,6 +204,10 @@ test("reduced motion keeps the static section colors and logo", async ({
     "rgb(18, 82, 132)",
   );
   await expect(page.locator("#pathways")).toHaveCSS(
+    "background-color",
+    "rgb(243, 240, 231)",
+  );
+  await expect(page.locator("#about-intro")).toHaveCSS(
     "background-color",
     "rgb(243, 240, 231)",
   );
@@ -264,11 +276,11 @@ test("one desktop wheel notch advances exactly one scene", async ({ page }) => {
   );
   await expect(page.locator("html")).toHaveCSS("scroll-snap-type", "none");
   await settleAt(page, "brand");
-  const pathways = await sceneTop(page, "pathways");
+  const aboutIntro = await sceneTop(page, "about-intro");
   await page.mouse.wheel(0, 100);
   await expect
     .poll(() => scrollY(page), { timeout: 1500 })
-    .toBeCloseTo(pathways, 0);
+    .toBeCloseTo(aboutIntro, 0);
 });
 
 test("two desktop wheel notches advance two scenes during animation", async ({
@@ -282,12 +294,12 @@ test("two desktop wheel notches advance two scenes during animation", async ({
     "wheel paging is desktop-only",
   );
   await settleAt(page, "brand");
-  const conversation = await sceneTop(page, "conversation");
+  const pathways = await sceneTop(page, "pathways");
   await page.mouse.wheel(0, 100);
   await page.mouse.wheel(0, 100);
   await expect
     .poll(() => scrollY(page), { timeout: 1800 })
-    .toBeCloseTo(conversation, 0);
+    .toBeCloseTo(pathways, 0);
 });
 
 test("trackpad inertia is treated as one wheel gesture", async ({ page }) => {
@@ -299,11 +311,11 @@ test("trackpad inertia is treated as one wheel gesture", async ({ page }) => {
     "wheel paging is desktop-only",
   );
   await settleAt(page, "brand");
-  const pathways = await sceneTop(page, "pathways");
+  const aboutIntro = await sceneTop(page, "about-intro");
   for (const delta of [12, 12, 12, 12, 12, 12, 12, 12, 12])
     await page.mouse.wheel(0, delta);
   await page.waitForTimeout(700);
-  expect(Math.abs((await scrollY(page)) - pathways)).toBeLessThanOrEqual(3);
+  expect(Math.abs((await scrollY(page)) - aboutIntro)).toBeLessThanOrEqual(3);
 });
 
 test("wheel reversal cancels the current page and returns to the prior scene", async ({
@@ -781,13 +793,13 @@ test("touch swipe advances and reverses naturally without snapping to an old sce
       touchPoints: [],
     });
   };
-  const pathways = await sceneTop(page, "pathways");
+  const aboutIntro = await sceneTop(page, "about-intro");
   await swipe(740, 290);
   await page.waitForTimeout(700);
   const advanced = await scrollY(page);
   // A partial natural swipe must land between anchors, not on an old screen.
   expect(advanced).toBeGreaterThan(150);
-  expect(advanced).toBeLessThan(pathways - 72);
+  expect(advanced).toBeLessThan(aboutIntro - 72);
   expect(advanced).toBeGreaterThan(72);
   await swipe(290, 740);
   await page.waitForTimeout(700);

@@ -58,7 +58,7 @@ test("homepage paths, dropdowns, mobile navigation and draft boundary", async ({
     page.locator(".footer-links").getByRole("link", { name: "后台管理" }),
   ).toHaveAttribute("href", "/admin");
   await expect(page.locator("#nav-corporate a")).toHaveCount(5);
-  await expect(page.locator(".motion-home > section")).toHaveCount(3);
+  await expect(page.locator(".motion-home > section")).toHaveCount(4);
   expect(
     await page
       .locator("img")
@@ -258,7 +258,7 @@ test("redesign remains readable at narrow and large widths with reduced motion",
         ),
     ).toBe(0);
     await page.goto("/contact/");
-    await expect(page.getByLabel("联系方式", { exact: true })).toBeVisible();
+    await expect(page.getByLabel("联系方式 *", { exact: true })).toBeVisible();
     await expect(page.locator("[data-form-status]")).toContainText(/咨询/);
     expect(
       await page.evaluate(
@@ -279,7 +279,7 @@ test("no-script pages retain content and navigation", async ({
   const page = await context.newPage();
   await page.goto(baseURL!);
   await expect(page.locator("h1")).toBeVisible();
-  await expect(page.locator(".motion-home > section")).toHaveCount(3);
+  await expect(page.locator(".motion-home > section")).toHaveCount(4);
   await expect(page.locator(".motion-logo").first()).toBeVisible();
   await expect(page.locator("html")).toHaveCSS("scroll-snap-type", "none");
   await expect(page.locator("#conversation")).toContainText(

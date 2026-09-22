@@ -84,7 +84,7 @@ export function createPublicServer(options: {
       try {
         for await (const chunk of req) {
           size += chunk.length;
-          if (size > 16_384)
+          if (size > 32_768)
             return json(res, 413, { message: "提交内容过长。" });
           chunks.push(chunk);
         }

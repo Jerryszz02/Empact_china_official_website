@@ -48,7 +48,29 @@ const pathways = [
         <h1>赋能更大的影响力</h1>
       </div>
       <span class="motion-scene-index" aria-hidden="true">
-        01 / 03
+        01 / 04
+      </span>
+    </section>
+    <section
+      id="about-intro"
+      class="motion-scene motion-scene-about-intro"
+      data-motion-scene
+    >
+      <div class="motion-scene-content">
+        <p class="eyebrow">Who we are</p>
+        <h2>我们是谁</h2>
+        <p class="motion-about-copy">
+          Empact 是一家 2011
+          年成立于新加坡、以能力建设为核心的社会企业，已为亚太地区 2,000
+          多家公益机构和企业赋能。2023
+          年进入中国大陆，通过咨询、培训与体验式项目，连接专业能力与真实需求，推动可持续的社会影响。
+        </p>
+        <a class="button motion-about-button" href="/about/">
+          了解 Empact <span aria-hidden="true">↗</span>
+        </a>
+      </div>
+      <span class="motion-scene-index" aria-hidden="true">
+        02 / 04
       </span>
     </section>
     <section
@@ -86,7 +108,7 @@ const pathways = [
         </div>
       </div>
       <span class="motion-scene-index" aria-hidden="true">
-        02 / 03
+        03 / 04
       </span>
     </section>
     <section
@@ -114,7 +136,7 @@ const pathways = [
         </a>
       </div>
       <span class="motion-scene-index" aria-hidden="true">
-        03 / 03
+        04 / 04
       </span>
     </section>
   </div>
@@ -142,7 +164,7 @@ const pathways = [
   }
   .motion-stage {
     position: relative;
-    min-height: 300svh;
+    min-height: 400svh;
   }
 
   /* Shared fixed blue background with a paper layer driven by scroll. */
@@ -186,6 +208,12 @@ const pathways = [
     text-align: left;
     padding-top: max(7rem, var(--motion-header-space, 6rem));
     justify-content: center;
+  }
+  .motion-scene-about-intro {
+    background-color: var(--motion-paper);
+    color: var(--motion-blue);
+    align-items: flex-start;
+    text-align: left;
   }
   :global(html.motion-live) .motion-scene {
     background-color: transparent;
@@ -270,6 +298,17 @@ const pathways = [
   }
   .motion-scene p {
     max-width: 42rem;
+  }
+  .motion-about-copy {
+    max-width: 42rem;
+    font-size: clamp(1rem, 1.5vw, 1.25rem);
+    line-height: 1.8;
+  }
+  .motion-about-button {
+    margin-top: 1rem;
+    color: var(--motion-blue);
+    border-color: var(--motion-blue);
+    border-radius: 3rem;
   }
 
   .motion-canvas {
