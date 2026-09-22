@@ -74,10 +74,31 @@ test("privacy update changes only consultation notices and preserves custom cont
   const update = updateExperienceBody("privacy", legacy, mapping);
   assert.equal(update.changed, true);
   assert.match(JSON.stringify(update.body), /机构名称/);
+  assert.match(JSON.stringify(update.body), /更新日期：2026 年 9 月 22 日/);
   assert.match(JSON.stringify(update.body), /另一条说明/);
   assert.match(JSON.stringify(update.body), /保留自定义声明与联系方式/);
   assert.equal(
     updateExperienceBody("privacy", update.body, mapping).changed,
     false,
   );
+});
+
+test("privacy update rejects missing, duplicate or unrefreshable revision dates without mutating the draft", () => {
+  const date =
+    "<p>更新日期：2026 年 9 月 22 日。本政策自本网站公布之日起适用。</p>";
+  for (const replacement of [
+    "",
+    "<p>更新日期：2026-09-20。本政策自本网站公布之日起适用。</p>",
+    date + date,
+    "<p>更新日期：2026 年 9 月 20 日。更新日期：2026 年 9 月 21 日。</p>",
+    "<p>更新日期：<strong>2026 年 9 月 20 日</strong>。保留编辑内容。</p>",
+  ]) {
+    const source = htmlToLexical(privacyBodyHtml.replace(date, replacement));
+    const original = structuredClone(source);
+    assert.throws(
+      () => updateExperienceBody("privacy", source, mapping),
+      /更新日期.*需人工核对/,
+    );
+    assert.deepEqual(source, original);
+  }
 });

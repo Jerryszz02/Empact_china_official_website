@@ -121,21 +121,36 @@ export function updateExperienceBody(
     visit(children);
     if (inquiryCount !== 1 || deliveryCount !== 1)
       throw new Error("privacy: 咨询信息说明不唯一或缺失，需人工核对。");
-    const date = children.find(
+    const dates = children.filter(
       (node) =>
         node.type === "paragraph" && plain(node).startsWith("更新日期："),
     );
-    if (date) {
-      const replaceDate = (node: Node) => {
-        if (node.text)
-          node.text = node.text.replace(
-            /更新日期：\d{4} 年 \d{1,2} 月 \d{1,2} 日/,
-            "更新日期：2026 年 9 月 22 日",
-          );
-        node.children?.forEach(replaceDate);
-      };
-      replaceDate(date);
-    }
+    if (dates.length !== 1)
+      throw new Error("privacy: 更新日期不唯一或缺失，需人工核对。");
+    const date = dates[0];
+    const originalDate = plain(date);
+    const pattern = /^更新日期：\d{4} 年 \d{1,2} 月 \d{1,2} 日/;
+    const updatedDate = "更新日期：2026 年 9 月 22 日";
+    if (
+      !pattern.test(originalDate) ||
+      originalDate.split("更新日期：").length !== 2
+    )
+      throw new Error("privacy: 更新日期格式无法识别，需人工核对。");
+    let replacements = 0;
+    const replaceDate = (node: Node) => {
+      if (node.text)
+        node.text = node.text.replace(pattern, () => {
+          replacements++;
+          return updatedDate;
+        });
+      node.children?.forEach(replaceDate);
+    };
+    replaceDate(date);
+    if (
+      replacements !== 1 ||
+      plain(date) !== originalDate.replace(pattern, updatedDate)
+    )
+      throw new Error("privacy: 更新日期未能完整替换，需人工核对。");
   }
   return { body, changed: !isDeepStrictEqual(source, body) };
 }
