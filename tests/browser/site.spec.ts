@@ -387,8 +387,11 @@ test("footer is compact and uses the transparent white logo", async ({
   await expect(china).toContainText("中国 · 上海");
   await expect(china).toContainText("上海市虹漕路88号越虹广场B座1609");
   await expect(
-    china.locator('a[href="mailto:empactsg@126.com"]'),
+    china.getByRole("link", { name: "maggie.yang@empact.sg", exact: true }),
   ).toBeVisible();
+  await expect(
+    china.getByRole("link", { name: "maggie.yang@empact.sg", exact: true }),
+  ).toHaveAttribute("href", "mailto:maggie.yang@empact.sg");
   const singapore = footer.locator(".footer-office-singapore");
   await expect(singapore).toContainText("新加坡");
   await expect(singapore).toContainText("Enabling Village");
