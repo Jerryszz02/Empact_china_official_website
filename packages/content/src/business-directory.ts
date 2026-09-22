@@ -212,7 +212,7 @@ const linkedCases: LinkedCase[] = [
   },
   {
     slug: "heart-friends-coffee-workshop",
-    title: "善淘×心朋友拉花",
+    title: "心朋友拉花",
     business: "monthly-camp",
     summary: "走进梦工坊咖啡厅，与“心朋友”共绘帆布包，学习咖啡拉花。",
     url: "https://mp.weixin.qq.com/s/MpH82pVhnbNNZlrEIE5gyQ",
@@ -660,7 +660,7 @@ export const directoryMedia: Media[] = [
   {
     id: "directory-heart-friends-coffee-workshop",
     filename: "directory-heart-friends-coffee-workshop.webp",
-    alt: "善淘×心朋友拉花原推文活动图片",
+    alt: "心朋友拉花原推文活动图片",
     width: 1080,
     height: 810,
     mimeType: "image/webp",

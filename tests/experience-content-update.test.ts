@@ -60,6 +60,41 @@ test("unrecognized about structures fail before modifying the input", () => {
   );
   assert.deepEqual(source, copy);
 });
+test("about update corrects the three legacy location counts and preserves unrelated numbers", async () => {
+  const legacy =
+    aboutBodyHtml
+      .replace("亚太地区 12 个地点", "亚太地区 13 个地点")
+      .replaceAll("<h3>12</h3>", "<h3>13</h3>") +
+    "<p>另一个项目有 13 位伙伴。</p>";
+  const source = htmlToLexical(legacy, mapping);
+  const original = structuredClone(source);
+  const update = updateExperienceBody("about", source, mapping);
+  const result = await serializeLexicalBody(update.body, media);
+  assert.match(result.html, /亚太地区 12 个地点/);
+  assert.equal((result.html.match(/<h3>12<\/h3>/g) || []).length, 2);
+  assert.match(result.html, /另一个项目有 13 位伙伴/);
+  assert.deepEqual(source, original);
+  assert.equal(
+    updateExperienceBody("about", update.body, mapping).changed,
+    false,
+  );
+});
+test("about update rejects changed or ambiguous location counts without modifying the draft", () => {
+  for (const html of [
+    aboutBodyHtml.replace("亚太地区 12 个地点", "亚太地区 14 个地点"),
+    aboutBodyHtml.replace("<h3>12</h3>", "<h3>14</h3>"),
+    aboutBodyHtml.replace("<li>亚太地区 12 个地点</li>", ""),
+    aboutBodyHtml + "<h3>13</h3><p>在亚太地区支持的地点（个）</p>",
+  ]) {
+    const source = htmlToLexical(html, mapping);
+    const original = structuredClone(source);
+    assert.throws(
+      () => updateExperienceBody("about", source, mapping),
+      /地点数量.*需人工核对/,
+    );
+    assert.deepEqual(source, original);
+  }
+});
 test("privacy update changes only consultation notices and preserves custom content", () => {
   const source = htmlToLexical(
     privacyBodyHtml + "<p>保留自定义声明与联系方式。</p>",

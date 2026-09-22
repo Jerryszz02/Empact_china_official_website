@@ -27,6 +27,46 @@ const nodesFrom = (
   media?: ReadonlyMap<string, string | number>,
 ) => (htmlToLexical(html, media) as Body).root.children;
 
+/** Match each location count by its label, never by an unscoped number. */
+function updateAboutLocations(children: Node[]) {
+  const compact = (node: Node) => plain(node).replace(/\s+/g, "");
+  const hero: Node[] = [];
+  const visit = (nodes: Node[]) => {
+    for (const node of nodes) {
+      if (node.type === "listitem" && /^亚太地区\d+个地点$/.test(compact(node)))
+        hero.push(node);
+      if (node.children) visit(node.children);
+    }
+  };
+  visit(children);
+  const labels = ["影响力覆盖的亚太地区地点", "在亚太地区支持的地点（个）"];
+  const groups = [
+    hero,
+    ...labels.map((label) =>
+      children.filter(
+        (node, index) =>
+          node.type === "heading" &&
+          node.tag === "h3" &&
+          children[index + 1]?.type === "paragraph" &&
+          compact(children[index + 1]) === label,
+      ),
+    ),
+  ];
+  for (const [index, candidates] of groups.entries()) {
+    const node = candidates[0];
+    const expected = index === 0 ? /^亚太地区(12|13)个地点$/ : /^(12|13)$/;
+    if (candidates.length !== 1 || !expected.test(compact(node)))
+      throw new Error("about: 亚太地点数量不唯一或已变更，需人工核对。");
+    const replace = (item: Node) => {
+      if (item.text) item.text = item.text.replace(/13/g, "12");
+      item.children?.forEach(replace);
+    };
+    replace(node);
+    if (compact(node) !== (index === 0 ? "亚太地区12个地点" : "12"))
+      throw new Error("about: 亚太地点数量未能完整替换，需人工核对。");
+  }
+}
+
 /** Change only the selected Lexical blocks, preserving every other node verbatim. */
 export function updateExperienceBody(
   slug: "about" | "privacy",
@@ -38,6 +78,7 @@ export function updateExperienceBody(
     throw new Error(`${slug}: 无有效正文，未更新。`);
   const children = body.root.children;
   if (slug === "about") {
+    updateAboutLocations(children);
     const start = children.findIndex(
       (node) =>
         node.type === "heading" &&
