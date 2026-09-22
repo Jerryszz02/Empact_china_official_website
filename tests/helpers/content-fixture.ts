@@ -5,8 +5,16 @@ import type { Snapshot } from "@empact/content/schema";
 // out of those isolated scenarios; brand-content and browser tests cover it.
 export const frameworkSnapshot: Snapshot = {
   ...structuredClone(previewSnapshot),
-  entries: structuredClone(previewSnapshot.entries).filter(
-    (entry) => entry.kind !== "case",
-  ),
+  entries: structuredClone(previewSnapshot.entries)
+    .filter((entry) => entry.kind !== "case")
+    .map((entry) =>
+      entry.slug === "about"
+        ? {
+            ...entry,
+            bodyHtml: entry.bodyHtml.replace(/<figure>[\s\S]*?<\/figure>/g, ""),
+            bodyMediaIds: [],
+          }
+        : entry,
+    ),
   media: [],
 };

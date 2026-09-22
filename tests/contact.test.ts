@@ -1,7 +1,12 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
-import { createContactHandler, smtpDelivery } from "../scripts/contact.js";
+import {
+  contactSchema,
+  createContactHandler,
+  inquiryMailText,
+  smtpDelivery,
+} from "../scripts/contact.js";
 
 const origin = "https://empact.cn";
 const inquiry = () => ({
@@ -10,6 +15,102 @@ const inquiry = () => ({
   message: "希望了解企业志愿活动的合作流程。",
   consent: true,
   idempotencyKey: randomUUID(),
+});
+const detailedInquiry = () => ({
+  ...inquiry(),
+  segment: "corporate",
+  business: "corporate-volunteering",
+  businessTitle: "企业志愿者、CSR与公益咨询",
+  name: "测试联系人",
+  organization: "测试机构",
+  role: "项目负责人",
+  goal: "让团队参与社区服务",
+  location: "上海",
+  timeline: "十月至十一月",
+  participants: "30—50 人",
+  budget: "人民币 5 万元以内",
+  referenceUrl: "https://example.com/project",
+});
+test("new inquiry validates optional details and produces a complete readable email", () => {
+  const data = contactSchema.parse(detailedInquiry());
+  const mail = inquiryMailText(data);
+  assert.match(mail, /企业服务 \/ 企业志愿者、CSR与公益咨询/);
+  for (const key of [
+    "name",
+    "organization",
+    "role",
+    "goal",
+    "location",
+    "timeline",
+    "participants",
+    "budget",
+    "referenceUrl",
+  ] as const)
+    assert.ok(mail.includes(data[key]), key);
+  assert.equal(
+    contactSchema.safeParse({ ...detailedInquiry(), name: " " }).success,
+    false,
+  );
+  assert.equal(
+    contactSchema.safeParse({ ...detailedInquiry(), business: "" }).success,
+    false,
+  );
+  for (const referenceUrl of [
+    "javascript:alert(1)",
+    "ftp://example.com/file",
+    "not a link",
+  ])
+    assert.equal(
+      contactSchema.safeParse({ ...detailedInquiry(), referenceUrl }).success,
+      false,
+    );
+  assert.equal(
+    contactSchema.safeParse({ ...detailedInquiry(), role: "name\nInjected" })
+      .success,
+    false,
+  );
+  assert.equal(
+    contactSchema.safeParse(inquiry()).success,
+    true,
+    "legacy requests remain accepted",
+  );
+});
+test("changing any delivered new field invalidates a reused submission key", async () => {
+  for (const field of [
+    "segment",
+    "businessTitle",
+    "name",
+    "organization",
+    "role",
+    "goal",
+    "location",
+    "timeline",
+    "participants",
+    "budget",
+    "referenceUrl",
+  ] as const) {
+    let delivered = 0;
+    const handle = createContactHandler({
+      origin,
+      deliver: async () => {
+        delivered++;
+      },
+    });
+    const original = detailedInquiry();
+    assert.equal((await handle(original, origin, field)).status, 200);
+    const changed =
+      field === "segment"
+        ? "school"
+        : field === "referenceUrl"
+          ? "https://example.com/changed"
+          : "已修改";
+    assert.equal(
+      (await handle({ ...original, [field]: changed }, origin, field)).status,
+      409,
+      field,
+    );
+    assert.equal(delivered, 1);
+  }
 });
 test("contact validates origin, consent and payload without delivering", async () => {
   let count = 0;

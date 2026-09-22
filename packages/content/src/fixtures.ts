@@ -1,4 +1,5 @@
 import { aboutBodyHtml, aboutSummary } from "./about.js";
+import { aboutMedia } from "./about-awards.js";
 import {
   privacyBodyHtml,
   privacySummary,
@@ -68,6 +69,7 @@ const pages: Entry[] = [
     title: "关于 Empact",
     summary: aboutSummary,
     bodyHtml: aboutBodyHtml,
+    bodyMediaIds: aboutMedia.map((item) => item.id),
     approved: false,
   },
   {
@@ -133,5 +135,5 @@ export const previewSnapshot: Snapshot = {
     ...directoryBusinesses,
     ...directoryCases,
   ],
-  media: directoryMedia,
+  media: [...directoryMedia, ...aboutMedia],
 };

@@ -106,8 +106,10 @@ const labels = [
                   {group.items.map((item) => (
                     <div class="award">
                       <span class="award-year" set:html={item.headingHtml} />
-                      <Fragment set:html={aboutInnerHtml(item.content[0])} />
-                      <span set:html={aboutInnerHtml(item.content[1])} />
+                      <div
+                        class="award-content"
+                        set:html={item.content.join("")}
+                      />
                     </div>
                   ))}
                 </div>
@@ -137,7 +139,17 @@ const labels = [
                 </div>
               )}
               {group.notes.map((html) => (
-                <div class="lead-note" set:html={html} />
+                <div
+                  class:list={[
+                    "lead-note",
+                    {
+                      "business-boundary":
+                        group.kind === "services" &&
+                        aboutPlainText(html).startsWith("业务边界"),
+                    },
+                  ]}
+                  set:html={html}
+                />
               ))}
             </section>
           ))}

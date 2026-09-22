@@ -120,6 +120,20 @@ export async function verifyCmsUI({
     await page.locator('input[name="password"]').fill(password);
     await page.locator('button[type="submit"]').click();
     await page.waitForURL(base + "/admin");
+    const homepage = page
+      .getByRole("navigation", { name: "官网入口" })
+      .getByRole("link", { name: "返回官网首页" });
+    await expect(homepage).toHaveAttribute("href", "/");
+    await expect(homepage).toHaveAttribute("target", "_blank");
+    const [popup] = await Promise.all([
+      page.context().waitForEvent("page", { timeout: 15_000 }),
+      homepage.click({ timeout: 10_000 }),
+    ]);
+    await popup.waitForLoadState("domcontentloaded");
+    assert.equal(new URL(popup.url()).origin, base);
+    assert.equal(new URL(popup.url()).pathname, "/");
+    await expect(page).toHaveURL(base + "/admin");
+    await popup.close();
     await expect(
       page.getByRole("heading", { name: "项目管理", exact: true }),
     ).toBeVisible();

@@ -9,6 +9,11 @@ export function getStaticPaths() {
 }
 const { entry } = Astro.props;
 const parent = byId(entry.parentId);
+const directoryUrl = parent
+  ? pathFor(parent)
+  : entry.segment
+    ? `/${entry.segment}/`
+    : "/";
 const publishedAt = entry.publishedAt;
 const publishedLabel =
   publishedAt && Number.isFinite(Date.parse(publishedAt))
@@ -40,11 +45,9 @@ const relatedCases = [
   type="article"
 >
   <section class="page-hero article-hero">
-    {parent && (
-      <a class="back-link" href={pathFor(parent)}>
-        <span aria-hidden="true">←</span> 返回{parent.title}
-      </a>
-    )}
+    <a class="back-link" href={directoryUrl}>
+      <span aria-hidden="true">←</span> 返回上级目录
+    </a>
     <span class="eyebrow">Case study</span>
     <h1>{entry.title}</h1>
     <p class="page-summary">{entry.summary}</p>
@@ -112,5 +115,11 @@ const relatedCases = [
         </a>
       )}
     </section>
+    <nav class="article-return" aria-label="案例目录">
+      <a class="button button-primary" href={directoryUrl}>
+        <span aria-hidden="true">←</span> 返回上级目录
+      </a>
+      {parent && <span>{parent.title}</span>}
+    </nav>
   </section>
 </BaseLayout>

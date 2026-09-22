@@ -174,6 +174,16 @@
   max-width: 44rem;
   margin: 1.5rem 0 0;
 }
+.about-layout .business-boundary {
+  color: var(--blue);
+  background: #e6eff3;
+  padding: 1rem 1.2rem;
+  max-width: none;
+  line-height: 1.8;
+}
+.about-layout .business-boundary strong {
+  font-weight: 750;
+}
 
 .about-layout .card-grid {
   display: grid;
@@ -291,6 +301,30 @@
 .about-layout .award {
   border: 1px solid var(--dark-line);
   padding: 1.3rem 1.4rem;
+}
+.about-layout .award-content p {
+  font-size: 0.9rem;
+  line-height: 1.75;
+  overflow-wrap: anywhere;
+  margin: 0.65rem 0;
+}
+.about-layout .award-content p:nth-child(2) {
+  color: var(--secondary);
+  font-size: 0.85rem;
+}
+.about-layout .award figure {
+  margin: 1.2rem 0 0;
+}
+.about-layout .award img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.about-layout .award figcaption {
+  font-size: 0.8rem;
+  line-height: 1.6;
+  color: var(--secondary);
+  margin-top: 0.6rem;
 }
 .about-layout .award-year {
   font:

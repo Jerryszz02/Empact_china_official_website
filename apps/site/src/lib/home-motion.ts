@@ -171,15 +171,25 @@ function measureLayout() {
 
 function paperAt(y: number) {
   const first = anchors[0];
-  const middle = anchors[1];
-  const last = anchors[2];
-  if (first === undefined || middle === undefined || last === undefined)
+  const second = anchors[1];
+  const penultimate = anchors[anchors.length - 2];
+  const last = anchors[anchors.length - 1];
+  if (
+    first === undefined ||
+    second === undefined ||
+    penultimate === undefined ||
+    last === undefined
+  )
     return 0;
   if (y <= first) return 0;
-  if (y < middle)
-    return smooth(((y - first) / Math.max(1, middle - first) - 0.5) / 0.3);
+  if (y < second)
+    return smooth(((y - first) / Math.max(1, second - first) - 0.5) / 0.3);
+  if (y < penultimate) return 1;
   if (y < last)
-    return 1 - smooth(((y - middle) / Math.max(1, last - middle) - 0.5) / 0.3);
+    return (
+      1 -
+      smooth(((y - penultimate) / Math.max(1, last - penultimate) - 0.5) / 0.3)
+    );
   return 0;
 }
 
@@ -356,7 +366,7 @@ function draw(now: number): boolean {
   updateCanvasClip();
 
   const first = anchors[0] ?? 0;
-  const last = anchors[2] ?? first + height * 2;
+  const last = anchors[anchors.length - 1] ?? first + height * 2;
   const progress = clamp((scrollY - first) / Math.max(1, last - first));
   const spread =
     smooth((progress - 0.1) / 0.32) * (1 - smooth((progress - 0.65) / 0.3));
@@ -378,7 +388,8 @@ function draw(now: number): boolean {
     );
     const heroCenterY = (heroBox.top + heroBox.bottom) / 2 - (anchors[0] ?? 0);
     const closingCenterY =
-      (closingBox.top + closingBox.bottom) / 2 - (anchors[2] ?? 0);
+      (closingBox.top + closingBox.bottom) / 2 -
+      (anchors[anchors.length - 1] ?? 0);
     centerY =
       lerp(heroCenterY, closingCenterY, finish) - Math.max(0, scrollY - last);
     size = lerp(
@@ -622,7 +633,7 @@ function updateLayout() {
   schedule();
 }
 
-if (stage && scenes.length === 3) {
+if (stage && scenes.length >= 2) {
   body.classList.add("motion-js");
   const observer = new ResizeObserver(updateLayout);
   scenes.forEach((scene) => observer.observe(scene));

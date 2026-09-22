@@ -1,0 +1,83 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+import { aboutBodyHtml } from "../packages/content/src/about.js";
+import {
+  aboutAwardsHtml,
+  aboutMedia,
+  businessBoundaryHtml,
+  businessBoundaryText,
+} from "../packages/content/src/about-awards.js";
+import { privacyBodyHtml } from "../packages/content/src/legal.js";
+import { htmlToLexical } from "../apps/cms/src/content-migration.js";
+import { serializeLexicalBody } from "../apps/cms/src/cms-data.js";
+import { updateExperienceBody } from "../apps/cms/src/experience-content-update.js";
+import { parseAboutBodyHtml } from "../apps/site/src/lib/about.js";
+
+const mapping = new Map(
+  aboutMedia.map((item, index) => [`/media/${item.filename}`, index + 100]),
+);
+const media = aboutMedia.map((item, index) => ({
+  ...item,
+  id: String(index + 100),
+}));
+const oldAwards =
+  "<h3>2022</h3><p><strong>总统志愿服务与慈善奖</strong></p><p>旧说明</p><h3>2023</h3><p>总统挑战社会企业奖</p><p>旧说明</p><h3>2025 — 2027</h3><p>Company of Good 三星奖</p><p>旧说明</p><h3>2025</h3><p>ECI 公益创新奖</p><p>旧说明</p>";
+test("targeted update preserves unrelated CMS nodes and custom awards; media survives serialization", async () => {
+  const old = aboutBodyHtml
+    .replace(
+      aboutAwardsHtml,
+      oldAwards + "<h3>2024</h3><p>自定义荣誉</p><p>保留我的说明</p>",
+    )
+    .replace(
+      businessBoundaryHtml,
+      `<blockquote><p>${businessBoundaryText}</p></blockquote>`,
+    )
+    .replace("152", "153");
+  const source = htmlToLexical(old) as any;
+  source.root.children[0].customMetadata = "must stay";
+  const original = structuredClone(source);
+  const updated = updateExperienceBody("about", source, mapping);
+  assert.equal(updated.changed, true);
+  assert.deepEqual(source, original, "source is not mutated");
+  assert.deepEqual(updated.body.root.children[0], source.root.children[0]);
+  const result = await serializeLexicalBody(updated.body, media);
+  assert.equal(result.mediaIds.length, 3);
+  assert.match(result.html, /153/);
+  assert.match(result.html, /保留我的说明/);
+  assert.match(result.html, /<strong>我们不做大额捐赠/);
+  assert.equal(parseAboutBodyHtml(result.html)?.[6].items.length, 5);
+  assert.equal(
+    updateExperienceBody("about", updated.body, mapping).changed,
+    false,
+  );
+});
+test("unrecognized about structures fail before modifying the input", () => {
+  const source = htmlToLexical("<h2>自定义公司介绍</h2><p>作者内容</p>");
+  const copy = structuredClone(source);
+  assert.throws(
+    () => updateExperienceBody("about", source, mapping),
+    /需人工核对/,
+  );
+  assert.deepEqual(source, copy);
+});
+test("privacy update changes only consultation notices and preserves custom content", () => {
+  const source = htmlToLexical(
+    privacyBodyHtml + "<p>保留自定义声明与联系方式。</p>",
+  ) as any;
+  source.root.children[2].customMetadata = "preserve";
+  const result = updateExperienceBody("privacy", source, mapping);
+  assert.equal(result.changed, false, "current template is idempotent");
+  assert.deepEqual(result.body.root.children[2], source.root.children[2]);
+  const legacy = htmlToLexical(
+    "<p>更新日期：2026 年 9 月 20 日。</p><ul><li><strong>咨询信息：</strong>旧字段</li><li>另一条说明</li></ul><p>咨询信息仅供处理该事项所需的工作人员使用。旧说明</p><p>保留自定义声明与联系方式。</p>",
+  );
+  const update = updateExperienceBody("privacy", legacy, mapping);
+  assert.equal(update.changed, true);
+  assert.match(JSON.stringify(update.body), /机构名称/);
+  assert.match(JSON.stringify(update.body), /另一条说明/);
+  assert.match(JSON.stringify(update.body), /保留自定义声明与联系方式/);
+  assert.equal(
+    updateExperienceBody("privacy", update.body, mapping).changed,
+    false,
+  );
+});

@@ -4,6 +4,9 @@
   "type": "module",
   "exports": {
     "./schema": "./src/schema.ts",
+    "./inquiry": "./src/inquiry.ts",
+    "./about-awards": "./src/about-awards.ts",
+    "./legal": "./src/legal.ts",
     "./fixtures": "./src/fixtures.ts"
   }
 }

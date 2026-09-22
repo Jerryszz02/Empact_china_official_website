@@ -288,6 +288,25 @@ try {
       body: JSON.stringify(data),
     });
   const seeded = await request("/api/content?limit=100");
+  const seededMedia = await request("/api/media?limit=1000");
+  const about = seeded.docs.find(
+    (doc: { slug: string }) => doc.slug === "about",
+  );
+  const aboutBody = await serializeLexicalBody(
+    about.body,
+    seededMedia.docs.map((item: any) => ({ ...item, id: String(item.id) })),
+  );
+  assert.equal(
+    aboutBody.mediaIds.length,
+    3,
+    "about seed retains three award photos",
+  );
+  assert.equal(load(aboutBody.html)("figure img").length, 3);
+  for (const id of aboutBody.mediaIds)
+    assert.equal(
+      seededMedia.docs.find((item: any) => String(item.id) === id)?.approved,
+      false,
+    );
   for (const slug of ["privacy", "terms"]) {
     const source = directorySnapshot.entries.find(
       (entry) => entry.kind === "page" && entry.slug === slug,
