@@ -185,6 +185,15 @@ export interface Content {
    * 填写完整的 http:// 或 https:// 链接，访客点击详情时直接打开外链；留空则使用下方网页正文。已有正文会保留，清空外链后可继续编辑。
    */
   detailUrl?: string | null;
+  /**
+   * 填写 YYYY-MM-DD，例如 2026-09-23。多日活动、长期项目或每周安排请填写在下方活动时间说明。
+   */
+  eventDate?: string | null;
+  /**
+   * 可填日期范围、项目周期或固定安排，例如 9月23日至25日、长期、每周六。
+   */
+  duration?: string | null;
+  location?: string | null;
   body?: {
     root: {
       type: string;
@@ -207,15 +216,12 @@ export interface Content {
   projectStatus?: ('upcoming' | 'open' | 'ended' | 'consultation') | null;
   audience?: string | null;
   operator?: string | null;
-  location?: string | null;
-  duration?: string | null;
   deadline?: string | null;
   registrationUrl?: string | null;
   publishedAt?: string | null;
   sourceName?: string | null;
   sourceUrl?: string | null;
   sourceType?: ('media' | 'partner' | 'official' | 'company' | 'sponsored') | null;
-  eventDate?: string | null;
   related?: (number | Content)[] | null;
   faqs?:
     | {
@@ -394,6 +400,9 @@ export interface ContentSelect<T extends boolean = true> {
   order?: T;
   image?: T;
   detailUrl?: T;
+  eventDate?: T;
+  duration?: T;
+  location?: T;
   body?: T;
   kind?: T;
   slug?: T;
@@ -402,15 +411,12 @@ export interface ContentSelect<T extends boolean = true> {
   projectStatus?: T;
   audience?: T;
   operator?: T;
-  location?: T;
-  duration?: T;
   deadline?: T;
   registrationUrl?: T;
   publishedAt?: T;
   sourceName?: T;
   sourceUrl?: T;
   sourceType?: T;
-  eventDate?: T;
   related?: T;
   faqs?:
     | T

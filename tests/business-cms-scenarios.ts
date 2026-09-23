@@ -75,6 +75,9 @@ export async function verifyBusinessWorkflow(options: {
     summary: "独立案例摘要。",
     sourceName: "项目原有来源",
     sourceUrl: "  https://example.invalid/case-source  ",
+    eventDate: " 2026-09-23 ",
+    duration: " 两天 ",
+    location: " 上海徐汇 ",
     body,
     parent: Number(businessId),
     image: coverId,
@@ -83,6 +86,25 @@ export async function verifyBusinessWorkflow(options: {
   const id = String(created.doc.id),
     url = "/cases/business-workflow-case/";
   assert.equal(created.doc.sourceUrl, "https://example.invalid/case-source");
+  assert.equal(created.doc.eventDate, "2026-09-23");
+  assert.equal(created.doc.duration, "两天");
+  assert.equal(created.doc.location, "上海徐汇");
+  const invalidDate = await fetch(base + `/api/content/${id}`, {
+    method: "PATCH",
+    headers: {
+      Cookie: cookies,
+      Origin: base,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ eventDate: "2026-02-30" }),
+  });
+  assert.equal(
+    invalidDate.status,
+    400,
+    "invalid activity dates are rejected on save",
+  );
+  assert.match(JSON.stringify(await invalidDate.json()), /活动日期/);
+  assert.equal((await request(`/api/content/${id}`)).eventDate, "2026-09-23");
   const invalidSource = await fetch(base + `/api/content/${id}`, {
     method: "PATCH",
     headers: {
@@ -146,6 +168,13 @@ export async function verifyBusinessWorkflow(options: {
   const firstDate = (await request(`/api/content/${id}`)).publishedAt;
   assert.ok(firstDate);
   assert.match(await publicText(url), /案例原版正文/);
+  assert.match(await publicText(url), /2026年9月23日/);
+  assert.match(await publicText(url), /地点：上海徐汇/);
+  const originalBusiness = (
+    await request("/api/business-admin/state")
+  ).items.find((item: any) => item.id === businessId);
+  assert.match(await publicText(originalBusiness.url), /2026年9月23日/);
+  assert.match(await publicText(originalBusiness.url), /地点：上海徐汇/);
   assert.doesNotMatch(
     await publicText(url),
     /项目原有来源|href="https:\/\/example.invalid\/case-source"/,
@@ -163,8 +192,13 @@ export async function verifyBusinessWorkflow(options: {
 
   await request(`/api/content/${id}`, "PATCH", {
     body: lexical("案例修改后正文。"),
+    eventDate: "2026-09-24",
+    duration: "三天",
+    location: "杭州",
   });
   assert.match(await publicText(url), /案例原版正文/);
+  assert.match(await publicText(url), /2026年9月23日/);
+  assert.doesNotMatch(await publicText(url), /2026年9月24日/);
   let items = (await request("/api/business-admin/state")).items;
   assert.equal(items.find((item: any) => item.id === id).modified, true);
   const otherBusiness = items.find(
@@ -180,11 +214,25 @@ export async function verifyBusinessWorkflow(options: {
   });
   await action("publish", id);
   assert.match(await publicText(url), /案例修改后正文/);
+  assert.match(await publicText(url), /2026年9月24日/);
+  assert.match(await publicText(url), /地点：杭州/);
   assert.equal((await request(`/api/content/${id}`)).publishedAt, firstDate);
   assert.match(
     await publicText(otherBusiness.url),
     /cases\/business-workflow-case/,
   );
+  assert.match(await publicText(otherBusiness.url), /2026年9月24日/);
+  assert.match(await publicText(otherBusiness.url), /地点：杭州/);
+  await request(`/api/content/${id}`, "PATCH", {
+    eventDate: "",
+    duration: "",
+    location: " 苏州 ",
+  });
+  assert.equal((await request(`/api/content/${id}`)).location, "苏州");
+  await action("publish", id);
+  assert.doesNotMatch(await publicText(url), /活动时间：/);
+  assert.match(await publicText(url), /地点：苏州/);
+  assert.match(await publicText(otherBusiness.url), /地点：苏州/);
 
   const blocked = await fetch(base + "/api/business-admin/delete", {
     method: "POST",
@@ -338,6 +386,11 @@ export async function verifyBusinessWorkflow(options: {
         await publicText("/cases/school-workflow-case/"),
         /学校业务案例正文/,
       );
+      assert.doesNotMatch(
+        await publicText("/cases/school-workflow-case/"),
+        /class="[^"]*case-meta/,
+        "legacy cases without metadata remain publishable",
+      );
       await action("unpublish", groupCaseId);
       assert.equal(
         (await fetch(publicURL + "/cases/school-workflow-case/")).status,
@@ -349,6 +402,6 @@ export async function verifyBusinessWorkflow(options: {
     assert.equal((await fetch(publicURL + groupPath)).status, 404);
   }
   console.log(
-    "PASS: business CRUD, rich case preview/publish/edit/transfer/unpublish/delete, inline media protection, stable date and sitemap.",
+    "PASS: business CRUD, case metadata validation/create/update/clear/publication, rich case preview/publish/edit/transfer/unpublish/delete, inline media protection, stable date and sitemap.",
   );
 }

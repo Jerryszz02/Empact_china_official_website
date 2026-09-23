@@ -81,6 +81,7 @@ test(
           parentId: parent.id,
           imageId: "image-test",
           detailUrl: "https://example.invalid/project-details",
+          location: "上海｜新加坡",
         },
         {
           id: "case-no-image",
@@ -93,6 +94,7 @@ test(
           featured: true,
           parentId: parent.id,
           order: -1,
+          publishedAt: "2026-09-23T00:00:00Z",
         },
         {
           id: "case-test",
@@ -107,6 +109,10 @@ test(
           approved: true,
           parentId: parent.id,
           relatedIds: ["external-case"],
+          eventDate: "2026-09-22T16:00:00Z",
+          location: "上海徐汇",
+          duration: "两天",
+          publishedAt: "2026-09-25T00:00:00Z",
         },
         {
           id: "coverage-test",
@@ -301,6 +307,19 @@ test(
       assert.ok(home('footer a[href="/news/news-test/"]').length);
       assert.equal(home(".motion-home > section").length, 4);
       assert.equal(business("#case-no-image .case-image").length, 0);
+      assert.equal(business("#case-no-image .case-meta").length, 0);
+      assert.equal(business("#external-case .case-meta time").length, 0);
+      assert.match(
+        business("#external-case .case-meta").text(),
+        /地点：上海｜新加坡/,
+      );
+      assert.match(business("#case-test .case-meta").text(), /2026年9月23日/);
+      assert.match(business("#case-test .case-meta").text(), /两天/);
+      assert.match(business("#case-test .case-meta").text(), /地点：上海徐汇/);
+      assert.doesNotMatch(
+        business("#case-test .case-meta").text(),
+        /2026-09-25/,
+      );
       assert.equal(business("#case-test").attr("href"), "/cases/case-test/");
       assert.equal(business("#case-test").attr("target"), undefined);
       assert.equal(business("#case-test").attr("rel"), undefined);
@@ -348,6 +367,9 @@ test(
         await readFile(join(out, "cases", "case-test", "index.html"), "utf8"),
       );
       assert.match(caseArticle("main").text(), /案例行动与结果正文/);
+      assert.match(caseArticle(".case-meta").text(), /2026年9月23日/);
+      assert.match(caseArticle(".case-meta").text(), /地点：上海徐汇/);
+      assert.match(caseArticle(".page-hero").text(), /发布于.*2026-09-25/s);
       assert.equal(caseArticle(".article-source").length, 0);
       assert.doesNotMatch(caseArticle("main").text(), /原有来源/);
       assert.equal(

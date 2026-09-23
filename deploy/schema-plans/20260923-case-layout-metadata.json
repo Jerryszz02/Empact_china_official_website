@@ -1,0 +1,7 @@
+{
+  "version": 1,
+  "from": "613cae70b2c06d2bdb0243fce6c8ad7627bffdd7152553cf900d66ab509e51de",
+  "to": "0d0045e8c4b85e03ab31a9b05a6b90b8c048189c995c2a1abf45a1facda5348a",
+  "description": "Expose the existing eventDate, duration and location text fields in case create/edit forms, trim optional case metadata and validate activity dates before saving. Stored field names, types, defaults, relationships and migrations are unchanged; no database statements are required.",
+  "statements": []
+}
