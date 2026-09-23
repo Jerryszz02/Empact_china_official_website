@@ -1,4 +1,8 @@
 import type { Entry, Media, Segment } from "./schema.js";
+import {
+  bokeOverseasArticle,
+  bokeOverseasMedia,
+} from "./business-directory-overseas.js";
 import { enterpriseArticles } from "./business-directory-enterprise.js";
 import {
   singaporeCampArticle,
@@ -84,6 +88,13 @@ const businessRows: Array<[string, string, Segment, string, string]> = [
     "corporate",
     "连接管理学习、社会创新与真实组织议题。",
     "商学院管理创新学科课程把管理知识与真实组织情境结合，通过案例讨论、体验学习和项目任务，支持学习者探索管理实践与社会创新之间的联系。课程主题和形式可根据教学需求共同设计。",
+  ],
+  [
+    "philanthropy-brand-overseas",
+    "公益品牌出海",
+    "corporate",
+    "连接目标国家的需求与本地伙伴，支持中国公益品牌走向海外。",
+    "帮助中国公益品牌出海，提供目标国家调研、法律主体落地支持、本地生态伙伴对接、路演安排和影响力评估的一站式服务。通过连接政府、公益机构等在地伙伴，协助公益品牌理解当地环境、探索项目本地化策略，并梳理活动实施与服务对象触达的路径。",
   ],
   [
     "coaching-parents-mentors",
@@ -352,6 +363,7 @@ const hostedCases: Array<
   }
 > = [
   ...enterpriseArticles,
+  bokeOverseasArticle,
   {
     slug: "microsoft-accessible-youth-exploration",
     detailUrl: "https://mp.weixin.qq.com/s/V7_Nw01aUZuc0zBFyuCJyQ",
@@ -484,6 +496,7 @@ export const directoryCases: Entry[] = [
 // unavailable. Never borrow a different event's photo as documentary evidence.
 export const directoryMedia: Media[] = [
   ...singaporeCampMedia,
+  ...bokeOverseasMedia,
   {
     id: "directory-yangpu-bilingual-ai-social-innovation",
     filename: "directory-yangpu-bilingual-ai-social-innovation.webp",
