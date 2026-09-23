@@ -1,4 +1,5 @@
 import type { Payload } from "payload";
+import { isFixedYouthModel } from "@empact/content/business";
 import { randomUUID } from "node:crypto";
 import { isDeepStrictEqual } from "node:util";
 import {
@@ -173,6 +174,10 @@ export async function businessAdminMutation(
   const entry = entryFor(draft, id);
   if (!entry || (entry.kind !== "business" && entry.kind !== "case"))
     throw new Error("业务内容不存在。");
+  if (isFixedYouthModel(entry))
+    throw new Error(
+      "国际人才培养模型为固定页面，不支持后台编辑、发布、撤下或删除。",
+    );
   if (action === "preview") {
     if (entry.kind === "case" && entry.detailUrl)
       return {

@@ -4,6 +4,7 @@
   "type": "module",
   "exports": {
     "./schema": "./src/schema.ts",
+    "./business": "./src/business.ts",
     "./inquiry": "./src/inquiry.ts",
     "./about-awards": "./src/about-awards.ts",
     "./legal": "./src/legal.ts",

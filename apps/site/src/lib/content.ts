@@ -4,6 +4,7 @@ import {
   type Entry,
   type Snapshot,
 } from "@empact/content/schema";
+import { businessesForSegment } from "@empact/content/business";
 
 export type SitePage = Entry;
 
@@ -44,7 +45,7 @@ export const news = entries.filter((entry) => entry.kind === "news");
 export const cases = entries.filter((entry) => entry.kind === "case");
 
 export function servicesForSegment(segment: string) {
-  const services = businesses.filter((entry) => entry.segment === segment);
+  const services = businessesForSegment(businesses, segment);
   const chatCircle = projects.find((entry) => entry.slug === "chatcircle");
   return segment === "community" && chatCircle
     ? [...services, chatCircle]

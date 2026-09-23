@@ -1,5 +1,5 @@
 import { APIError } from "payload";
-import type { CollectionConfig, GlobalConfig, Field } from "payload";
+import type { CollectionConfig, GlobalConfig, Field, Where } from "payload";
 import { lexicalMediaIds, serializeLexicalBody } from "./cms-data.js";
 import { assertBusinessDependencyFree } from "./business-admin.js";
 import { randomUUID } from "node:crypto";
@@ -7,6 +7,7 @@ import { listReceipts, readLiveSnapshot } from "./publisher.js";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { isHttpUrl } from "@empact/content/schema";
+import { isFixedYouthModel, youthModelSlug } from "@empact/content/business";
 import {
   BlockquoteFeature,
   FixedToolbarFeature,
@@ -18,6 +19,12 @@ import {
 
 const adminOnly = ({ req }: any) =>
   req.user?.role === "admin" && req.user.collection === "users";
+const editableContent: Where = {
+  or: [
+    { kind: { not_equals: "business" } },
+    { slug: { not_equals: youthModelSlug } },
+  ],
+};
 const text = (name: string, label: string, required = false) => ({
   name,
   label,
@@ -441,12 +448,13 @@ export const Content: CollectionConfig = {
   access: {
     create: adminOnly,
     read: adminOnly,
-    update: adminOnly,
+    update: ({ req }) => adminOnly({ req }) && editableContent,
     delete: async ({ req, id }) =>
       adminOnly({ req }) &&
       !(await readLiveSnapshot())?.entries.some(
         (entry) => entry.id === String(id),
-      ),
+      ) &&
+      editableContent,
   },
   versions: { maxPerDoc: 30 },
   hooks: {
@@ -463,6 +471,15 @@ export const Content: CollectionConfig = {
     ],
     beforeChange: [
       async ({ data, originalDoc, context, req }) => {
+        if (
+          req.user &&
+          (isFixedYouthModel(originalDoc ?? {}) ||
+            isFixedYouthModel({ ...originalDoc, ...data }))
+        )
+          throw new APIError(
+            "国际人才培养模型为固定页面，不支持后台编辑。",
+            403,
+          );
         if (!originalDoc && !data.slug) data.slug = `content-${randomUUID()}`;
         if (Object.hasOwn(data, "body") && data.body) {
           const ids = lexicalMediaIds(data.body);

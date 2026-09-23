@@ -32,8 +32,7 @@ test(
         contactEnabled: false,
         retentionDays: 30,
       };
-      // Other content must remain publishable before the optional model business
-      // is first published, or after that business is withdrawn.
+      // The fixed model remains in navigation even without its legacy CMS record.
       data.entries = data.entries.filter(
         (entry) => entry.slug !== "international-talent-model",
       );
@@ -177,8 +176,14 @@ test(
         await readFile(join(out, "youth/index.html"), "utf8"),
       );
       assert.equal(
-        youthOverview('a[href="/youth/international-talent-model/"]').length,
-        0,
+        youthOverview(
+          '.model-intro a[href="/youth/international-talent-model/"]',
+        ).length,
+        1,
+      );
+      assert.equal(
+        youthOverview("#nav-youth a").first().attr("href"),
+        "/youth/international-talent-model/",
       );
       assert.deepEqual(await checkOutput(out, true), []);
       for (const business of emptyBusinesses) {

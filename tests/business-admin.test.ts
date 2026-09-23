@@ -96,9 +96,30 @@ async function fixture() {
     (await publishSnapshot({ ...snapshot, mode: "production" }, options)).state,
     "published",
   );
-  const parent = docs.find((d) => d.kind === "business");
+  const parent = docs.find(
+    (d) => d.kind === "business" && d.slug !== "international-talent-model",
+  );
   return { root, docs, payload, options, parent, images };
 }
+
+test("fixed youth model rejects every business admin action", async () => {
+  const f = await fixture();
+  try {
+    const model = f.docs.find(
+      (doc) => doc.kind === "business" && doc.slug === "international-talent-model",
+    );
+    assert.ok(model, "the fixed model remains in the draft");
+    for (const action of ["preview", "publish", "unpublish", "delete"] as const)
+      await assert.rejects(
+        () => businessAdminMutation(f.payload, action, String(model.id), f.options),
+        /固定页面，不支持后台编辑、发布、撤下或删除/,
+        action,
+      );
+    assert.ok(f.docs.includes(model), "rejected actions preserve the model");
+  } finally {
+    await rm(f.root, { recursive: true, force: true });
+  }
+});
 
 test("external projects publish without body and can switch back to a hosted article", async () => {
   const f = await fixture();
