@@ -10,6 +10,14 @@ const socials = [
     name: "Empact中国",
     href: "https://weixin.qq.com/r/mp/YBDv99XEyYi2rZGU90Vy",
   },
+  {
+    name: "Empact SG · LinkedIn",
+    href: "https://www.linkedin.com/company/empactsg/posts/?feedView=all",
+  },
+  {
+    name: "Empact SG · Facebook",
+    href: "https://www.facebook.com/empactsg/",
+  },
 ];
 ---
 
@@ -44,7 +52,11 @@ const socials = [
       <br />
       Singapore 159053
     </span>
-    <a href="mailto:enquiries@empact.sg">enquiries@empact.sg</a>
+    <a
+      href="https://portal.empact.sg/empact-general-enquiry"
+      target="_blank"
+      rel="noopener noreferrer"
+    >联系 Empact 新加坡</a>
   </div>
 
   <nav class="footer-socials" aria-label="社交媒体">
@@ -59,6 +71,26 @@ const socials = [
             width="24"
             height="24"
           />
+        ) : social.name === "Empact SG · LinkedIn" ? (
+          <svg
+            class="footer-social-icon"
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+            focusable="false"
+            fill="currentColor"
+          >
+            <path d="M20.45 2H3.55C2.7 2 2 2.67 2 3.5v17c0 .83.7 1.5 1.55 1.5h16.9c.85 0 1.55-.67 1.55-1.5v-17c0-.83-.7-1.5-1.55-1.5ZM7.93 18.75H4.98V9.2h2.95v9.55ZM6.45 7.9a1.71 1.71 0 1 1 0-3.42 1.71 1.71 0 0 1 0 3.42Zm12.3 10.85H15.8V14.1c0-1.11-.02-2.54-1.55-2.54-1.55 0-1.79 1.21-1.79 2.46v4.73H9.51V9.2h2.83v1.3h.04c.39-.74 1.36-1.52 2.79-1.52 2.98 0 3.58 1.96 3.58 4.51v5.26Z" />
+          </svg>
+        ) : social.name === "Empact SG · Facebook" ? (
+          <svg
+            class="footer-social-icon"
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+            focusable="false"
+            fill="currentColor"
+          >
+            <path d="M22 12a10 10 0 1 0-11.56 9.88v-6.99H7.9V12h2.54V9.8c0-2.5 1.49-3.9 3.77-3.9 1.09 0 2.23.19 2.23.19v2.45h-1.26c-1.24 0-1.63.77-1.63 1.56V12h2.78l-.45 2.89h-2.33v6.99A10 10 0 0 0 22 12Z" />
+          </svg>
         ) : (
           <svg
             class="footer-social-icon"
