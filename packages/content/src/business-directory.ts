@@ -727,9 +727,9 @@ export const directoryMedia: Media[] = [
   {
     id: "directory-office-camp",
     filename: "directory-office-camp.webp",
-    alt: "新加坡 Office Camp 实训项目海报",
-    width: 800,
-    height: 1200,
+    alt: "办公室实训参与者在 Empact 展架前合影",
+    width: 1080,
+    height: 808,
     mimeType: "image/webp",
     approved: false,
   },
