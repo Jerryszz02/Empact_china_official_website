@@ -277,7 +277,7 @@ const pathways = [
     gap: clamp(0.75rem, 2vh, 1.2rem);
     justify-content: center;
     padding-top: max(7rem, var(--motion-header-space, 6rem));
-    padding-bottom: 6rem;
+    padding-bottom: clamp(6rem, 16vh, 9rem);
   }
   .has-home-gallery .motion-logo-brand {
     width: clamp(14rem, 24vw, 22rem);
@@ -456,6 +456,12 @@ const pathways = [
     align-items: center;
   }
 
+  @media (min-width: 601px) and (max-height: 760px) {
+    .has-home-gallery {
+      /* Leave room for the enlarged film strip without disabling motion. */
+      padding-bottom: 4rem;
+    }
+  }
   @media (max-width: 600px) {
     :global(body.motion-home.motion-js .site-header) {
       top: 0.5rem;
@@ -472,7 +478,7 @@ const pathways = [
     }
     .has-home-gallery {
       padding-top: max(6.5rem, var(--motion-header-space, 6rem));
-      padding-bottom: 6rem;
+      padding-bottom: 8rem;
     }
     .has-home-gallery .motion-logo-brand {
       width: min(58vw, 16rem);
