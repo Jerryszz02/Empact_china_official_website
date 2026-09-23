@@ -687,9 +687,9 @@ export const directoryMedia: Media[] = [
   {
     id: "directory-microsoft-youth",
     filename: "directory-microsoft-youth.webp",
-    alt: "微软探索日公益活动海报，活动日期为 2025 年 4 月 18 日",
+    alt: "微软探索日活动参与者在户外手持多元与共融横幅合影",
     width: 1080,
-    height: 1920,
+    height: 721,
     mimeType: "image/webp",
     approved: false,
   },
