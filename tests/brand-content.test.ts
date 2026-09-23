@@ -42,8 +42,8 @@ test("brand content preview has the approved shape", () => {
     (entry) => entry.kind === "case",
   );
   assert.equal(cases.length, 40);
-  assert.equal(cases.filter((entry) => entry.detailUrl).length, 24);
-  assert.equal(cases.filter((entry) => !entry.detailUrl).length, 16);
+  assert.equal(cases.filter((entry) => entry.detailUrl).length, 25);
+  assert.equal(cases.filter((entry) => !entry.detailUrl).length, 15);
   const yangpu = cases.find(
     (entry) => entry.slug === "yangpu-bilingual-ai-social-innovation",
   );
@@ -65,7 +65,6 @@ test("brand content preview has the approved shape", () => {
     assert.ok(entry.imageId);
     if (entry.detailUrl) {
       assert.equal(entryUrl(entry), entry.detailUrl);
-      assert.equal(entry.bodyHtml, "");
     } else {
       assert.ok(entry.bodyHtml.length > 100);
       assert.ok(entry.sourceName);
@@ -150,6 +149,10 @@ test("monthly article links follow verified subjects instead of worksheet positi
   const microsoft = previewSnapshot.entries.find(
     (entry) => entry.slug === "microsoft-accessible-youth-exploration",
   );
-  assert.equal(microsoft?.detailUrl, undefined);
+  assert.equal(
+    microsoft?.detailUrl,
+    "https://mp.weixin.qq.com/s/V7_Nw01aUZuc0zBFyuCJyQ",
+  );
   assert.match(microsoft?.sourceName || "", /海报/);
+  assert.match(microsoft?.bodyHtml || "", /触摸科技之光/);
 });

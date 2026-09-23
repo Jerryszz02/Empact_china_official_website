@@ -344,11 +344,17 @@ const linkedCases: LinkedCase[] = [
 ];
 
 const hostedCases: Array<
-  LinkedCase & { bodyHtml: string; sourceName: string; bodyMediaIds?: string[] }
+  LinkedCase & {
+    bodyHtml: string;
+    sourceName: string;
+    bodyMediaIds?: string[];
+    detailUrl?: string;
+  }
 > = [
   ...enterpriseArticles,
   {
     slug: "microsoft-accessible-youth-exploration",
+    detailUrl: "https://mp.weixin.qq.com/s/V7_Nw01aUZuc0zBFyuCJyQ",
     title: "微软×边疆助残少年圆梦 · 活动设计介绍",
     business: "monthly-camp",
     summary:
@@ -467,6 +473,7 @@ export const directoryCases: Entry[] = [
   ...hostedCases.map((item, index) => ({
     ...caseBase(item, linkedCases.length + index),
     bodyHtml: item.bodyHtml,
+    ...(item.detailUrl ? { detailUrl: item.detailUrl } : {}),
     ...(item.bodyMediaIds ? { bodyMediaIds: item.bodyMediaIds } : {}),
     sourceName: item.sourceName,
     ...(item.url ? { sourceUrl: item.url } : {}),
