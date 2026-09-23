@@ -12,6 +12,7 @@ import { verifyCmsUI } from "./cms-ui-scenarios.js";
 import { verifyBusinessWorkflow } from "./business-cms-scenarios.js";
 import { load } from "cheerio";
 import { serializeLexicalBody } from "../apps/cms/src/cms-data.js";
+import { readLiveSnapshot } from "../apps/cms/src/publisher.js";
 const execute = promisify(execFile),
   repository = resolve("."),
   cms = join(repository, "apps/cms");
@@ -170,6 +171,7 @@ try {
   for (const path of [
     "/api/content",
     "/api/media",
+    "/api/globals/home-gallery",
     "/api/publication/state",
     "/preview/unknown/",
   ])
@@ -625,6 +627,47 @@ try {
   assert.match(
     await (await fetch(publicURL + "/news/operations-news/")).text(),
     /新闻原版正文/,
+  );
+  await request("/api/globals/home-gallery", "POST", {
+    style: "film",
+    photos: [{ image: uploaded.doc.id, alt: "隔离轮播照片" }],
+  });
+  const galleryDraft = await request("/api/globals/home-gallery");
+  assert.equal(galleryDraft.style, "film");
+  assert.equal(
+    String(galleryDraft.photos[0].image.id ?? galleryDraft.photos[0].image),
+    String(uploaded.doc.id),
+  );
+  const galleryPreview = await request("/api/publication/preview", "POST", {
+    ids: [],
+    includeHomeGallery: true,
+  });
+  assert.equal(
+    (
+      await responseFor("/api/publication/publish", {
+        ids: [],
+        confirmed: true,
+        previewId: galleryPreview.previewUrl.split("/")[2],
+        includeHomeGallery: false,
+      })
+    ).status,
+    400,
+    "a gallery preview cannot publish with different selection",
+  );
+  const galleryPublished = await request("/api/publication/publish", "POST", {
+    ids: [],
+    confirmed: true,
+    previewId: galleryPreview.previewUrl.split("/")[2],
+    includeHomeGallery: true,
+  });
+  assert.equal(galleryPublished.result.state, "published");
+  assert.deepEqual((await readLiveSnapshot(runtime))?.homeGallery, {
+    style: "film",
+    photos: [{ imageId: String(uploaded.doc.id), alt: "隔离轮播照片" }],
+  });
+  assert.equal(
+    (await request("/api/publication/state")).homeGallery.modified,
+    false,
   );
   assert.equal(
     (await fetch(publicURL + `/media/${uploaded.doc.filename}`)).status,

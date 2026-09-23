@@ -628,6 +628,17 @@ export const Media: CollectionConfig = {
         )
       )
         return false;
+      const gallery = await req.payload.findGlobal({
+        slug: "home-gallery",
+        depth: 0,
+        overrideAccess: true,
+      });
+      if (
+        gallery.photos?.some(
+          (photo: { image: unknown }) => String(photo.image) === String(id),
+        )
+      )
+        return false;
       for (const receipt of await listReceipts()) {
         if (!receipt.releasePath) continue;
         const snapshot = JSON.parse(
@@ -709,6 +720,53 @@ export const Company: GlobalConfig = {
       label: "咨询保存天数",
       type: "number",
       defaultValue: 30,
+    },
+  ],
+};
+export const HomeGallery: GlobalConfig = {
+  slug: "home-gallery",
+  label: "首页照片",
+  admin: { group: "首页内容" },
+  access: { read: adminOnly, update: adminOnly },
+  fields: [
+    {
+      name: "galleryActions",
+      type: "ui",
+      admin: {
+        components: {
+          Field: "@/components/HomeGalleryActions#HomeGalleryActions",
+        },
+      },
+    },
+    {
+      name: "style",
+      label: "展示样式",
+      type: "select",
+      required: true,
+      defaultValue: "photos",
+      options: [
+        { label: "纯照片", value: "photos" },
+        { label: "胶卷", value: "film" },
+      ],
+    },
+    {
+      name: "photos",
+      label: "轮播照片（拖动调整顺序）",
+      type: "array",
+      admin: {
+        description:
+          "先上传图片并保存，再用上方按钮预览、发布。每张图片可填写单独的替代文字。",
+      },
+      fields: [
+        {
+          name: "image",
+          label: "照片",
+          type: "upload",
+          relationTo: "media",
+          required: true,
+        },
+        text("alt", "替代文字（选填，默认使用图片素材描述）"),
+      ],
     },
   ],
 };

@@ -1,7 +1,12 @@
 ---
 import BaseLayout from "@/layouts/BaseLayout.astro";
-import { pageBySlug } from "@/lib/content";
+import HomePhotoGallery from "@/components/HomePhotoGallery.astro";
+import { pageBySlug, snapshot, isPreviewMode, mediaById } from "@/lib/content";
 const home = pageBySlug("home");
+const hasGallery =
+  import.meta.env.DEV ||
+  isPreviewMode() ||
+  snapshot.homeGallery?.photos.some((photo) => mediaById(photo.imageId));
 const pathways = [
   { href: "/youth/", title: "青少年项目", label: "For youth & families" },
   { href: "/corporate/", title: "企业服务", label: "For organisations" },
@@ -28,7 +33,10 @@ const pathways = [
     ></canvas>
     <section
       id="brand"
-      class="motion-scene motion-scene-brand"
+      class:list={[
+        "motion-scene motion-scene-brand",
+        { "has-home-gallery": hasGallery },
+      ]}
       data-motion-scene
     >
       <span
@@ -47,6 +55,7 @@ const pathways = [
         <p class="motion-tagline">empowering greater impact</p>
         <h1>赋能更大的影响力</h1>
       </div>
+      <HomePhotoGallery />
       <span class="motion-scene-index" aria-hidden="true">
         01 / 04
       </span>
@@ -264,6 +273,23 @@ const pathways = [
   .motion-logo-brand {
     width: 70vw;
   }
+  .has-home-gallery {
+    gap: clamp(0.75rem, 2vh, 1.2rem);
+    justify-content: center;
+    padding-top: max(7rem, var(--motion-header-space, 6rem));
+    padding-bottom: 6rem;
+  }
+  .has-home-gallery .motion-logo-brand {
+    width: clamp(14rem, 24vw, 22rem);
+  }
+  .motion-scene-brand .motion-scene-content {
+    transform: translateY(var(--hero-copy-offset, 0px));
+    opacity: calc(var(--scene-fade, 1) * var(--hero-copy-opacity, 1));
+    transition: none;
+  }
+  :global(html[data-home-intro="loading"]) .motion-scene-brand .motion-logo {
+    opacity: 0;
+  }
   .motion-logo-conversation {
     width: min(46vw, 34rem);
   }
@@ -443,6 +469,13 @@ const pathways = [
     }
     .motion-logo-brand {
       width: min(92vw, 30rem);
+    }
+    .has-home-gallery {
+      padding-top: max(6.5rem, var(--motion-header-space, 6rem));
+      padding-bottom: 6rem;
+    }
+    .has-home-gallery .motion-logo-brand {
+      width: min(58vw, 16rem);
     }
     .motion-logo-conversation {
       width: min(76vw, 22rem);

@@ -7,6 +7,7 @@ import {
   Content,
   Media,
   Company,
+  HomeGallery,
   Publications,
 } from "./src/collections.js";
 
@@ -32,7 +33,7 @@ export default buildConfig({
     client: { url: process.env.DATABASE_URL || "file:.data/cms.sqlite" },
   }),
   collections: [Users, Content, Media, Publications],
-  globals: [Company],
+  globals: [Company, HomeGallery],
   upload: { limits: { fileSize: 5 * 1024 * 1024 } },
   admin: {
     user: "users",

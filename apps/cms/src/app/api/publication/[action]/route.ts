@@ -17,13 +17,33 @@ import {
   removeFailedPreview,
 } from "../../../../publisher.js";
 import { readDraftSnapshot } from "../../../../cms-data.js";
-import { entryPath, validateSnapshot } from "@empact/content/schema";
+import {
+  entryPath,
+  validateSnapshot,
+  type Snapshot,
+} from "@empact/content/schema";
 
 export const dynamic = "force-dynamic";
 const headers = {
   "Cache-Control": "private, no-store",
   "X-Robots-Tag": "noindex, nofollow",
 };
+const galleryMedia = (
+  gallery: Snapshot["homeGallery"],
+  media: Snapshot["media"],
+) =>
+  gallery?.photos.map(({ imageId }) => {
+    const image = media.find((item) => item.id === imageId);
+    return image
+      ? {
+          id: image.id,
+          filename: image.filename,
+          alt: image.alt,
+          width: image.width,
+          height: image.height,
+        }
+      : undefined;
+  });
 async function authenticate(request: Request) {
   const payload = await getPayload({ config });
   const { user } = await payload.auth({ headers: request.headers });
@@ -75,6 +95,15 @@ export async function GET(request: Request) {
         ({ releasePath: _private, ...receipt }) => receipt,
       ),
       currentVersion: live?.version || null,
+      homeGallery: {
+        live: Boolean(live?.homeGallery),
+        modified:
+          !isDeepStrictEqual(content.homeGallery, live?.homeGallery) ||
+          !isDeepStrictEqual(
+            galleryMedia(content.homeGallery, content.media),
+            galleryMedia(live?.homeGallery, live?.media ?? []),
+          ),
+      },
     },
     { headers },
   );
@@ -100,6 +129,7 @@ export async function POST(
     const body = (await request.json()) as {
       ids?: unknown;
       includeCompany?: boolean;
+      includeHomeGallery?: boolean;
       confirmed?: boolean;
       version?: string;
       receiptId?: string;
@@ -116,7 +146,8 @@ export async function POST(
     if (
       !["rollback", "retry"].includes(action) &&
       !ids.length &&
-      !body.includeCompany
+      !body.includeCompany &&
+      !body.includeHomeGallery
     )
       throw new Error("请选择要预览或发布的内容。");
     if (action !== "preview" && body.confirmed !== true)
@@ -130,6 +161,7 @@ export async function POST(
         draft,
         ids,
         Boolean(body.includeCompany),
+        Boolean(body.includeHomeGallery),
       );
       const snapshot = validateSnapshot(
         { ...merged, mode: "preview" },
@@ -153,6 +185,7 @@ export async function POST(
         JSON.stringify({
           ids,
           includeCompany: Boolean(body.includeCompany),
+          includeHomeGallery: Boolean(body.includeHomeGallery),
           baseVersion,
           digest: snapshotDigest(snapshot),
         }),
@@ -212,8 +245,14 @@ export async function POST(
             (entry) => !ids.includes(entry.id),
           );
           const used = new Set(
-            entries.flatMap((entry) => (entry.imageId ? [entry.imageId] : [])),
+            entries.flatMap((entry) =>
+              [entry.imageId, ...(entry.bodyMediaIds ?? [])].filter(
+                (id): id is string => Boolean(id),
+              ),
+            ),
           );
+          for (const photo of live.homeGallery?.photos ?? [])
+            used.add(photo.imageId);
           return {
             ...live,
             version: `v-${randomUUID()}`,
@@ -236,6 +275,7 @@ export async function POST(
         ) as {
           ids?: unknown;
           includeCompany?: unknown;
+          includeHomeGallery?: unknown;
           baseVersion?: unknown;
           digest?: unknown;
         },
@@ -250,20 +290,24 @@ export async function POST(
       if (
         JSON.stringify(review.ids) !== JSON.stringify(ids) ||
         review.includeCompany !== Boolean(body.includeCompany) ||
+        review.includeHomeGallery !== Boolean(body.includeHomeGallery) ||
         review.digest !== snapshotDigest(frozen)
       )
         throw new Error("预览内容与当前选择不一致，请重新生成预览。");
-      result = await publishSnapshot(async () => {
-        const live = await readLiveSnapshot();
-        if (live?.version !== review.baseVersion)
-          throw new Error("官网已有更新，请重新选择内容并预览。");
-        return {
-          ...frozen,
-          mode: "production",
-          version: `v-${randomUUID()}`,
-          generatedAt: new Date().toISOString(),
-        };
-      });
+      result = await publishSnapshot(
+        async () => {
+          const live = await readLiveSnapshot();
+          if (live?.version !== review.baseVersion)
+            throw new Error("官网已有更新，请重新选择内容并预览。");
+          return {
+            ...frozen,
+            mode: "production",
+            version: `v-${randomUUID()}`,
+            generatedAt: new Date().toISOString(),
+          };
+        },
+        { selectedIds: ids },
+      );
     }
     if (result.state !== "failed" && action !== "unpublish") {
       for (const id of result.selectedIds || ids)
