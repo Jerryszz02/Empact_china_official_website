@@ -6,6 +6,9 @@ import json
 import os
 import re
 import subprocess
+import sys
+import tempfile
+from pathlib import Path
 
 PROTECTED = (
     "apps/cms/payload.config.ts",
@@ -33,22 +36,51 @@ def manifest(revision):
     return files, {name: dependencies[name] for name in DEPENDENCIES}
 
 
-def report(base, head):
+def verify_plan(base, head):
+    # Reconstruct only the protected inputs; never execute candidate code.
+    with tempfile.TemporaryDirectory(prefix="empact-schema-preflight-") as directory:
+        roots = []
+        for index, revision in enumerate((base, head)):
+            root = Path(directory) / str(index)
+            root.mkdir()
+            paths = git("ls-tree", "-r", "--name-only", revision, "--",
+                        *PROTECTED, "apps/cms/src/migrations",
+                        "apps/cms/package.json", "deploy/schema-plans").decode().splitlines()
+            for name in paths:
+                target = root / name
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_bytes(git("show", revision + ":" + name))
+            roots.append(root)
+        result = subprocess.run([
+            sys.executable, str(Path(__file__).with_name("schema-plan.py")),
+            "check", str(roots[0]), str(roots[1]), str(Path(directory) / "plan.json"),
+        ], stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
+        if result.returncode:
+            raise ValueError("Protected CMS changes need a reviewed schema plan before merge: "
+                             + result.stderr.strip())
+        return result.stdout.strip()
+
+
+def report(base, head, require_plan=False):
     before, before_deps = manifest(base)
     after, after_deps = manifest(head)
     changed = [path for path in sorted(set(before) | set(after))
                if before.get(path) != after.get(path)]
     changed += [name for name in DEPENDENCIES if before_deps[name] != after_deps[name]]
     summary = "## Production deployment preflight\n\n"
-    if changed:
+    if changed and require_plan:
+        details = verify_plan(base, head)
+        summary += "**Reviewed deployment plan covers this CMS transition.**\n\n" + details + "\n\n"
+        summary += "The server will check its installed revision, back up the database, and rehearse any additive SQL before applying it.\n\n"
+    elif changed:
         summary += "**Maintainer review required before production deployment.**\n\n"
         summary += "\n".join("- `" + item + "`" for item in changed) + "\n\n"
         summary += (
             "These files or dependencies are protected by the server schema gate. "
             "CI passing does not authorize deployment. Inspect the full diff against "
-            "the installed production revision. For non-schema changes, approve only "
-            "the exact server manifest transition using docs/automatic-deployment.md; "
-            "real schema changes require a separate migration review.\n\n"
+            "the installed production revision and include an exact reviewed plan in "
+            "deploy/schema-plans using docs/automatic-deployment.md. Changes beyond "
+            "additive tables need a separate migration review.\n\n"
         )
         print("::warning title=Production deployment needs maintainer review::"
               "Protected CMS files or database dependencies changed. See the job summary.")
@@ -65,8 +97,10 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("base")
     parser.add_argument("head")
+    parser.add_argument("--require-plan", action="store_true",
+                        help="Fail CI when protected changes lack an exact reviewed plan")
     args = parser.parse_args()
-    summary = report(args.base, args.head)
+    summary = report(args.base, args.head, require_plan=args.require_plan)
     print(summary)
     if os.environ.get("GITHUB_STEP_SUMMARY"):
         with open(os.environ["GITHUB_STEP_SUMMARY"], "a") as handle:
