@@ -114,6 +114,62 @@ test("mobile gallery stays inside the document width", async ({ page }) => {
   expect(dimensions.document).toBeLessThanOrEqual(dimensions.viewport);
 });
 
+test("film gallery preserves motion and wheel paging at a 700px desktop height", async ({
+  page,
+}, testInfo) => {
+  test.skip(testInfo.project.name !== "desktop", "desktop wheel paging");
+  // Exercise the CMS-rendered style before the homepage scripts measure it.
+  await page.route("**/", async (route) => {
+    const response = await route.fetch();
+    await route.fulfill({
+      response,
+      body: (await response.text()).replace(
+        'data-gallery-style="photos"',
+        'data-gallery-style="film"',
+      ),
+    });
+  });
+  await page.setViewportSize({ width: 1440, height: 700 });
+  await page.goto("/");
+  await expect(page.locator("[data-home-gallery]")).toHaveAttribute(
+    "data-gallery-style",
+    "film",
+  );
+  await expect(page.locator("html")).toHaveClass(/motion-live/);
+  await expect(page.locator("html")).not.toHaveClass(/motion-overflow/);
+  await expect(page.locator("html")).toHaveAttribute(
+    "data-home-intro",
+    "ready",
+  );
+  expect(
+    await page.locator("#brand").evaluate((node) => node.scrollHeight),
+  ).toBeLessThanOrEqual(702);
+  const canvasInk = () =>
+    page.locator("[data-motion-canvas]").evaluate((element) => {
+      const canvas = element as HTMLCanvasElement;
+      const pixels = canvas
+        .getContext("2d")!
+        .getImageData(0, 0, canvas.width, canvas.height).data;
+      return pixels.some((value, index) => index % 4 === 3 && value > 0);
+    });
+  await expect.poll(canvasInk).toBe(true);
+  const nextScene = await page
+    .locator("#about-intro")
+    .evaluate((node) => node.getBoundingClientRect().top + scrollY);
+  await page.mouse.wheel(0, 100);
+  await expect
+    .poll(() => page.evaluate(() => scrollY))
+    .toBeCloseTo(nextScene, 0);
+
+  await page.setViewportSize({ width: 1440, height: 480 });
+  await expect(page.locator("html")).toHaveClass(/motion-overflow/);
+  await page.setViewportSize({ width: 1440, height: 700 });
+  await page.evaluate(() => scrollTo({ top: 0, behavior: "instant" }));
+  await expect(page.locator("html")).not.toHaveClass(/motion-overflow/);
+  await expect(page.locator("html")).toHaveClass(/motion-live/);
+  await expect.poll(canvasInk).toBe(true);
+});
+
 test.describe("without JavaScript", () => {
   test.use({ javaScriptEnabled: false });
 
