@@ -4,6 +4,7 @@ import {
   sanitizeBodyHtml,
   type Snapshot,
   type Entry,
+  type RecruitmentJob,
 } from "@empact/content/schema";
 import { randomUUID } from "node:crypto";
 
@@ -101,26 +102,32 @@ export async function serializeLexicalBody(
 }
 /** Call only after request authentication, or from a trusted local administration command. */
 export async function readDraftSnapshot(payload: Payload): Promise<Snapshot> {
-  const [content, company, images, homeGallery] = await Promise.all([
-    payload.find({
-      collection: "content",
-      pagination: false,
-      depth: 0,
-      overrideAccess: true,
-    }),
-    payload.findGlobal({ slug: "company", overrideAccess: true }),
-    payload.find({
-      collection: "media",
-      pagination: false,
-      depth: 0,
-      overrideAccess: true,
-    }),
-    payload.findGlobal({
-      slug: "home-gallery",
-      depth: 0,
-      overrideAccess: true,
-    }),
-  ]);
+  const [content, company, images, homeGallery, recruitment] =
+    await Promise.all([
+      payload.find({
+        collection: "content",
+        pagination: false,
+        depth: 0,
+        overrideAccess: true,
+      }),
+      payload.findGlobal({ slug: "company", overrideAccess: true }),
+      payload.find({
+        collection: "media",
+        pagination: false,
+        depth: 0,
+        overrideAccess: true,
+      }),
+      payload.findGlobal({
+        slug: "home-gallery",
+        depth: 0,
+        overrideAccess: true,
+      }),
+      payload.findGlobal({
+        slug: "recruitment",
+        depth: 0,
+        overrideAccess: true,
+      }),
+    ]);
   const media = images.docs.map((doc): DraftMedia => ({
     id: String(doc.id),
     filename: string(doc.filename),
@@ -196,6 +203,24 @@ export async function readDraftSnapshot(payload: Payload): Promise<Snapshot> {
         (photo: { image: unknown; alt?: string | null }) => ({
           imageId: relation(photo.image) || "",
           ...(optional(photo.alt) ? { alt: optional(photo.alt) } : {}),
+        }),
+      ),
+    },
+    recruitment: {
+      jobs: (recruitment.jobs ?? []).map(
+        (job: Record<string, unknown>): RecruitmentJob => ({
+          id: string(job.jobId),
+          title: string(job.title),
+          type: job.type as RecruitmentJob["type"],
+          location: string(job.location),
+          summary: string(job.summary),
+          responsibilities: string(job.responsibilities),
+          requirements: string(job.requirements),
+          ...(optional(job.commitment)
+            ? { commitment: optional(job.commitment) }
+            : {}),
+          status: job.status as RecruitmentJob["status"],
+          isExample: job.isExample as boolean,
         }),
       ),
     },

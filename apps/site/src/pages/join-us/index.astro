@@ -1,0 +1,237 @@
+---
+import { Image } from "astro:assets";
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import { snapshot } from "@/lib/content";
+import {
+  visibleRecruitmentJobs,
+  recruitmentLines,
+  jobTypeLabel,
+} from "@/lib/recruitment";
+import teamPhoto from "@/assets/recruitment/team.jpg";
+import officePhoto from "@/assets/recruitment/office.jpg";
+import brandPhoto from "@/assets/recruitment/office-brand.jpg";
+import "@/styles/recruitment.css";
+
+const preview = import.meta.env.SITE_MODE === "preview";
+const jobs = visibleRecruitmentJobs(snapshot, preview);
+const hasExamples = jobs.some((job) => job.isExample);
+---
+
+<BaseLayout
+  title="加入我们"
+  breadcrumbTitle="加入我们"
+  description="加入 Empact，一起参与社会创新、教育与企业公益实践。了解团队、工作内容与招聘机会。"
+  noIndex={preview}
+>
+  <div class="recruitment-page">
+    <section class="recruitment-hero section" aria-labelledby="join-title">
+      <div class="recruitment-hero-copy">
+        <span class="eyebrow">Careers at Empact</span>
+        <h1 id="join-title">
+          让你的专业，
+          <br />
+          带来积极改变<span class="recruitment-period">。</span>
+        </h1>
+        <p class="recruitment-lead">把关心的事，变成一起做的事。</p>
+        <p>
+          从一场课程、一次志愿行动，到一个社会创新项目，我们连接不同背景的人，将想法付诸实践。期待你带着自己的经验与好奇心，加入
+          Empact。
+        </p>
+        <a class="button button-primary" href="#opportunities">
+          查看招聘机会 <span aria-hidden="true">↘</span>
+        </a>
+      </div>
+      <figure class="recruitment-team-photo">
+        <Image
+          src={teamPhoto}
+          alt="Empact 团队在办公室品牌墙前合影"
+          width={1480}
+          widths={[640, 960, 1480]}
+          sizes="(max-width: 896px) calc(100vw - 2.2rem), 52vw"
+          format="webp"
+          quality={82}
+          loading="eager"
+          fetchpriority="high"
+        />
+        <figcaption>一起工作，也一起创造改变。</figcaption>
+      </figure>
+    </section>
+
+    <div class="recruitment-paper">
+      <section class="section recruitment-work" aria-labelledby="work-title">
+        <div class="recruitment-section-heading">
+          <span class="eyebrow">Work with purpose</span>
+          <h2 id="work-title">
+            在真实的项目里，
+            <br />
+            发挥你的专业。
+          </h2>
+          <p>
+            我们的工作连接企业、青少年、学校与社区。每个项目，都需要有人认真理解需求、设计方案，并把细节落实。
+          </p>
+        </div>
+        <div class="recruitment-work-list">
+          <article>
+            <h3>让社会创新走进学习</h3>
+            <p>
+              围绕社会议题、AI
+              与思辨，参与课程和实践活动的设计、组织与执行，让学习连接真实世界。
+            </p>
+            <a href="/youth/">
+              了解青少年项目 <span aria-hidden="true">↗</span>
+            </a>
+          </article>
+          <article>
+            <h3>把企业的力量带进社区</h3>
+            <p>
+              从员工志愿服务到 ESG 与 CSR
+              项目，连接企业与本地伙伴，让专业能力回应具体的社会需要。
+            </p>
+            <a href="/corporate/">
+              了解企业服务 <span aria-hidden="true">↗</span>
+            </a>
+          </article>
+          <article>
+            <h3>让每一次实践被看见</h3>
+            <p>
+              记录项目过程、整理反馈、评估影响力，把现场的经验变成下一次行动的依据。
+            </p>
+            <a href="/about/">
+              认识 Empact <span aria-hidden="true">↗</span>
+            </a>
+          </article>
+        </div>
+      </section>
+
+      <section
+        class="section recruitment-office"
+        aria-labelledby="office-title"
+      >
+        <div class="recruitment-section-heading">
+          <span class="eyebrow">A glimpse of everyday life</span>
+          <h2 id="office-title">一起工作的地方</h2>
+          <p>认识 Empact，也从日常的工作空间开始。</p>
+        </div>
+        <div class="recruitment-office-photos">
+          <figure>
+            <Image
+              src={officePhoto}
+              alt="Empact 办公空间的工位、绿植与窗边区域"
+              width={1440}
+              widths={[640, 960, 1440]}
+              sizes="(max-width: 640px) calc(100vw - 2.2rem), 60vw"
+              format="webp"
+              quality={80}
+              loading="lazy"
+            />
+            <figcaption>Empact 办公空间</figcaption>
+          </figure>
+          <figure>
+            <Image
+              src={brandPhoto}
+              alt="办公室的蓝色 Empact 品牌墙与展示柜一角"
+              width={960}
+              widths={[480, 640, 960]}
+              sizes="(max-width: 640px) calc(100vw - 2.2rem), 34vw"
+              format="webp"
+              quality={80}
+              loading="lazy"
+            />
+            <figcaption>办公室一角</figcaption>
+          </figure>
+        </div>
+      </section>
+
+      <section
+        class="section recruitment-opportunities"
+        id="opportunities"
+        aria-labelledby="opportunities-title"
+      >
+        <div class="recruitment-section-heading recruitment-opportunities-heading">
+          <div>
+            <span class="eyebrow">Find your role</span>
+            <h2 id="opportunities-title">找到适合你的机会</h2>
+          </div>
+          <p>
+            了解岗位职责与要求，
+            <br />
+            从一次相互认识开始。
+          </p>
+        </div>
+        {hasExamples && (
+          <p class="recruitment-preview-note">
+            以下为岗位示例，用于预览页面，暂不接受申请。
+          </p>
+        )}
+        {jobs.length ? (
+          <div class="recruitment-jobs">
+            {jobs.map((job) => (
+              <article class="recruitment-job" data-recruitment-job>
+                <div class="recruitment-job-heading">
+                  <div>
+                    <div class="recruitment-job-meta">
+                      <span>{jobTypeLabel[job.type]}</span>
+                      <span>{job.location}</span>
+                      {job.commitment && <span>{job.commitment}</span>}
+                      {job.isExample && <span>示例岗位</span>}
+                    </div>
+                    <h3>{job.title}</h3>
+                    <p>{job.summary}</p>
+                  </div>
+                  <a
+                    class="button"
+                    href={`/join-us/apply/?job=${encodeURIComponent(job.id)}`}
+                  >
+                    {job.isExample ? "查看申请表" : "申请岗位"}{" "}
+                    <span aria-hidden="true">↗</span>
+                  </a>
+                </div>
+                <details class="recruitment-job-details">
+                  <summary>岗位职责与要求</summary>
+                  <div class="recruitment-job-description">
+                    <div>
+                      <h4>你将参与</h4>
+                      <ul>
+                        {recruitmentLines(job.responsibilities).map((line) => (
+                          <li>{line}</li>
+                        ))}
+                      </ul>
+                    </div>
+                    <div>
+                      <h4>我们期待</h4>
+                      <ul>
+                        {recruitmentLines(job.requirements).map((line) => (
+                          <li>{line}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                </details>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <div class="recruitment-empty">
+            <h3>目前暂无开放岗位</h3>
+            <p>新的招聘机会会在这里更新，欢迎之后再来看看。</p>
+          </div>
+        )}
+      </section>
+    </div>
+    <section
+      class="section recruitment-next"
+      aria-labelledby="apply-guide-title"
+    >
+      <div>
+        <span class="eyebrow">Take the next step</span>
+        <h2 id="apply-guide-title">准备好介绍自己了吗？</h2>
+        <p>
+          选择一个适合的岗位，告诉我们你的相关经历、可以加入的时间，并附上简历或作品链接。我们期待了解你想参与的工作。
+        </p>
+      </div>
+      <a class="button button-primary" href="#opportunities">
+        查看招聘机会 <span aria-hidden="true">↑</span>
+      </a>
+    </section>
+  </div>
+</BaseLayout>

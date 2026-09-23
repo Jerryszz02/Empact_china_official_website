@@ -14,5 +14,15 @@ const entry = pageBySlug("privacy");
   </section>
   <section class="content-wrap">
     <article class="prose" set:html={entry?.bodyHtml ?? ""} />
+    <article class="prose" id="recruitment-privacy">
+      <h2>招聘申请信息</h2>
+      <p>
+        提交招聘申请时，我们会接收你选择的岗位、姓名、联系邮箱、相关经历、可到岗时间，以及你提供的其他联系方式和简历或作品链接。这些信息通过邮件交给
+        Empact 招聘负责人，用于评估本次岗位申请和联系你。
+      </p>
+      <p>
+        简历或作品链接至少填写一项；请只提供与应聘有关的信息。信息处理、保存及查阅、更正、删除等权利的行使方式，适用本页的其他说明。
+      </p>
+    </article>
   </section>
 </BaseLayout>

@@ -8,6 +8,8 @@ export const GET: APIRoute = ({ site }) => {
           [
             ...entries.map(pathFor),
             "/youth/international-talent-model/",
+            "/join-us/",
+            "/join-us/apply/",
           ].filter((path) => path.startsWith("/")),
         ),
       ];

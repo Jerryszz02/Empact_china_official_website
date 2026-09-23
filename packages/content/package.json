@@ -6,6 +6,7 @@
     "./schema": "./src/schema.ts",
     "./business": "./src/business.ts",
     "./inquiry": "./src/inquiry.ts",
+    "./recruitment": "./src/recruitment.ts",
     "./about-awards": "./src/about-awards.ts",
     "./legal": "./src/legal.ts",
     "./fixtures": "./src/fixtures.ts"

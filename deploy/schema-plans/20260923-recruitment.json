@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "from": "613cae70b2c06d2bdb0243fce6c8ad7627bffdd7152553cf900d66ab509e51de",
+  "to": "bab219d43cd7e9f1c119496246193ed1a8b835111255c1d854f71350e1bb4bcf",
+  "description": "Add the recruitment global and ordered editable job rows without changing existing tables or content.",
+  "statements": [
+    "CREATE TABLE `recruitment` (\n    `id` integer PRIMARY KEY NOT NULL,\n    `updated_at` text,\n    `created_at` text\n  );",
+    "CREATE TABLE `recruitment_jobs` (\n    `_order` integer NOT NULL,\n    `_parent_id` integer NOT NULL,\n    `id` text PRIMARY KEY NOT NULL,\n    `job_id` text NOT NULL,\n    `title` text NOT NULL,\n    `type` text NOT NULL,\n    `location` text NOT NULL,\n    `summary` text NOT NULL,\n    `responsibilities` text NOT NULL,\n    `requirements` text NOT NULL,\n    `commitment` text,\n    `status` text DEFAULT 'open' NOT NULL,\n    `is_example` integer DEFAULT true,\n    FOREIGN KEY (`_parent_id`) REFERENCES `recruitment`(`id`) ON UPDATE no action ON DELETE cascade\n  );",
+    "CREATE INDEX `recruitment_jobs_order_idx` ON `recruitment_jobs` (`_order`);",
+    "CREATE INDEX `recruitment_jobs_parent_id_idx` ON `recruitment_jobs` (`_parent_id`);"
+  ]
+}

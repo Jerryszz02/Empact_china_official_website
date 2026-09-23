@@ -1,14 +1,11 @@
+import { bindFormSubmission } from "./form-submission";
+
 const form = document.querySelector<HTMLFormElement>("[data-contact-form]");
 if (form) initializeForm(form);
 
 function initializeForm(form: HTMLFormElement) {
-  const status = form.querySelector<HTMLElement>("[data-form-status]")!;
   const segment = form.querySelector<HTMLSelectElement>('[name="segment"]')!;
   const business = form.querySelector<HTMLSelectElement>('[name="business"]')!;
-  const button = form.querySelector<HTMLButtonElement>(
-    'button[type="submit"]',
-  )!;
-  const key = form.querySelector<HTMLInputElement>('[name="idempotencyKey"]')!;
   const options = Array.from(business.options).filter(
     (option) => option.dataset.segment,
   );
@@ -35,16 +32,9 @@ function initializeForm(form: HTMLFormElement) {
   )
     segment.value = requested;
   showBusinesses(requestedOption?.value ?? "");
-  key.value = crypto.randomUUID();
-  form.addEventListener("submit", async (event) => {
-    event.preventDefault();
-    if (button.disabled || !form.reportValidity()) return;
-    button.disabled = true;
-    status.className = "form-status";
-    status.textContent = "正在发送…";
-    const fields = new FormData(form);
+  bindFormSubmission(form, (fields) => {
     const value = (name: string) => String(fields.get(name) ?? "").trim();
-    const payload = {
+    return {
       segment: value("segment"),
       business: value("business"),
       businessTitle: business.selectedOptions[0]?.textContent?.trim() ?? "",
@@ -63,22 +53,5 @@ function initializeForm(form: HTMLFormElement) {
       website: value("website"),
       idempotencyKey: value("idempotencyKey"),
     };
-    try {
-      const response = await fetch("/api/contact", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      const data = await response.json();
-      if (!response.ok)
-        throw new Error(data.message || "暂时无法发送，请稍后再试。");
-      status.textContent = data.message || "咨询已送达。";
-      status.className = "form-status success";
-    } catch (error) {
-      button.disabled = false;
-      status.textContent =
-        error instanceof Error ? error.message : "暂时无法发送，请稍后再试。";
-      status.className = "form-status error";
-    }
   });
 }

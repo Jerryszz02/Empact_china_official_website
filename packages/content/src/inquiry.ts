@@ -19,6 +19,7 @@ const optionalLine = (max: number) => line(max).default("");
 /** New fields stay optional for pages opened before the form upgrade. */
 export const contactSchema = z
   .object({
+    kind: z.literal("inquiry").optional(),
     business: optionalLine(120),
     segment: z
       .enum(["youth", "corporate", "school", "community", "other"])
@@ -53,6 +54,45 @@ export const contactSchema = z
   });
 
 export type Inquiry = z.infer<typeof contactSchema>;
+
+const httpUrl = z
+  .union([
+    z.literal(""),
+    z
+      .url()
+      .max(2000)
+      .refine((value) => /^https?:\/\//i.test(value)),
+  ])
+  .default("");
+
+export const recruitmentApplicationSchema = z
+  .object({
+    kind: z.literal("recruitment"),
+    jobId: line(120).min(1),
+    name: line(80).min(1),
+    email: z.email().max(254),
+    contact: optionalLine(160),
+    experience: z.string().trim().min(10).max(3000),
+    availability: line(160).min(1),
+    resumeUrl: httpUrl,
+    portfolioUrl: httpUrl,
+    consent: z.literal(true),
+    website: z.string().max(200).optional(),
+    idempotencyKey: z.string().uuid(),
+  })
+  .strict()
+  .refine((value) => Boolean(value.resumeUrl || value.portfolioUrl), {
+    message: "请提供简历或作品链接。",
+  });
+
+export type RecruitmentApplicationRequest = z.infer<
+  typeof recruitmentApplicationSchema
+>;
+
+export const contactSubmissionSchema = z.union([
+  recruitmentApplicationSchema,
+  contactSchema,
+]);
 
 export function inquiryBusinessLabel(inquiry: Inquiry) {
   const segment = inquirySegments.find(

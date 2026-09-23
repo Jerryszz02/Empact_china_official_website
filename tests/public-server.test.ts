@@ -1,10 +1,18 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtemp, mkdir, writeFile, symlink, rm } from "node:fs/promises";
+import {
+  mkdtemp,
+  mkdir,
+  writeFile,
+  symlink,
+  rename,
+  rm,
+} from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { randomUUID } from "node:crypto";
 import { createPublicServer } from "../scripts/public-server.js";
+import type { ContactMessage } from "../scripts/contact.js";
 
 test("static server preserves real 404, blocks private files, switches release atomically and gates contact", async () => {
   const dir = await mkdtemp(join(tmpdir(), "empact-static-"));
@@ -180,6 +188,91 @@ test("static server preserves real 404, blocks private files, switches release a
     assert.equal((await sendDetailed(detailed)).status, 200);
     assert.equal(deliveries, 2);
     assert.equal((await sendDetailed("x".repeat(32_769))).status, 413);
+  } finally {
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test("recruitment uses the current published snapshot and rejects a job closed after page load", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "empact-recruitment-"));
+  const messages: ContactMessage[] = [];
+  const server = createPublicServer({
+    root: join(dir, "current"),
+    origin: "https://empact.cn",
+    deliver: async (message) => {
+      messages.push(message);
+    },
+  });
+  const writeRelease = async (name: string, status: "open" | "closed") => {
+    const publicDir = join(dir, name, "public");
+    await mkdir(publicDir, { recursive: true });
+    await writeFile(
+      join(publicDir, "release.json"),
+      JSON.stringify({ mode: "production", contactEnabled: true }),
+    );
+    await writeFile(
+      join(dir, name, "snapshot.json"),
+      JSON.stringify({
+        recruitment: {
+          jobs: [
+            {
+              id: "coordinator",
+              title: "项目协调员",
+              status,
+              isExample: false,
+            },
+          ],
+        },
+      }),
+    );
+    return publicDir;
+  };
+  server.listen(0, "127.0.0.1");
+  await new Promise<void>((resolve) => server.once("listening", resolve));
+  const address = server.address() as { port: number };
+  const url = `http://127.0.0.1:${address.port}/api/contact`;
+  const data = {
+    kind: "recruitment",
+    jobId: "coordinator",
+    name: "申请人",
+    email: "candidate@example.com",
+    contact: "13800000000",
+    experience: "曾负责社区项目协调与志愿者培训。",
+    availability: "2026 年 10 月",
+    resumeUrl: "https://example.com/cv.pdf",
+    portfolioUrl: "",
+    consent: true,
+    idempotencyKey: randomUUID(),
+  };
+  const post = (body: object) =>
+    fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Origin: "https://empact.cn",
+      },
+      body: JSON.stringify(body),
+    });
+  try {
+    const open = await writeRelease("one", "open");
+    await symlink(open, join(dir, "current"));
+    assert.equal((await post(data)).status, 200);
+    assert.equal(messages.length, 1);
+    assert.equal(messages[0].kind, "recruitment");
+    if (messages[0].kind !== "recruitment")
+      throw new Error("unexpected inquiry");
+    assert.equal(messages[0].jobTitle, "项目协调员");
+
+    const closed = await writeRelease("two", "closed");
+    await symlink(closed, join(dir, "next"));
+    await rename(join(dir, "next"), join(dir, "current"));
+    assert.equal((await post(data)).status, 409, "old open page cannot resend");
+    assert.equal(
+      (await post({ ...data, idempotencyKey: randomUUID() })).status,
+      409,
+    );
+    assert.equal(messages.length, 1);
   } finally {
     await new Promise<void>((resolve) => server.close(() => resolve()));
     await rm(dir, { recursive: true, force: true });

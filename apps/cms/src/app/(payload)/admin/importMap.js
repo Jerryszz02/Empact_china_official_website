@@ -16,6 +16,7 @@ import { BoldFeatureClient as BoldFeatureClient_e70f5e05f09f93e00b997edb1ef0c864
 import { ItalicFeatureClient as ItalicFeatureClient_e70f5e05f09f93e00b997edb1ef0c864 } from '@payloadcms/richtext-lexical/client'
 import { BusinessAdminDashboard as BusinessAdminDashboard_a37d148312e276b2145259b451d85cd6 } from '@/components/BusinessAdminDashboard'
 import { HomeGalleryActions as HomeGalleryActions_c8751bd11f8aab35cb7dff8ec499fcec } from '@/components/HomeGalleryActions'
+import { RecruitmentActions as RecruitmentActions_594db352b0250ed0f38f0aef1f874002 } from '@/components/RecruitmentActions'
 import { BusinessAdminNav as BusinessAdminNav_b85a31db204fe8907fb5127ecf8e275c } from '@/components/BusinessAdminNav'
 import { CollectionCards as CollectionCards_f9c02e79a4aed9a3924487c0cd4cafb1 } from '@payloadcms/next/rsc'
 
@@ -39,6 +40,7 @@ export const importMap = {
   "@payloadcms/richtext-lexical/client#ItalicFeatureClient": ItalicFeatureClient_e70f5e05f09f93e00b997edb1ef0c864,
   "@/components/BusinessAdminDashboard#BusinessAdminDashboard": BusinessAdminDashboard_a37d148312e276b2145259b451d85cd6,
   "@/components/HomeGalleryActions#HomeGalleryActions": HomeGalleryActions_c8751bd11f8aab35cb7dff8ec499fcec,
+  "@/components/RecruitmentActions#RecruitmentActions": RecruitmentActions_594db352b0250ed0f38f0aef1f874002,
   "@/components/BusinessAdminNav#BusinessAdminNav": BusinessAdminNav_b85a31db204fe8907fb5127ecf8e275c,
   "@payloadcms/next/rsc#CollectionCards": CollectionCards_f9c02e79a4aed9a3924487c0cd4cafb1
 }

@@ -8,6 +8,7 @@ import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { isHttpUrl } from "@empact/content/schema";
 import { isFixedYouthModel, youthModelSlug } from "@empact/content/business";
+import { exampleRecruitment } from "@empact/content/recruitment";
 import {
   BlockquoteFeature,
   FixedToolbarFeature,
@@ -783,6 +784,110 @@ export const HomeGallery: GlobalConfig = {
           required: true,
         },
         text("alt", "替代文字（选填，默认使用图片素材描述）"),
+      ],
+    },
+  ],
+};
+export const Recruitment: GlobalConfig = {
+  slug: "recruitment",
+  label: "招聘管理",
+  admin: { group: "加入我们" },
+  access: { read: adminOnly, update: adminOnly },
+  fields: [
+    {
+      name: "recruitmentActions",
+      type: "ui",
+      admin: {
+        components: {
+          Field: "@/components/RecruitmentActions#RecruitmentActions",
+        },
+      },
+    },
+    {
+      name: "jobs",
+      label: "岗位（拖动调整展示顺序）",
+      type: "array",
+      maxRows: 30,
+      defaultValue: exampleRecruitment.jobs.map(({ id, ...job }) => ({
+        jobId: id,
+        ...job,
+      })),
+      validate: (value: unknown) => {
+        if (!Array.isArray(value)) return true;
+        const ids = value.map((job) => job?.jobId);
+        return new Set(ids).size === ids.length ? true : "岗位 ID 不能重复。";
+      },
+      admin: {
+        description:
+          "初始内容均为示例。确认真实招聘信息后，逐条取消“示例岗位”标记并保存、预览、发布；关闭或删除岗位后也需重新发布。",
+      },
+      fields: [
+        {
+          ...text("jobId", "岗位 ID（唯一，英文小写、数字及连字符）", true),
+          maxLength: 80,
+          validate: (value: unknown) =>
+            typeof value === "string" &&
+            /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(value) &&
+            value.length <= 80
+              ? true
+              : "岗位 ID 只能使用英文小写、数字和连字符，最长 80 字符。",
+        },
+        { ...text("title", "岗位名称", true), maxLength: 100 },
+        {
+          name: "type",
+          label: "岗位类型",
+          type: "select",
+          required: true,
+          options: [
+            { label: "全职", value: "full-time" },
+            { label: "实习", value: "internship" },
+          ],
+        },
+        { ...text("location", "工作地点", true), maxLength: 100 },
+        {
+          name: "summary",
+          label: "岗位简介",
+          type: "textarea",
+          required: true,
+          maxLength: 300,
+        },
+        {
+          name: "responsibilities",
+          label: "工作职责",
+          type: "textarea",
+          required: true,
+          maxLength: 5000,
+        },
+        {
+          name: "requirements",
+          label: "任职要求",
+          type: "textarea",
+          required: true,
+          maxLength: 5000,
+        },
+        {
+          name: "commitment",
+          label: "到岗与时长（选填）",
+          type: "textarea",
+          maxLength: 1000,
+        },
+        {
+          name: "status",
+          label: "招聘状态",
+          type: "select",
+          required: true,
+          defaultValue: "open",
+          options: [
+            { label: "开放申请", value: "open" },
+            { label: "已关闭", value: "closed" },
+          ],
+        },
+        {
+          name: "isExample",
+          label: "示例岗位（正式站点不展示，也不开放申请）",
+          type: "checkbox",
+          defaultValue: true,
+        },
       ],
     },
   ],
