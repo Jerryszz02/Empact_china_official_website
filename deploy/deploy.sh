@@ -14,6 +14,7 @@ readonly BACKUP=/usr/local/lib/empact/backup.sh
 readonly AUTO_UPDATE=/usr/local/lib/empact/auto-update.py
 readonly PUBLICATION_LOCK=/usr/local/lib/empact/publication-lock.py
 readonly PRUNE_BUILD_CACHE=/usr/local/lib/empact/prune-build-cache.py
+readonly SCHEMA_PLAN=/usr/local/lib/empact/schema-plan.py
 readonly REPO=Jerryszz02/Empact_china_official_website
 readonly BUILD_HEAP_MB=${EMPACT_BUILD_HEAP_MB:-768}
 readonly MIN_FREE_KB=${EMPACT_MIN_FREE_KB:-3145728}
@@ -128,48 +129,16 @@ else
 fi
 rm -f "$archive"
 
-schema_manifest() {
-  local root_dir=$1 file
-  for file in \
-    apps/cms/payload.config.ts \
-    apps/cms/src/collections.ts \
-    apps/cms/src/payload-types.ts; do
-    if [[ -f "$root_dir/$file" ]]; then
-      (cd "$root_dir" && sha256sum "$file")
-    else
-      printf 'missing  %s\n' "$file"
-    fi
-  done
-  python3 - "$root_dir/apps/cms/package.json" <<'PYDEPS'
-import json, sys
-with open(sys.argv[1]) as package:
-    dependencies = json.load(package)["dependencies"]
-for name in ("payload", "@payloadcms/db-sqlite"):
-    print(name + "=" + dependencies[name])
-PYDEPS
-  if [[ -d "$root_dir/apps/cms/src/migrations" ]]; then
-    (cd "$root_dir" && find apps/cms/src/migrations -type f -print0 | sort -z | xargs -0 -r sha256sum)
-  fi
-}
-schema_change_allowed() {
-  local previous=$1 next=$2 previous_hash next_hash approval
-  [[ "$previous" == "$next" ]] && return 0
-  previous_hash=$(printf '%s\n' "$previous" | sha256sum)
-  next_hash=$(printf '%s\n' "$next" | sha256sum)
-  approval="${previous_hash%% *}:${next_hash%% *}"
-  if [[ "${EMPACT_APPROVED_SCHEMA_CHANGE:-}" != "$approval" ]]; then
-    echo "Reviewed non-schema changes require exact manifest approval: $approval" >&2
-    return 1
-  fi
-  echo "Using maintainer-approved non-schema manifest transition: $approval"
-}
+# Reviewed plans travel with code, so ordinary additive changes need no server
+# environment override. Validate the exact installed -> candidate chain before
+# dependency installation or stopping any service.
+[[ -x $SCHEMA_PLAN ]] || { echo 'trusted schema plan helper is not installed' >&2; exit 1; }
+schema_plan_file="$ROOT/staging/schema-$sha-$timestamp.json"
+schema_changed=false
 if [[ -n $current_code && -d $current_code ]]; then
-  previous_schema=$(schema_manifest "$current_code")
-  next_schema=$(schema_manifest "$candidate")
-  if ! schema_change_allowed "$previous_schema" "$next_schema"; then
-    diff -u <(printf '%s\n' "$previous_schema") <(printf '%s\n' "$next_schema") || true
-    echo 'CMS schema files changed; automatic deployment is fail-closed.' >&2
-    exit 1
+  "$SCHEMA_PLAN" check "$current_code" "$candidate" "$schema_plan_file"
+  if [[ $("$SCHEMA_PLAN" fingerprint "$current_code") != $("$SCHEMA_PLAN" fingerprint "$candidate") ]]; then
+    schema_changed=true
   fi
 fi
 
@@ -225,7 +194,10 @@ rollback() {
   if [[ -n $previous_code ]]; then restore_pointer "$CURRENT" "$previous_code" || true; fi
   if [[ -n $previous_public ]]; then restore_pointer "$PUBLIC_CURRENT" "$previous_public" || true; fi
   restore_services
-  echo "deployment failed; restored previous pointers" >&2
+  # Additive tables remain on rollback and are compatible with the old code.
+  # Do not restore the DB over edits made after CMS restarted. Exact SQL makes
+  # a retry idempotent; failures during SQL application roll back atomically.
+  echo "deployment failed; restored previous pointers (additive schema retained)" >&2
   exit "$status"
 }
 trap 'status=$?; if (( status != 0 )); then rollback "$status"; fi' EXIT
@@ -255,6 +227,20 @@ maintenance=true
 systemctl stop empact-expiry.timer empact-expiry.service empact-cms.service
 if [[ -e $PUBLIC_CURRENT ]]; then previous_public=$(readlink -f "$PUBLIC_CURRENT"); fi
 "$BACKUP" "$backup_dir"
+if $schema_changed; then
+  database_path=$(/usr/bin/node --env-file="$ENV_FILE" -e '
+    const url = process.env.DATABASE_URL || "";
+    if (!url.startsWith("file:/") || /[?#]/.test(url)) process.exit(1);
+    console.log(url.slice(5));
+  ')
+  [[ "$database_path" == "$ROOT/data/"* && -f "$database_path" ]] || {
+    echo 'Schema migration requires an existing local database under /srv/empact/data.' >&2
+    exit 1
+  }
+  # Only create new tables/indexes. The helper rehearses on a private copy,
+  # preserves existing rows/schema, and applies all statements transactionally.
+  "$SCHEMA_PLAN" apply "$schema_plan_file" "$database_path" "$backup_dir/schema-before.db"
+fi
 "$PUBLICATION_LOCK" release "$SITE_RUNTIME" "$lock_token"
 cd "$candidate"
 runuser -u empact -- env NODE_ENV=production REPOSITORY_DIR="$candidate" SITE_CODE_REVISION="$sha" \

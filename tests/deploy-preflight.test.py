@@ -5,6 +5,7 @@ import io
 import json
 from pathlib import Path
 import subprocess
+import sys
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -95,6 +96,31 @@ class PreflightTests(unittest.TestCase):
         self.assertIn("- `payload`", summary)
         self.assertNotIn("- `other`", summary)
         self.assertIn("::warning", annotation)
+
+    def fingerprint(self):
+        helper = Path(__file__).parents[1] / "deploy/schema-plan.py"
+        return subprocess.check_output([sys.executable, str(helper), "fingerprint", str(self.root)]).decode().strip()
+
+    def test_ci_rejects_protected_change_without_plan(self):
+        self.write("apps/cms/src/collections.ts", "new access control")
+        with self.assertRaisesRegex(ValueError, "reviewed schema plan"):
+            preflight.report(self.before, self.commit(), require_plan=True)
+
+    def test_ci_accepts_exact_reviewed_nonstructural_plan(self):
+        before = self.fingerprint()
+        self.write("apps/cms/src/collections.ts", "new access control")
+        after = self.fingerprint()
+        self.write("deploy/schema-plans/access.json", json.dumps({
+            "version": 1, "from": before, "to": after,
+            "description": "Only access control changes; no field changes.", "statements": [],
+        }))
+        summary = preflight.report(self.before, self.commit(), require_plan=True)
+        self.assertIn("Reviewed deployment plan covers", summary)
+
+    def test_ci_does_not_require_plan_for_site_only_change(self):
+        self.write("apps/site/page.astro", "updated copy")
+        summary = preflight.report(self.before, self.commit(), require_plan=True)
+        self.assertIn("No protected CMS changes", summary)
 
     def test_invalid_or_missing_comparison_revision_fails(self):
         for value in ("main", "--help", "a" * 40 + "\n"):

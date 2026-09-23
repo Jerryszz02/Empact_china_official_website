@@ -12,9 +12,11 @@ Actions 展示目标提交、对应 CI、服务器部署日志、公网验收和
 
 ## 合并前预检与交付确认
 
-`Website checks` 在安装依赖前运行 `deploy/preflight.py`，将 PR 基线（push 时为上一提交）与待检查提交比较。改动 CMS 配置、集合定义、生成类型、迁移文件或 Payload/SQLite 依赖时，检查摘要会列出受保护项并提示维护人评估。该步骤只发出预警，不自动判定“无结构变化”，不授予发布许可，也不读取生产服务器；服务器上的实际版本和精确清单门禁仍是最终依据。
+`Website checks` 在安装依赖前运行 `deploy/preflight.py --require-plan`。修改 CMS 配置、集合定义、生成类型、迁移或数据库依赖时，必须在同一 PR 提交覆盖该清单变化的 `deploy/schema-plans/*.json`；缺少计划直接阻止 CI，通过后无需再上服务器填写临时批准变量。
 
-合并前看到预警时，先核对线上 `codeRevision` 与候选版本的全部受保护差异，按下文准备非结构变更的精确授权或独立迁移方案。不要以 PR CI 通过代替这一步，也不要自动复制失败日志中的指纹作为授权。
+计划绑定旧、新受保护文件清单的 SHA-256；普通页面、图片、文案改动无需计划。审查过的非结构改动使用空 `statements`；数据库增量目前仅自动支持新增表及这些新表上的索引。修改/删除旧字段、数据转换、数据库依赖升级、修改既有迁移文件仍需单独迁移方案，不属于自动放行范围。计划随代码审查；清单匹配只能证明计划针对这些文件，不能替代对字段定义与 SQL 是否一致的审查。
+
+服务器从实际已安装版本沿计划链选择到候选版本，因此连续合并时可一次补齐多个增量。计划必须保留，每个源指纹只有一条后继；回滚后重复执行只接受 SQL 定义完全一致的已有新增对象。不能用 `IF NOT EXISTS` 掩盖数据库漂移。
 
 线上交付必须确认以下四项：合并提交对应的 main CI 成功、`Deploy production` 成功、公开 `release.json` 的 `codeRevision` 匹配，以及本次实际改动的页面或功能符合预期。以“移除案例来源”为例，还要请求受影响案例并确认来源区块和链接均已消失。未完成这些核对时，只能报告已合并或部署中，不能报告已上线。
 
@@ -30,7 +32,7 @@ Actions 展示目标提交、对应 CI、服务器部署日志、公网验收和
 
 受限入口启动 `empact-release@<完整 SHA>.service`，调用固定安装路径 `/usr/local/lib/empact/deploy.sh`。部署进程由 systemd 管理，SSH 断线不会把版本切换截断。服务限时 15 分钟、`MemoryMax=1400M`；构建以 `empact` 用户运行，默认 Node 堆 768 MB，服务器保留约 2 GB 持久化 swap。
 
-发布安装不可变代码目录 `/srv/empact/code/<SHA>`。候选版本改动 CMS schema、迁移或关键数据库依赖时停止，交维护人评估；不会自动执行 schema push、migration、reset 或 seed。
+发布安装不可变代码目录 `/srv/empact/code/<SHA>`。候选版本的 CMS 变化必须匹配仓库中的精确迁移计划；不执行 schema push、全量 Payload migration、reset 或 seed。生产库继承的 `dev / -1` 迁移记录保持不变，自动增量不伪造旧迁移已完成记录。该库的升级依据是受保护代码指纹、精确 SQL 对象定义和部署回执；不要对它直接执行原生 Payload `migrate`、`migrate:rollback`，也不要用原生迁移状态判断增量是否已执行。
 
 安装器持有部署锁后、下载前，由 root 安装的 `prune-build-cache.py` 清理旧代码目录的 `node_modules` 和 `apps/cms/.next`。它保留当前线上版本、当前发布回执指定的上一回滚版本、本次候选版本及被运行中进程引用的版本；没有有效 `.code-revision` 的旧目录、符号链接和无法确认的状态不清理。缺失当前回执时停止，不能猜测回滚版本。所有源码、CMS 数据、媒体、公开快照及备份均保留。
 
@@ -40,11 +42,18 @@ Actions 展示目标提交、对应 CI、服务器部署日志、公网验收和
 
 人工检查同一清理计划可运行 `sudo /usr/local/lib/empact/prune-build-cache.py <候选完整SHA>`，默认只列出计划；经批准后添加 `--apply` 才清理。该命令与正常部署使用同一把锁，不能并行清理。
 
-若差异仅为已审查的非结构改动（例如关系字段的选项过滤），维护人可在 root 管理的 `/etc/default/empact-deploy` 中临时设置 `EMPACT_APPROVED_SCHEMA_CHANGE=<旧清单 SHA256>:<新清单 SHA256>`。清单由 `schema_manifest` 生成；指纹按 `printf '%s\n' "$manifest" | sha256sum` 计算，拒绝日志也会显示所需的精确指纹对。必须先核对线上与候选版本的全部清单差异，不能仅根据日志自动批准。
+维护阶段先等待 CMS 共用的 `publish.lock`，再停止 CMS 和截止任务并自动备份。若有清单变化，另用 SQLite `.backup` 创建约为数据库大小的 `schema-before.db`，在临时副本试跑选中的 SQL，并检查数据库完整性、既有表结构和数据不变、外键问题没有增加，全部通过后才在正式数据库的一个事务中执行。这里的备份、试跑和迁移均由部署执行，不需要日常手动操作。服务器需要 `/usr/bin/sqlite3`；备份与试跑副本不输出业务数据。
 
-批准只适用于这一个有方向的文件/依赖清单变化；源清单、目标清单、迁移或关键依赖再次变化时仍会拒绝。成功发布后删除此临时设置。真正的数据库结构变化仍须独立完成迁移评估，不能使用该设置替代迁移。
+随后用候选代码重建已批准快照，切换代码指针，重启官网和 CMS，验证内外网精确 `codeRevision`、CMS `/admin/` 和 ChatCircle 健康接口。SQL 失败时事务回滚；后续发布失败时恢复原代码/公开快照指针和原服务状态，并保留向后兼容的新增表。不会把数据库恢复成旧备份覆盖 CMS 重启后可能产生的新编辑。重试验证已有新增对象的 SQL 与计划一致。成功回执保存在 `/srv/empact/receipts/`，对应迁移计划留在 `/srv/empact/staging/schema-<SHA>-<时间>.json`，备份位于该次 `/srv/empact/backups/auto-<SHA>-<时间>/`。
 
-维护阶段先等待 CMS 共用的 `publish.lock`，再停止 CMS 和截止任务并备份。随后用候选代码重建已批准快照，切换代码指针，重启官网和 CMS，验证内外网精确 `codeRevision`、CMS `/admin/` 和 ChatCircle 健康接口。安装器失败恢复原代码/公开快照指针和原服务状态，成功回执保存在 `/srv/empact/receipts/`。
+### 为后续 CMS 改动提交计划
+
+1. 在独立工作区完成字段/迁移改动；保留现有迁移文件。在基线和候选源码目录分别运行 `python3 deploy/schema-plan.py fingerprint <目录>` 获取指纹。
+2. 新增计划（参照 `deploy/schema-plans/20260923-home-gallery.json`），填写 `version: 1`、`from`、`to`、说明和 `statements`。无结构变化用空数组；新增表 SQL 必须与对应 Payload 迁移及生成结构一致。保留历史计划以覆盖线上落后多个版本的情况。
+3. 运行 `python3 deploy/schema-plan.py check <基线目录> <候选目录> <计划输出.json>` 和 `python3 tests/deploy-schema.test.py`。需要用数据副本演练时，运行 `python3 deploy/schema-plan.py apply <计划输出.json> <数据库副本> <新备份路径>`，不能把本地试验指向生产库。
+4. PR 审查并通过检查后按正常流程合并。服务器自动匹配、备份、试跑、迁移和部署。缺计划或数据库存在不兼容对象时明确失败，不自动生成批准或修改数据。
+
+更复杂的迁移应先实现并评审专用迁移与恢复流程。旧 `EMPACT_APPROVED_SCHEMA_CHANGE` 环境变量不再作为放行入口。
 
 Actions 随后独立核对公网精确 SHA、生产模式、首页、青少年页、咨询页和人才模型页的内容，并再次核对版本号。公网验收失败会令工作流和部署记录失败；这一步不会在远端成功后自行回退，需要维护人结合服务器回执判断。SSH 断线或人工取消工作流时，远端可能继续完成，必须先查服务器状态，不能据此宣称已经回退。
 
@@ -58,6 +67,7 @@ sudo install -o root -g root -m 0755 deploy/backup.sh /usr/local/lib/empact/back
 sudo install -o root -g root -m 0755 deploy/auto-update.py /usr/local/lib/empact/auto-update.py
 sudo install -o root -g root -m 0755 deploy/publication-lock.py /usr/local/lib/empact/publication-lock.py
 sudo install -o root -g root -m 0755 deploy/prune-build-cache.py /usr/local/lib/empact/prune-build-cache.py
+sudo install -o root -g root -m 0755 deploy/schema-plan.py /usr/local/lib/empact/schema-plan.py
 sudo install -o root -g root -m 0755 deploy/deploy.sh /usr/local/lib/empact/deploy.sh
 sudo install -o root -g root -m 0755 deploy/actions-command.py /usr/local/lib/empact/actions-command.py
 sudo install -o root -g root -m 0644 deploy/empact-release@.service /etc/systemd/system/empact-release@.service
@@ -105,6 +115,6 @@ sudo systemctl status 'empact-release@*.service' --no-pager
 
 区分等待 CI、已被更新取代、构建/备份/发布失败、连接中断及公网验收失败。GitHub Actions 的失败通知依照仓库和个人通知设置，不另设消息通道。
 
-连接配置步骤会逐项报告缺少的 Actions secret/variable 名称，不输出其值。缺少配置时先修复所列设置，重跑同样的任务不会使配置自动出现。CMS 清单拦截则按“服务器发布与回退”核对实际差异；网络/SSH 中断须先确认 systemd 是否仍在发布，再决定重试，不能对所有失败统一自动重跑。
+连接配置步骤会逐项报告缺少的 Actions secret/variable 名称，不输出其值。缺少配置时先修复所列设置，重跑同样的任务不会使配置自动出现。CMS 清单拦截则核对实际差异与仓库迁移计划；网络/SSH 中断须先确认 systemd 是否仍在发布，再决定重试，不能对所有失败统一自动重跑。
 
 需要回到轮询模式时，先防止新的 Actions 部署进入、等待已有模板服务结束，再启用原 `empact-deploy.timer`。保留的 `auto-update.py` 默认模式和旧 service/timer 仍可使用；新门禁仍允许已开始的合格版本在主分支正常前进时完成。不要同时长期保留两个主动部署入口。
