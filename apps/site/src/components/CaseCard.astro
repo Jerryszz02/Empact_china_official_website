@@ -1,0 +1,32 @@
+---
+import type { Entry } from "@empact/content/schema";
+import CaseImage from "@/components/CaseImage.astro";
+import CaseMetadata from "@/components/CaseMetadata.astro";
+import { pathFor } from "@/lib/content";
+
+interface Props {
+  entry: Entry;
+  grouped?: boolean;
+}
+
+const { entry, grouped = false } = Astro.props;
+const Heading = grouped ? "h4" : "h3";
+---
+
+<a
+  id={entry.slug}
+  class="case-card"
+  href={pathFor(entry)}
+  target={entry.detailUrl ? "_blank" : undefined}
+  rel={entry.detailUrl ? "noopener noreferrer" : undefined}
+>
+  <CaseImage entry={entry} />
+  <div class="case-card-copy">
+    <Heading class="case-card-title">{entry.title}</Heading>
+    <CaseMetadata entry={entry} />
+    <p class="case-card-summary">{entry.summary}</p>
+    <span class="case-card-more" aria-hidden="true">
+      阅读案例 ↗
+    </span>
+  </div>
+</a>

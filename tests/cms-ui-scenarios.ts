@@ -352,6 +352,11 @@ export async function verifyCmsUI({
     await page
       .locator('dialog[open] textarea[name="summary"]')
       .fill("由实际浏览器录入的案例摘要。");
+    await page
+      .locator('dialog[open] input[name="eventDate"]')
+      .fill("2026-09-23");
+    await page.locator('dialog[open] input[name="duration"]').fill("两天");
+    await page.locator('dialog[open] input[name="location"]').fill("上海徐汇");
     await page.getByRole("button", { name: "创建并编辑", exact: true }).click();
     await page.waitForURL(/\/admin\/collections\/content\/\d+$/);
     id = page.url().split("/").at(-1)!;
@@ -359,6 +364,28 @@ export async function verifyCmsUI({
     const created = await request("/api/content/" + id);
     assert.equal(created.kind, "case");
     assert.equal(String(created.parent.id ?? created.parent), parent.id);
+    assert.equal(created.eventDate, "2026-09-23");
+    assert.equal(created.duration, "两天");
+    assert.equal(created.location, "上海徐汇");
+    await expect(page.locator('input[name="eventDate"]:visible')).toHaveValue(
+      "2026-09-23",
+    );
+    await expect(page.locator('input[name="duration"]:visible')).toHaveValue(
+      "两天",
+    );
+    await expect(page.locator('input[name="location"]:visible')).toHaveValue(
+      "上海徐汇",
+    );
+    await page.locator('input[name="eventDate"]:visible').fill("");
+    await page.locator('input[name="duration"]:visible').fill("长期");
+    await page.locator('input[name="location"]:visible').fill("");
+    await page.getByRole("button", { name: "保存", exact: true }).click();
+    await expect
+      .poll(async () => (await request("/api/content/" + id)).duration)
+      .toBe("长期");
+    const changedMetadata = await request("/api/content/" + id);
+    assert.ok(!changedMetadata.eventDate);
+    assert.ok(!changedMetadata.location);
     await expect(
       page.getByText("项目封面（发布时必填）", { exact: true }),
     ).toBeVisible();

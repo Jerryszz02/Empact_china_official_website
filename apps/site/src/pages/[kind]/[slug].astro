@@ -1,6 +1,6 @@
 ---
 import BaseLayout from "@/layouts/BaseLayout.astro";
-import CaseImage from "@/components/CaseImage.astro";
+import CaseList from "@/components/CaseList.astro";
 import ProjectPlanning from "@/components/ProjectPlanning.astro";
 import { effectiveProjectStatus } from "@empact/content/schema";
 import {
@@ -147,26 +147,7 @@ const media = mediaById(entry.imageId);
       <section id="cases" class="embedded-section case-section">
         {!isPlanning && <h2>相关案例</h2>}
         {entryCases.length > 0 ? (
-          <div class="case-grid">
-            {entryCases.map((item) => (
-              <a
-                id={item.slug}
-                class="case-card"
-                href={pathFor(item)}
-                target={item.detailUrl ? "_blank" : undefined}
-                rel={item.detailUrl ? "noopener noreferrer" : undefined}
-              >
-                <CaseImage entry={item} />
-                <div class="case-card-copy">
-                  <h3>{item.title}</h3>
-                  <p>{item.summary}</p>
-                  <span class="case-card-more" aria-hidden="true">
-                    阅读案例 ↗
-                  </span>
-                </div>
-              </a>
-            ))}
-          </div>
+          <CaseList cases={entryCases} businessSlug={entry.slug} />
         ) : (
           <ProjectPlanning businessId={entry.id} businessTitle={entry.title} />
         )}

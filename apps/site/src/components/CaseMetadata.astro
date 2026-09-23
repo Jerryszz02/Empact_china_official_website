@@ -1,0 +1,28 @@
+---
+import type { Entry } from "@empact/content/schema";
+import { caseEventDate } from "@/lib/case-layout";
+
+interface Props {
+  entry: Entry;
+  class?: string;
+}
+
+const { entry, class: className } = Astro.props;
+const eventDate = caseEventDate(entry.eventDate);
+const duration = entry.duration?.trim();
+const location = entry.location?.trim();
+---
+
+{(eventDate || duration || location) && (
+  <div class:list={["case-meta", "detail-meta", className]}>
+    {(eventDate || duration) && (
+      <span>
+        活动时间：
+        {eventDate && <time datetime={entry.eventDate}>{eventDate}</time>}
+        {eventDate && duration && " · "}
+        {duration}
+      </span>
+    )}
+    {location && <span>地点：{location}</span>}
+  </div>
+)}

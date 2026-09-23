@@ -32,7 +32,12 @@ export function CreateContentButton({
           summary: form.get("summary"),
           ...(kind === "business"
             ? { segment: form.get("segment"), order: 0 }
-            : { parent: Number(parentId || form.get("parent")) }),
+            : {
+                parent: Number(parentId || form.get("parent")),
+                eventDate: String(form.get("eventDate") || "").trim(),
+                duration: String(form.get("duration") || "").trim(),
+                location: String(form.get("location") || "").trim(),
+              }),
           approved: false,
         }),
       });
@@ -101,6 +106,30 @@ export function CreateContentButton({
                 ))}
               </select>
             </label>
+          )}
+          {kind === "case" && (
+            <>
+              <label>
+                活动日期（选填）
+                <input name="eventDate" type="date" />
+              </label>
+              <label>
+                活动时间说明（选填）
+                <input
+                  name="duration"
+                  maxLength={120}
+                  placeholder="例如 9月23日至25日、长期、每周六"
+                />
+              </label>
+              <label>
+                地点（选填）
+                <input
+                  name="location"
+                  maxLength={120}
+                  placeholder="例如 上海徐汇"
+                />
+              </label>
+            </>
           )}
           {error && (
             <p role="alert" className="admin-error">
