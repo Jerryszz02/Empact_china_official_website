@@ -217,12 +217,16 @@ test("reduced motion keeps the static section colors and logo", async ({
   );
 });
 
-test("hero centers the brand logo and keeps the white mark with its red underline", async ({
+test("hero finishes with the complete colored brand mark above the photos", async ({
   page,
 }) => {
   await page.goto("/");
   expect(await enhancementDisabled(page)).toBe(false);
-  await expect.poll(() => canvasInk(page)).toBeGreaterThan(100);
+  await expect(page.locator("html")).toHaveAttribute(
+    "data-home-intro",
+    "ready",
+    { timeout: 8000 },
+  );
   const colors = await page
     .locator("[data-motion-canvas]")
     .evaluate((element) => {
@@ -253,7 +257,7 @@ test("hero centers the brand logo and keeps the white mark with its red underlin
     });
   expect(colors.white).toBeGreaterThan(100);
   expect(colors.red).toBeGreaterThan(1);
-  expect(colors.teal).toBe(0);
+  expect(colors.teal).toBeGreaterThan(1);
   // The painted particle mark itself must sit on the horizontal centre.
   expect(Math.abs(colors.center - 0.5)).toBeLessThan(0.12);
 
@@ -263,6 +267,65 @@ test("hero centers the brand logo and keeps the white mark with its red underlin
   const center = box!.x + box!.width / 2;
   expect(Math.abs(center - viewport.width / 2)).toBeLessThan(
     viewport.width * 0.1,
+  );
+  const gallery = await page.locator("[data-home-gallery]").boundingBox();
+  expect(gallery).not.toBeNull();
+  expect(box!.y + box!.height).toBeLessThan(gallery!.y);
+  await expect(page.locator("[data-home-gallery]")).toHaveCSS("opacity", "1");
+});
+
+test("the gathered logo moves up and shrinks before the photo strip appears", async ({
+  page,
+}) => {
+  await page.goto("/");
+  const paintedBounds = () =>
+    page.locator("[data-motion-canvas]").evaluate((element) => {
+      const canvas = element as HTMLCanvasElement;
+      const pixels = canvas
+        .getContext("2d")!
+        .getImageData(0, 0, canvas.width, canvas.height).data;
+      let left = canvas.width,
+        right = 0,
+        top = canvas.height,
+        bottom = 0;
+      for (let i = 3; i < pixels.length; i += 4) {
+        if (pixels[i] < 80) continue;
+        const x = ((i - 3) / 4) % canvas.width;
+        const y = Math.floor((i - 3) / 4 / canvas.width);
+        left = Math.min(left, x);
+        right = Math.max(right, x);
+        top = Math.min(top, y);
+        bottom = Math.max(bottom, y);
+      }
+      return {
+        width: (right - left) / canvas.width,
+        centerY: (top + bottom) / 2 / canvas.height,
+      };
+    });
+  await expect(page.locator("html")).toHaveAttribute(
+    "data-home-intro",
+    "forming",
+    { timeout: 6000 },
+  );
+  await expect(page.locator("[data-home-gallery]")).toHaveCSS("opacity", "0");
+  const large = await paintedBounds();
+  expect(large.width).toBeGreaterThan(0.55);
+  await expect(page.locator("html")).toHaveAttribute(
+    "data-home-intro",
+    "ready",
+    { timeout: 6000 },
+  );
+  const docked = await paintedBounds();
+  expect(docked.width).toBeLessThan(large.width * 0.8);
+  expect(docked.centerY).toBeLessThan(large.centerY - 0.08);
+  const final = await canvasSignature(page);
+  await page.waitForTimeout(240);
+  expect(await canvasSignature(page)).toBe(final);
+  await settleAt(page, "about-intro");
+  await settleAt(page, "brand");
+  await expect(page.locator("html")).toHaveAttribute(
+    "data-home-intro",
+    "ready",
   );
 });
 
@@ -312,9 +375,23 @@ test("trackpad inertia is treated as one wheel gesture", async ({ page }) => {
   );
   await settleAt(page, "brand");
   const aboutIntro = await sceneTop(page, "about-intro");
-  for (const delta of [12, 12, 12, 12, 12, 12, 12, 12, 12])
-    await page.mouse.wheel(0, delta);
-  await page.waitForTimeout(700);
+  // Keep one gesture inside the browser: slow CI protocol round trips must
+  // not turn its small samples into separate gestures (>180ms apart).
+  await page.evaluate(() => {
+    for (let i = 0; i < 9; i++)
+      window.dispatchEvent(
+        new WheelEvent("wheel", {
+          deltaY: 12,
+          deltaMode: 0,
+          bubbles: true,
+          cancelable: true,
+        }),
+      );
+  });
+  await expect
+    .poll(() => scrollY(page), { timeout: 1800 })
+    .toBeCloseTo(aboutIntro, 0);
+  await page.waitForTimeout(240);
   expect(Math.abs((await scrollY(page)) - aboutIntro)).toBeLessThanOrEqual(3);
 });
 
@@ -599,7 +676,7 @@ for (const failure of ["canvas", "logo"] as const) {
           null) as typeof HTMLCanvasElement.prototype.getContext;
       });
     } else {
-      await page.route("**/brand/empact-logo-blue.png", (route) =>
+      await page.route("**/brand/empact-logo-tagline-white.png", (route) =>
         route.abort(),
       );
     }

@@ -190,6 +190,7 @@ export async function businessAdminMutation(
       ? mergeSelectedLive(live, draft, selected, false)
       : {
           ...draft,
+          homeGallery: undefined,
           entries: draft.entries.filter(
             (item) => selected.includes(item.id) || item.kind === "page",
           ),
@@ -395,6 +396,8 @@ export async function businessAdminMutation(
             relatedIds: item.relatedIds?.filter((ref) => !removed.has(ref)),
           }));
         const mediaIds = new Set(remaining.flatMap(usedMedia));
+        for (const photo of latest.homeGallery?.photos ?? [])
+          mediaIds.add(photo.imageId);
         return {
           ...latest,
           entries: remaining,

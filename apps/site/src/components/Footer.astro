@@ -5,16 +5,28 @@ const updates = [...news].sort((a, b) =>
 );
 const company = snapshot.company;
 const socials = [
-  { name: "小红书", href: "https://xhslink.cn/o/A6Nv4ftO0Td" },
   {
+    platform: "小红书",
+    name: "Empact AI 社创营",
+    href: "https://xhslink.cn/o/A6Nv4ftO0Td",
+  },
+  {
+    platform: "小红书",
+    name: "Empact中国",
+    href: "https://xhslink.cn/o/30HZaQmiwlS",
+  },
+  {
+    platform: "微信公众号",
     name: "Empact中国",
     href: "https://weixin.qq.com/r/mp/YBDv99XEyYi2rZGU90Vy",
   },
   {
+    platform: "LinkedIn",
     name: "Empact SG · LinkedIn",
     href: "https://www.linkedin.com/company/empactsg/posts/?feedView=all",
   },
   {
+    platform: "Facebook",
     name: "Empact SG · Facebook",
     href: "https://www.facebook.com/empactsg/",
   },
@@ -56,22 +68,30 @@ const socials = [
       href="https://portal.empact.sg/empact-general-enquiry"
       target="_blank"
       rel="noopener noreferrer"
-    >联系 Empact 新加坡</a>
+    >
+      联系 Empact 新加坡
+    </a>
   </div>
 
   <nav class="footer-socials" aria-label="社交媒体">
     {socials.map((social) => (
-      <a href={social.href} target="_blank" rel="noopener noreferrer">
-        {social.name === "小红书" ? (
+      <a
+        href={social.href}
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label={`${social.platform}：${social.name}`}
+        title={`${social.platform}：${social.name}`}
+      >
+        {social.platform === "小红书" ? (
           <img
             class="footer-social-icon"
-            src="/brand/xiaohongshu.svg"
+            src="/brand/xiaohongshu-white.svg"
             alt=""
             aria-hidden="true"
             width="24"
             height="24"
           />
-        ) : social.name === "Empact SG · LinkedIn" ? (
+        ) : social.platform === "LinkedIn" ? (
           <svg
             class="footer-social-icon"
             viewBox="0 0 24 24"
@@ -81,7 +101,7 @@ const socials = [
           >
             <path d="M20.45 2H3.55C2.7 2 2 2.67 2 3.5v17c0 .83.7 1.5 1.55 1.5h16.9c.85 0 1.55-.67 1.55-1.5v-17c0-.83-.7-1.5-1.55-1.5ZM7.93 18.75H4.98V9.2h2.95v9.55ZM6.45 7.9a1.71 1.71 0 1 1 0-3.42 1.71 1.71 0 0 1 0 3.42Zm12.3 10.85H15.8V14.1c0-1.11-.02-2.54-1.55-2.54-1.55 0-1.79 1.21-1.79 2.46v4.73H9.51V9.2h2.83v1.3h.04c.39-.74 1.36-1.52 2.79-1.52 2.98 0 3.58 1.96 3.58 4.51v5.26Z" />
           </svg>
-        ) : social.name === "Empact SG · Facebook" ? (
+        ) : social.platform === "Facebook" ? (
           <svg
             class="footer-social-icon"
             viewBox="0 0 24 24"
@@ -162,7 +182,10 @@ const socials = [
 <style>
   .site-footer {
     display: grid;
-    grid-template-columns: auto minmax(0, 0.8fr) minmax(0, 1fr) auto;
+    grid-template-columns: auto minmax(0, 0.8fr) minmax(0, 1fr) minmax(
+        0,
+        1.8fr
+      );
     grid-template-areas:
       "brand china singapore socials"
       "news news news news"
@@ -210,16 +233,19 @@ const socials = [
   }
   .footer-socials {
     grid-area: socials;
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.3rem;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+    gap: 0.5rem 1rem;
+    min-width: 0;
   }
   .footer-socials a {
     display: inline-flex;
     align-items: center;
     gap: 0.5rem;
     min-height: 1.5rem;
+    min-width: 0;
+    overflow-wrap: anywhere;
     text-decoration: none;
   }
   .footer-social-icon {
@@ -272,12 +298,13 @@ const socials = [
     flex-wrap: wrap;
     gap: 0.25rem 0.9rem;
   }
-  @media (max-width: 56em) {
+  @media (max-width: 72em) {
     .site-footer {
       grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
       grid-template-areas:
-        "brand socials"
+        "brand brand"
         "china singapore"
+        "socials socials"
         "news news"
         "bottom bottom";
       gap: 0.25rem 0.85rem;
@@ -289,8 +316,8 @@ const socials = [
       width: clamp(5rem, 27vw, 8.5rem);
     }
     .footer-socials {
-      align-items: flex-end;
-      gap: 0.2rem;
+      gap: 0.4rem 0.85rem;
+      padding-block: 0.4rem;
     }
     .footer-bottom {
       align-items: flex-start;

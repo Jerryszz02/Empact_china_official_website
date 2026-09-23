@@ -93,9 +93,11 @@ export interface Config {
   fallbackLocale: null;
   globals: {
     company: Company;
+    'home-gallery': HomeGallery;
   };
   globalsSelect: {
     company: CompanySelect<false> | CompanySelect<true>;
+    'home-gallery': HomeGallerySelect<false> | HomeGallerySelect<true>;
   };
   locale: null;
   widgets: {
@@ -531,6 +533,26 @@ export interface Company {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "home-gallery".
+ */
+export interface HomeGallery {
+  id: number;
+  style: 'photos' | 'film';
+  /**
+   * 先上传图片并保存，再用上方按钮预览、发布。每张图片可填写单独的替代文字。
+   */
+  photos?:
+    | {
+        image: number | Media;
+        alt?: string | null;
+        id?: string | null;
+      }[]
+    | null;
+  updatedAt?: string | null;
+  createdAt?: string | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "company_select".
  */
 export interface CompanySelect<T extends boolean = true> {
@@ -546,6 +568,23 @@ export interface CompanySelect<T extends boolean = true> {
   privacyApproved?: T;
   contactEnabled?: T;
   retentionDays?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  globalType?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "home-gallery_select".
+ */
+export interface HomeGallerySelect<T extends boolean = true> {
+  style?: T;
+  photos?:
+    | T
+    | {
+        image?: T;
+        alt?: T;
+        id?: T;
+      };
   updatedAt?: T;
   createdAt?: T;
   globalType?: T;

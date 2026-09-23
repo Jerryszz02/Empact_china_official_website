@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 480" role="img" aria-label="待替换照片 5">
+  <rect width="720" height="480" fill="#e6e4d5"/>
+  <circle cx="305" cy="190" r="95" fill="#d4846d" opacity=".8"/>
+  <path d="M0 305 C170 240, 300 320, 510 280 S740 290, 740 290 V480 H0Z" fill="#9bbb9f"/>
+  <path d="M-30 353 C160 405, 350 435, 750 370 V480 H-30Z" fill="#96b1c4" opacity=".92"/>
+  <path d="M55 70h160M55 90h95" stroke="#fff" stroke-width="5" opacity=".5"/>
+  <text x="54" y="441" fill="#173f58" font-family="Arial, sans-serif" font-size="22" font-weight="700" letter-spacing="3">PHOTO 05 · 待替换</text>
+</svg>

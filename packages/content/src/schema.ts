@@ -61,6 +61,10 @@ export type Company = {
   contactEnabled: boolean;
   retentionDays: number;
 };
+export type HomeGallery = {
+  style: "photos" | "film";
+  photos: { imageId: string; alt?: string }[];
+};
 export type Snapshot = {
   version: string;
   generatedAt: string;
@@ -68,6 +72,7 @@ export type Snapshot = {
   company: Company;
   entries: Entry[];
   media: Media[];
+  homeGallery?: HomeGallery;
 };
 
 const slug = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
@@ -193,6 +198,14 @@ const snapshotSchema = z.object({
   company: companySchema,
   entries: z.array(entrySchema),
   media: z.array(mediaSchema),
+  homeGallery: z
+    .object({
+      style: z.enum(["photos", "film"]),
+      photos: z.array(
+        z.object({ imageId: z.string().min(1), alt: z.string().optional() }),
+      ),
+    })
+    .optional(),
 });
 
 export function effectiveProjectStatus(
@@ -269,6 +282,10 @@ export function validateSnapshot(
       throw new Error(`unapproved media: ${media.id}`);
     if (mediaIds.size !== input.media.length)
       throw new Error("duplicate media id");
+  }
+  for (const photo of input.homeGallery?.photos ?? []) {
+    if (!mediaIds.has(photo.imageId))
+      throw new Error(`unknown home gallery image: ${photo.imageId}`);
   }
   for (const e of input.entries) {
     if (ids.has(e.id)) throw new Error(`duplicate entry id: ${e.id}`);

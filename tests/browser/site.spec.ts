@@ -59,18 +59,22 @@ test("homepage paths, dropdowns, mobile navigation and draft boundary", async ({
   ).toHaveAttribute("href", "/admin");
   await expect(page.locator("#nav-corporate a")).toHaveCount(5);
   await expect(page.locator(".motion-home > section")).toHaveCount(4);
-  expect(
-    await page
-      .locator("img")
-      .evaluateAll((images) =>
-        images.every(
-          (image) =>
-            image instanceof HTMLImageElement &&
-            image.complete &&
-            image.naturalWidth > 0,
+  // Offscreen gallery originals and loop copies load lazily; the logo and
+  // navigation images must still load before the user interacts.
+  await expect
+    .poll(() =>
+      page
+        .locator('img:not([loading="lazy"])')
+        .evaluateAll((images) =>
+          images.every(
+            (image) =>
+              image instanceof HTMLImageElement &&
+              image.complete &&
+              image.naturalWidth > 0,
+          ),
         ),
-      ),
-  ).toBe(true);
+    )
+    .toBe(true);
   await expect(page.locator('meta[name="robots"]')).toHaveAttribute(
     "content",
     /noindex/,
@@ -419,8 +423,12 @@ test("footer is compact and uses the transparent white logo", async ({
 
   // China and Singapore social links open the official accounts in a safe new tab.
   for (const [name, href] of [
-    ["小红书", "https://xhslink.cn/o/A6Nv4ftO0Td"],
-    ["Empact中国", "https://weixin.qq.com/r/mp/YBDv99XEyYi2rZGU90Vy"],
+    ["小红书：Empact AI 社创营", "https://xhslink.cn/o/A6Nv4ftO0Td"],
+    ["小红书：Empact中国", "https://xhslink.cn/o/30HZaQmiwlS"],
+    [
+      "微信公众号：Empact中国",
+      "https://weixin.qq.com/r/mp/YBDv99XEyYi2rZGU90Vy",
+    ],
     [
       "Empact SG · LinkedIn",
       "https://www.linkedin.com/company/empactsg/posts/?feedView=all",
@@ -438,6 +446,17 @@ test("footer is compact and uses the transparent white logo", async ({
     );
   }
 
+  const socials = footer.locator(".footer-socials");
+  expect(
+    await socials.evaluate(
+      (element) =>
+        getComputedStyle(element).gridTemplateColumns.split(" ").length,
+    ),
+  ).toBe(2);
+  await expect(
+    socials.locator('img[src="/brand/xiaohongshu-white.svg"]'),
+  ).toHaveCount(2);
+
   // Removed rows stay removed and no telephone link is reintroduced.
   await expect(footer.locator(".footer-brand p")).toHaveCount(0);
   await expect(footer.locator('a[href^="/projects/"]')).toHaveCount(0);
@@ -454,9 +473,9 @@ test("footer is compact and uses the transparent white logo", async ({
   ).toBe(true);
 
   const bounds = await footer.boundingBox();
-  // Four social accounts need more vertical space beside the logo on phones.
+  // Social accounts use their own two-column row on narrow screens.
   expect(bounds!.height).toBeLessThan(
-    testInfo.project.name === "mobile" ? 336 : 220,
+    testInfo.project.name === "mobile" ? 380 : 220,
   );
 
   expect(
@@ -469,14 +488,29 @@ test("footer is compact and uses the transparent white logo", async ({
     path: `test-results/footer-${testInfo.project.name}.png`,
   });
 
-  // Narrow phones must not introduce horizontal overflow either.
-  await page.setViewportSize({ width: 320, height: 900 });
-  await page.goto("/");
-  expect(
-    await page.evaluate(
-      () => document.documentElement.scrollWidth <= window.innerWidth,
-    ),
-  ).toBe(true);
+  // Keep both social columns readable on phones and tablets.
+  for (const width of [320, 768, 1024]) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto("/");
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= window.innerWidth,
+      ),
+    ).toBe(true);
+    expect(
+      await socials.evaluate(
+        (element) =>
+          getComputedStyle(element).gridTemplateColumns.split(" ").length,
+      ),
+    ).toBe(2);
+    for (const link of await socials.locator("a").all()) {
+      expect(
+        await link.evaluate(
+          (element) => element.scrollWidth <= element.clientWidth + 1,
+        ),
+      ).toBe(true);
+    }
+  }
 });
 
 test("hybrid pointers reveal dropdowns on touch before following parent links", async ({

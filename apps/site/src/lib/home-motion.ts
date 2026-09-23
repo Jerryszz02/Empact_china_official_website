@@ -7,6 +7,7 @@
  */
 
 import { WheelNotchTracker, clampPage } from "./home-paging";
+import { HomeIntro } from "./home-intro";
 
 const root = document.documentElement;
 const body = document.body;
@@ -21,6 +22,11 @@ const scenes = [
   ...document.querySelectorAll<HTMLElement>("[data-motion-scene]"),
 ];
 const logos = [...document.querySelectorAll<HTMLElement>("[data-motion-logo]")];
+const hero = scenes[0];
+const heroCopy = hero?.querySelector<HTMLElement>(".motion-scene-content");
+const gallery = hero?.querySelector<HTMLElement>("[data-home-gallery]");
+const intro = new HomeIntro();
+const LOGO_SOURCE_HEIGHT = 373;
 const reduced = matchMedia("(prefers-reduced-motion: reduce)");
 const coarse = matchMedia("(pointer: coarse)");
 const fine = matchMedia("(hover: hover) and (pointer: fine)");
@@ -93,6 +99,9 @@ let stageTop = 0;
 let stageBottom = 0;
 let heroBox: Box | null = null;
 let closingBox: Box | null = null;
+let introBox: Box | null = null;
+let heroCopyBox: Box | null = null;
+let heroCopyOffset = 0;
 let textBoxes: Box[] = [];
 let sceneFades: number[] = [];
 let paperOpacity = -1;
@@ -161,6 +170,26 @@ function measureLayout() {
   stageBottom = stageRect ? stageRect.bottom + scrollY : innerHeight;
   heroBox = boxOf(logos[0] ?? null);
   closingBox = boxOf(logos[1] ?? null);
+  heroCopyBox = boxOf(heroCopy ?? null);
+  if (heroCopyBox) {
+    heroCopyBox.top -= heroCopyOffset;
+    heroCopyBox.bottom -= heroCopyOffset;
+  }
+  const largeWidth = Math.min(
+    innerWidth * (innerWidth < 700 ? 0.88 : 0.7),
+    1120,
+  );
+  const largeHeight = (largeWidth * LOGO_SOURCE_HEIGHT) / 1080;
+  const largeY = Math.max(
+    innerHeight * 0.43,
+    (header?.getBoundingClientRect().bottom ?? 80) + 24 + largeHeight / 2,
+  );
+  introBox = {
+    left: (innerWidth - largeWidth) / 2,
+    right: (innerWidth + largeWidth) / 2,
+    top: (anchors[0] ?? 0) + largeY - largeHeight / 2,
+    bottom: (anchors[0] ?? 0) + largeY + largeHeight / 2,
+  };
   textBoxes = scenes
     .map((scene) =>
       boxOf(scene.querySelector<HTMLElement>(".motion-scene-content")),
@@ -244,6 +273,7 @@ function updateCanvasSize() {
 }
 
 function clearParticles() {
+  finishIntro();
   particleCount = 0;
   sceneFades = [];
   applyLive(true);
@@ -257,11 +287,21 @@ function sampleLogo() {
     mobileSample = innerWidth < 700 || coarse.matches;
     sample.width = mobileSample ? 420 : 640;
     sample.height = Math.round(
-      (sample.width * logo.naturalHeight) / logo.naturalWidth,
+      (sample.width * LOGO_SOURCE_HEIGHT) / logo.naturalWidth,
     );
     const sampleContext = sample.getContext("2d");
     if (!sampleContext) return;
-    sampleContext.drawImage(logo, 0, 0, sample.width, sample.height);
+    sampleContext.drawImage(
+      logo,
+      0,
+      0,
+      logo.naturalWidth,
+      LOGO_SOURCE_HEIGHT,
+      0,
+      0,
+      sample.width,
+      sample.height,
+    );
     const pixels = sampleContext.getImageData(
       0,
       0,
@@ -283,13 +323,8 @@ function sampleLogo() {
     for (let y = 0; y < sample.height; y += 3) {
       for (let x = 0; x < sample.width; x += 3) {
         const offset = (y * sample.width + x) * 4;
-        // The source mark has an opaque white background. Only the red
-        // underline is coloured; the rest of the mark stays white.
-        if (
-          pixels[offset + 3] < 80 ||
-          pixels[offset] + pixels[offset + 1] + pixels[offset + 2] >= 700
-        )
-          continue;
+        // Use the same transparent source and crop as the solid brand mark.
+        if (pixels[offset + 3] < 80) continue;
         const random = Math.sin(index * 127.1 + 311.7) * 43758.5453;
         const seed = random - Math.floor(random);
         const phase = seed * Math.PI * 2;
@@ -347,6 +382,7 @@ function applyLive(force = false) {
     updateBackground(true);
     updateSceneFades(true);
   } else {
+    if (reduced.matches || oversized || !context) finishIntro();
     paperOpacity = -1;
     sceneFades = scenes.map(() => -1);
     if (background) background.style.opacity = "";
@@ -355,6 +391,16 @@ function applyLive(force = false) {
     if (canvas) canvas.style.clipPath = "";
   }
   schedule();
+}
+
+function finishIntro() {
+  intro.finish();
+  root.dataset.homeIntro = "ready";
+  hero?.style.setProperty("--gallery-reveal", "1");
+  hero?.style.setProperty("--hero-copy-opacity", "1");
+  hero?.style.setProperty("--hero-copy-offset", "0px");
+  heroCopyOffset = 0;
+  if (gallery) gallery.inert = false;
 }
 
 function draw(now: number): boolean {
@@ -368,6 +414,21 @@ function draw(now: number): boolean {
   const first = anchors[0] ?? 0;
   const last = anchors[anchors.length - 1] ?? first + height * 2;
   const progress = clamp((scrollY - first) / Math.max(1, last - first));
+  if (scrollY > first + height * 0.5) intro.finish();
+  const opening = intro.read(now);
+  root.dataset.homeIntro = opening.phase;
+  hero?.style.setProperty("--gallery-reveal", String(opening.reveal));
+  hero?.style.setProperty("--hero-copy-opacity", String(opening.copy));
+  const copyOffset =
+    introBox && heroCopyBox
+      ? Math.max(0, introBox.bottom + 22 - heroCopyBox.top) * (1 - opening.dock)
+      : 0;
+  heroCopyOffset = copyOffset;
+  hero?.style.setProperty("--hero-copy-offset", `${copyOffset.toFixed(2)}px`);
+  if (gallery) gallery.inert = opening.reveal < 1;
+  const firstSpan = Math.max(1, (anchors[1] ?? height) - first);
+  const solidOpacity =
+    opening.solid * (1 - smooth((scrollY - first) / (firstSpan * 0.36)));
   const spread =
     smooth((progress - 0.1) / 0.32) * (1 - smooth((progress - 0.65) / 0.3));
   const finish = smooth((progress - 0.75) / 0.2);
@@ -403,10 +464,21 @@ function draw(now: number): boolean {
     size = width * (mobileSample ? 0.92 : 0.59);
   }
 
+  if (introBox && finish === 0 && opening.dock < 1) {
+    centerX = lerp((introBox.left + introBox.right) / 2, centerX, opening.dock);
+    centerY = lerp(
+      (introBox.top + introBox.bottom) / 2 - first,
+      centerY,
+      opening.dock,
+    );
+    size = lerp(introBox.right - introBox.left, size, opening.dock);
+  }
+
   const time = now / 1000;
   const heroWeight = 1 - smooth(progress / 0.3);
-  centerY += Math.sin(time * ((Math.PI * 2) / 7)) * 3 * heroWeight;
-  if (fine.matches) {
+  centerY +=
+    Math.sin(time * ((Math.PI * 2) / 7)) * 3 * heroWeight * (1 - solidOpacity);
+  if (fine.matches && solidOpacity < 1) {
     centerX += pointerX * 5 * heroWeight;
     centerY += pointerY * 5 * heroWeight;
   }
@@ -428,9 +500,25 @@ function draw(now: number): boolean {
   context.clearRect(0, 0, width, height);
   // Clear the final image once, then leave fully transparent particles idle.
   if (exitOpacity === 0) return false;
-  context.globalAlpha = exitOpacity;
+  if (solidOpacity > 0) {
+    const logoHeight = (size * LOGO_SOURCE_HEIGHT) / logo.naturalWidth;
+    context.globalAlpha = exitOpacity * solidOpacity;
+    context.drawImage(
+      logo,
+      0,
+      0,
+      logo.naturalWidth,
+      LOGO_SOURCE_HEIGHT,
+      centerX - size / 2,
+      centerY - logoHeight / 2,
+      size,
+      logoHeight,
+    );
+  }
+  const particleOpacity = exitOpacity * (1 - solidOpacity);
+  context.globalAlpha = particleOpacity;
   let lastFill = "";
-  for (let i = 0; i < particleCount; i += 1) {
+  for (let i = 0; i < particleCount && particleOpacity > 0; i += 1) {
     const seed = particleSeed[i] ?? 0;
     const phaseCos = particlePhaseCos[i] ?? 0;
     const phaseSin = particlePhaseSin[i] ?? 0;
@@ -451,9 +539,21 @@ function draw(now: number): boolean {
       x += (ds * phaseCos + dc * phaseSin) * amplitude * spread;
       y += (dc * phaseCos - ds * phaseSin) * amplitude * spread;
     }
+    if (opening.gather < 1) {
+      const radius = Math.sqrt((seed * 17.13) % 1);
+      const fromX = width * 0.5 + phaseCos * width * 0.44 * radius;
+      const fromY = height * 0.43 + phaseSin * height * 0.28 * radius;
+      const arc =
+        Math.sin(opening.gather * Math.PI) * (seed - 0.5) * width * 0.1;
+      x = lerp(fromX, x, opening.gather) + arc;
+      y = lerp(fromY, y, opening.gather) + arc * 0.36;
+      context.globalAlpha =
+        particleOpacity * lerp(0.28 + seed * 0.42, 1, opening.gather);
+    }
     if (x < -4 || x > width + 4 || y < -4 || y > height + 4) continue;
     let blocked = false;
     for (const box of textBoxes) {
+      if (box === textBoxes[0] && opening.phase !== "ready") continue;
       if (
         x > box.left - 12 &&
         x < box.right + 12 &&
@@ -476,7 +576,9 @@ function draw(now: number): boolean {
     const rotationSin = particleUnderline[i]
       ? 0
       : lerp(0, scatteredSin, spread);
-    const radius = particleRadius[i] ?? 1;
+    const radius =
+      (particleRadius[i] ?? 1) *
+      Math.max(0.45, size / (mobileSample ? 420 : 640));
     const color = particleUnderline[i] ? UNDERLINE_COLOR : fill;
     if (color !== lastFill) {
       context.fillStyle = color;
@@ -499,7 +601,11 @@ function draw(now: number): boolean {
   }
   context.globalAlpha = 1;
   // Scroll and layout listeners schedule the next paint for static scenes.
-  return spread > 0 || heroWeight > 0;
+  return (
+    opening.phase !== "ready" ||
+    spread > 0 ||
+    (heroWeight > 0 && solidOpacity < 1)
+  );
 }
 
 /* ------------------------------------------------------------------ */
@@ -598,6 +704,8 @@ function onPointerDown(event: PointerEvent) {
 
 function onKeyboardInput() {
   cancelWheelAnimation();
+  finishIntro();
+  schedule();
 }
 
 function onFocusIn() {
@@ -635,6 +743,13 @@ function updateLayout() {
 
 if (stage && scenes.length >= 2) {
   body.classList.add("motion-js");
+  if (reduced.matches || !context) finishIntro();
+  else {
+    root.dataset.homeIntro = "loading";
+    hero?.style.setProperty("--gallery-reveal", "0");
+    hero?.style.setProperty("--hero-copy-opacity", "0");
+    if (gallery) gallery.inert = true;
+  }
   const observer = new ResizeObserver(updateLayout);
   scenes.forEach((scene) => observer.observe(scene));
   if (header) observer.observe(header);
@@ -648,7 +763,15 @@ if (stage && scenes.length >= 2) {
       updateLayout();
     }).observe(nav, { attributes: true, attributeFilter: ["class"] });
 
-  addEventListener("scroll", schedule, { passive: true });
+  addEventListener(
+    "scroll",
+    () => {
+      if (Math.abs(scrollY - (anchors[0] ?? 0)) > 4)
+        intro.handOver(performance.now());
+      schedule();
+    },
+    { passive: true },
+  );
   addEventListener("wheel", onWheel, { passive: false });
   addEventListener("touchstart", cancelWheelAnimation, { passive: true });
   addEventListener("touchend", cancelWheelAnimation, { passive: true });
@@ -723,6 +846,10 @@ if (stage && scenes.length >= 2) {
     });
   logo.onload = sampleLogo;
   logo.onerror = clearParticles;
+  // A delayed or stalled decorative asset must not hide readable content.
+  setTimeout(() => {
+    if (particleCount === 0) finishIntro();
+  }, 1500);
   updateLayout();
-  if (context) logo.src = "/brand/empact-logo-blue.png";
+  if (context) logo.src = "/brand/empact-logo-tagline-white.png";
 }

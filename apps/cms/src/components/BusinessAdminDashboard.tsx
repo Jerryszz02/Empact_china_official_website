@@ -199,6 +199,15 @@ export function BusinessAdminDashboard() {
           </a>
         ))}
       </nav>
+      <a className="home-gallery-entry" href="/admin/globals/home-gallery">
+        <span>
+          <strong>首页照片</strong>
+          <small>管理首屏轮播照片和展示样式，保存后可预览、发布。</small>
+        </span>
+        <span className="home-gallery-entry__action" aria-hidden="true">
+          编辑照片 ↗
+        </span>
+      </a>
       {message && (
         <p className="admin-notice" role="status">
           {message}
