@@ -2,9 +2,11 @@
 
 ## 本机
 
-Node.js 22.12+（22 系列）和 npm 10。先 `npm ci`、`npm run setup:local`。该命令只首次生成权限为 600 的本地 `.env`，不打印密钥；已有文件不会被覆盖。
+主目录 `/Users/jerryszz/Desktop/实习/Empact/empactchinaOfficialWeb` 用于同步 `main` 和日常预览。实现任务须先更新远端引用，再从最新 `origin/main` 创建自己的分支和 worktree，编辑、检查和提交均在该 worktree 内完成；已有本任务 worktree 时继续使用。合并后先核对主目录的在途改动和服务，再安全同步最新 `main`。完整约定见 [项目协作规则](../AGENTS.md)。
 
-- `npm run dev`：从唯一工作区根目录启动后台运行的开发预览，固定使用 127.0.0.1:4321；官网与 `/admin` 共用入口，首次访问后台时加载 CMS。首次发布前显示设计内容，之后读取 `RUNTIME_DIR/current` 对应的已发布内容，保存草稿不会改变前台。页面与样式修改由 Astro 热更新。
+Node.js 22.12+（22 系列）和 npm 10。在需要运行服务或检查的目录先执行 `npm ci`、`npm run setup:local`。该命令只首次生成权限为 600 的本地 `.env`，不打印密钥；已有文件不会被覆盖。
+
+- `npm run dev`：日常从主目录根目录启动后台运行的开发预览，固定使用 127.0.0.1:4321；官网与 `/admin` 共用入口，首次访问后台时加载 CMS。首次发布前显示设计内容，之后读取 `RUNTIME_DIR/current` 对应的已发布内容，保存草稿不会改变前台。页面与样式修改由 Astro 热更新。
 - `npm run dev:status`、`npm run dev:logs`、`npm run dev:stop`：只管理上述 Astro 开发预览。启动前核对端口进程及所属目录；符合约定可复用，不自动换端口。
 - `CMS_URL=http://127.0.0.1:4321 npm run dev -w @empact/cms -- --port 4321`：单独启动内容管理后台前，先停止占用 4321 的本项目服务；初始账号通过本机初始化命令建立，不能在公网抢注。其他服务的切换及完整发布演练限制见 [README 本机启动](../README.md#本机启动)。
 - `npm run build:preview`：明确生成不可索引的结构预览；不要上传到公开托管。
@@ -12,7 +14,7 @@ Node.js 22.12+（22 系列）和 npm 10。先 `npm ci`、`npm run setup:local`�
 - `npm run verify`：类型、业务测试、预览构建、HTML/链接/SEO 检查、CMS 生产构建、隔离数据库的 CMS 发布流程、开发预览发布刷新及桌面/移动端浏览器验收。
 - `npm run test:browser`：桌面/移动端浏览器验收。
 
-日常入口始终是根目录 `npm run dev`。单独 CMS、`serve:workspace` 或静态服务只用于明确的后台/发布工作及必要验收；独占 4321 的测试前停止本项目开发预览，无论成功或失败都清理测试服务，再恢复 `npm run dev` 并实际请求页面。不要用 `dev:stop` 停止其他模式服务。
+日常入口始终是主目录根目录的 `npm run dev`。任务 worktree 需要浏览器验收时，先协调 4321 使用权，再在该 worktree 根目录运行 `npm run dev`。单独 CMS、`serve:workspace` 或静态服务只用于明确的后台/发布工作及必要验收；独占 4321 的测试前同样先协调，再停止本项目开发预览。无论成功或失败，都清理任务或测试服务，恢复主目录的 `npm run dev` 并实际请求页面。不要停止其他任务正在使用的服务，也不要用 `dev:stop` 停止其他模式服务。
 
 `.env`、`.data`、构建日志与媒体不入 Git。初始化、数据库升级和后台操作说明见 [README](../README.md#本机启动)及[业务后台](business-content-migration.md)。
 
