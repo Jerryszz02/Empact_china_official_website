@@ -456,6 +456,12 @@ const pathways = [
     align-items: center;
   }
 
+  @media (min-width: 601px) and (max-height: 760px) {
+    .has-home-gallery {
+      /* Leave room for the enlarged film strip without disabling motion. */
+      padding-bottom: 4rem;
+    }
+  }
   @media (max-width: 600px) {
     :global(body.motion-home.motion-js .site-header) {
       top: 0.5rem;
