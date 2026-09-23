@@ -396,7 +396,9 @@ try {
   });
   const ids: string[] = [];
   for (const entry of previewSnapshot.entries.filter(
-    (entry) => entry.kind === "page" || entry.kind === "business",
+    (entry) =>
+      (entry.kind === "page" || entry.kind === "business") &&
+      entry.slug !== "international-talent-model",
   )) {
     const existing = seeded.docs.find(
       (doc: { slug: string }) => doc.slug === entry.slug,
@@ -434,6 +436,44 @@ try {
     (item: { slug: string }) => item.slug === "international-talent-model",
   );
   assert.ok(model, "the fixed model remains in CMS content");
+  const rejectContentMutation = async (
+    path: string,
+    method: "POST" | "PATCH" | "DELETE",
+    data?: unknown,
+  ) => {
+    const response = await fetch(base + path, {
+      method,
+      headers: {
+        Cookie: cookies,
+        Origin: base,
+        "Content-Type": "application/json",
+      },
+      ...(data ? { body: JSON.stringify(data) } : {}),
+    });
+    assert.ok(
+      [400, 403, 404].includes(response.status),
+      `${method} ${path} unexpectedly returned ${response.status}`,
+    );
+  };
+  await rejectContentMutation(`/api/content/${model.id}`, "PATCH", {
+    title: "不可编辑的模型",
+    order: -100,
+  });
+  await rejectContentMutation(`/api/content/${model.id}`, "DELETE");
+  await rejectContentMutation(`/api/content/${business.id}`, "PATCH", {
+    slug: "international-talent-model",
+  });
+  await rejectContentMutation("/api/content", "POST", {
+    kind: "business",
+    slug: "international-talent-model",
+    title: "重复模型",
+    summary: "不得通过创建绕过固定模型保护。",
+    segment: "youth",
+  });
+  assert.equal(
+    (await request(`/api/content/${model.id}`)).slug,
+    "international-talent-model",
+  );
   await assert.rejects(
     request("/api/content", "POST", {
       kind: "case",
