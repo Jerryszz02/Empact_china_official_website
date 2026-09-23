@@ -1,0 +1,457 @@
+---
+import { isPreviewMode, mediaById, snapshot } from "@/lib/content";
+import { resolveHomeGallery } from "@/lib/home-gallery";
+
+// Local development can consume a production snapshot; its comparison controls
+// and temporary images still belong only to the development / preview surface.
+const preview = import.meta.env.DEV || isPreviewMode();
+const { style, images } = resolveHomeGallery(snapshot, mediaById, preview);
+---
+
+{images.length > 0 && (
+  <section
+    class="home-gallery"
+    aria-label="首页照片展示"
+    data-home-gallery
+    data-gallery-style={style}
+    data-preview={preview ? "true" : "false"}
+  >
+    <div class="gallery-viewport" data-gallery-viewport>
+      <div class="gallery-track" data-gallery-track>
+        {images.map((image) => (
+          <div class="gallery-card" data-gallery-card>
+            <div class="gallery-frame">
+              <img
+                src={image.src}
+                alt={image.alt}
+                width={image.width}
+                height={image.height}
+                loading="lazy"
+                decoding="async"
+              />
+              {image.placeholder && (
+                <span class="gallery-placeholder-label" aria-hidden="true">
+                  待替换照片
+                </span>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+    <div class="gallery-controls">
+      {preview && (
+        <div
+          class="gallery-style-switch"
+          role="group"
+          aria-label="照片展示样式"
+          hidden
+        >
+          <button
+            type="button"
+            data-gallery-choice="photos"
+            aria-pressed={style === "photos"}
+          >
+            纯照片
+          </button>
+          <button
+            type="button"
+            data-gallery-choice="film"
+            aria-pressed={style === "film"}
+          >
+            胶卷
+          </button>
+        </div>
+      )}
+      {images.length > 1 && (
+        <button type="button" class="gallery-pause" data-gallery-pause hidden>
+          暂停轮播
+        </button>
+      )}
+    </div>
+  </section>
+)}
+
+<script>
+  function initHomeGallery(root: HTMLElement) {
+    const viewport = root.querySelector<HTMLElement>("[data-gallery-viewport]");
+    const track = root.querySelector<HTMLElement>("[data-gallery-track]");
+    const pauseButton = root.querySelector<HTMLButtonElement>(
+      "[data-gallery-pause]",
+    );
+    const originals = Array.from(
+      root.querySelectorAll<HTMLElement>("[data-gallery-card]"),
+    );
+    if (!viewport || !track || originals.length === 0) return;
+
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const brand = root.closest<HTMLElement>("#brand");
+    let manualPause = false;
+    let hovering = false;
+    let focusing = false;
+    let onScreen = true;
+    let resizeTimer = 0;
+
+    function introReady() {
+      const state =
+        brand?.dataset.homeIntro ?? document.documentElement.dataset.homeIntro;
+      return !state || state === "ready";
+    }
+
+    function updatePlayback() {
+      const paused =
+        manualPause ||
+        hovering ||
+        focusing ||
+        !onScreen ||
+        document.hidden ||
+        !introReady();
+      track!.style.animationPlayState = paused ? "paused" : "running";
+      root.dataset.galleryMotion = !root.classList.contains("gallery-animated")
+        ? "static"
+        : paused
+          ? "paused"
+          : "running";
+      if (pauseButton) {
+        pauseButton.textContent = manualPause ? "继续轮播" : "暂停轮播";
+        pauseButton.setAttribute("aria-pressed", String(manualPause));
+      }
+    }
+
+    function cloneCard(source: HTMLElement) {
+      const clone = source.cloneNode(true) as HTMLElement;
+      clone.dataset.galleryClone = "";
+      clone.setAttribute("aria-hidden", "true");
+      clone.querySelectorAll<HTMLElement>("[tabindex]").forEach((node) => {
+        node.tabIndex = -1;
+      });
+      track!.append(clone);
+      return clone;
+    }
+
+    function rebuild() {
+      track!
+        .querySelectorAll("[data-gallery-clone]")
+        .forEach((node) => node.remove());
+      root.classList.remove("gallery-animated");
+      if (
+        reducedMotion.matches ||
+        originals.length < 2 ||
+        window.innerHeight < 540
+      ) {
+        root.dataset.galleryMotion = "static";
+        if (pauseButton) pauseButton.hidden = true;
+        return;
+      }
+
+      // A complete sequence must cover the viewport before its duplicate begins.
+      // This also makes a short CMS list loop without an empty stretch.
+      const firstSequence = [...originals];
+      let next = 0;
+      while (
+        firstSequence.length < 24 &&
+        firstSequence.at(-1)!.getBoundingClientRect().right -
+          firstSequence[0].getBoundingClientRect().left <
+          viewport!.clientWidth + originals[0].clientWidth
+      ) {
+        firstSequence.push(cloneCard(originals[next % originals.length]));
+        next++;
+      }
+      const secondSequence = firstSequence.map(cloneCard);
+      const distance =
+        secondSequence[0].offsetLeft - firstSequence[0].offsetLeft;
+      if (distance <= 0) return;
+      track!.style.setProperty("--gallery-distance", `${distance}px`);
+      track!.style.setProperty(
+        "--gallery-duration",
+        `${Math.max(12, distance / 52)}s`,
+      );
+      root.classList.add("gallery-animated");
+      if (pauseButton) pauseButton.hidden = false;
+      updatePlayback();
+    }
+
+    function setStyle(style: "photos" | "film", updateUrl = false) {
+      root.dataset.galleryStyle = style;
+      root
+        .querySelectorAll<HTMLButtonElement>("[data-gallery-choice]")
+        .forEach((button) => {
+          button.setAttribute(
+            "aria-pressed",
+            String(button.dataset.galleryChoice === style),
+          );
+        });
+      if (updateUrl) {
+        const url = new URL(window.location.href);
+        url.searchParams.set("gallery", style);
+        history.replaceState(history.state, "", url);
+      }
+      rebuild();
+    }
+
+    if (root.dataset.preview === "true") {
+      const styleSwitch = root.querySelector<HTMLElement>(
+        ".gallery-style-switch",
+      );
+      if (styleSwitch) styleSwitch.hidden = false;
+      const queryStyle = new URLSearchParams(location.search).get("gallery");
+      if (queryStyle === "photos" || queryStyle === "film")
+        setStyle(queryStyle);
+      root
+        .querySelectorAll<HTMLButtonElement>("[data-gallery-choice]")
+        .forEach((button) => {
+          button.addEventListener("click", () => {
+            const style = button.dataset.galleryChoice;
+            if (style === "photos" || style === "film") setStyle(style, true);
+          });
+        });
+    }
+
+    pauseButton?.addEventListener("click", () => {
+      manualPause = !manualPause;
+      updatePlayback();
+    });
+    root.addEventListener("mouseenter", () => {
+      hovering = true;
+      updatePlayback();
+    });
+    root.addEventListener("mouseleave", () => {
+      hovering = false;
+      updatePlayback();
+    });
+    root.addEventListener("focusin", () => {
+      focusing = true;
+      updatePlayback();
+    });
+    root.addEventListener("focusout", () => {
+      focusing = false;
+      updatePlayback();
+    });
+    document.addEventListener("visibilitychange", updatePlayback);
+    reducedMotion.addEventListener("change", rebuild);
+    const observer = new IntersectionObserver((entries) => {
+      onScreen = entries[0]?.isIntersecting ?? false;
+      updatePlayback();
+    });
+    observer.observe(root);
+    const introObserver = new MutationObserver(updatePlayback);
+    if (brand)
+      introObserver.observe(brand, {
+        attributes: true,
+        attributeFilter: ["data-home-intro"],
+      });
+    introObserver.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["data-home-intro"],
+    });
+    window.addEventListener("resize", () => {
+      window.clearTimeout(resizeTimer);
+      resizeTimer = window.setTimeout(rebuild, 150);
+    });
+    rebuild();
+  }
+
+  document
+    .querySelectorAll<HTMLElement>("[data-home-gallery]")
+    .forEach(initHomeGallery);
+</script>
+
+<style>
+  .home-gallery {
+    position: relative;
+    z-index: 3;
+    width: 100%;
+    min-width: 0;
+    margin-top: clamp(1rem, 3svh, 2rem);
+    color: #fff;
+    opacity: calc(var(--gallery-reveal, 1) * var(--scene-fade, 1));
+    transform: translateY(calc((1 - var(--gallery-reveal, 1)) * 18px));
+    pointer-events: auto;
+  }
+  .gallery-viewport {
+    width: 100%;
+    min-width: 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+    -webkit-mask-image: linear-gradient(
+      90deg,
+      transparent,
+      #000 6%,
+      #000 94%,
+      transparent
+    );
+    mask-image: linear-gradient(
+      90deg,
+      transparent,
+      #000 6%,
+      #000 94%,
+      transparent
+    );
+  }
+  .gallery-viewport::-webkit-scrollbar {
+    display: none;
+  }
+  .gallery-animated .gallery-viewport {
+    overflow-x: hidden;
+  }
+  .gallery-track {
+    position: relative;
+    display: flex;
+    align-items: stretch;
+    gap: clamp(0.55rem, 1vw, 0.9rem);
+    width: max-content;
+    padding: 0 0.2rem;
+  }
+  .gallery-animated .gallery-track {
+    animation: gallery-drift var(--gallery-duration) linear infinite;
+    will-change: transform;
+  }
+  @keyframes gallery-drift {
+    to {
+      transform: translate3d(calc(-1 * var(--gallery-distance)), 0, 0);
+    }
+  }
+  .gallery-card {
+    flex: 0 0 auto;
+    width: clamp(12.5rem, 23vw, 18rem);
+    min-width: 0;
+  }
+  .gallery-frame {
+    position: relative;
+    overflow: hidden;
+    width: 100%;
+    aspect-ratio: 3 / 2;
+    background: #dce9ed;
+    border-radius: 0.18rem;
+  }
+  .gallery-frame img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .gallery-placeholder-label {
+    position: absolute;
+    right: 0.55rem;
+    bottom: 0.5rem;
+    padding: 0.25rem 0.45rem;
+    border-radius: 0.15rem;
+    background: rgba(7, 34, 52, 0.75);
+    color: #fff;
+    font:
+      600 0.72rem/1.2 Arial,
+      "PingFang SC",
+      sans-serif;
+    letter-spacing: 0.05em;
+  }
+  .home-gallery[data-gallery-style="film"] .gallery-track {
+    gap: 0;
+  }
+  .home-gallery[data-gallery-style="film"] .gallery-card {
+    width: clamp(13.5rem, 25vw, 19rem);
+    padding: 1.18rem 0.4rem;
+    background: #142b39;
+    background-image:
+      repeating-linear-gradient(
+        90deg,
+        transparent 0 0.55rem,
+        #a5b8bf 0.55rem 1.45rem,
+        transparent 1.45rem 2rem
+      ),
+      repeating-linear-gradient(
+        90deg,
+        transparent 0 0.55rem,
+        #a5b8bf 0.55rem 1.45rem,
+        transparent 1.45rem 2rem
+      );
+    background-size: auto 0.42rem;
+    background-position:
+      0 0.33rem,
+      0 calc(100% - 0.33rem);
+    background-repeat: repeat-x;
+  }
+  .home-gallery[data-gallery-style="film"] .gallery-frame {
+    border-radius: 0;
+  }
+  .gallery-controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 2.1rem;
+    gap: 0.75rem;
+    margin: 0.7rem clamp(1rem, 4vw, 3rem) 0;
+  }
+  .gallery-style-switch {
+    display: inline-flex;
+    flex-wrap: wrap;
+    max-width: 100%;
+    gap: 0.35rem;
+  }
+  .gallery-style-switch[hidden] {
+    display: none;
+  }
+  .gallery-controls button {
+    appearance: none;
+    border: 1px solid rgba(255, 255, 255, 0.55);
+    border-radius: 999px;
+    background: rgba(10, 54, 88, 0.56);
+    color: #fff;
+    padding: 0.32rem 0.8rem;
+    font:
+      500 0.78rem/1.35 Arial,
+      "PingFang SC",
+      sans-serif;
+    cursor: pointer;
+  }
+  .gallery-controls button[aria-pressed="true"] {
+    background: #fff;
+    color: #125284;
+  }
+  .gallery-controls button:hover {
+    background: rgba(255, 255, 255, 0.23);
+  }
+  .gallery-controls button[aria-pressed="true"]:hover {
+    background: #fff;
+  }
+  .gallery-controls button:focus-visible {
+    outline: 2px solid #fff;
+    outline-offset: 3px;
+  }
+  .gallery-pause {
+    margin-left: auto;
+    white-space: nowrap;
+  }
+  .gallery-pause[hidden] {
+    display: none;
+  }
+  @media (max-width: 600px) {
+    .gallery-card {
+      width: clamp(11.5rem, 52vw, 14rem);
+    }
+    .home-gallery[data-gallery-style="film"] .gallery-card {
+      width: clamp(12.5rem, 56vw, 15rem);
+    }
+    .gallery-controls {
+      margin-inline: 1rem;
+    }
+  }
+  @media (pointer: coarse) {
+    .gallery-controls button {
+      min-height: 44px;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .home-gallery {
+      opacity: 1;
+      transform: none;
+    }
+    .gallery-animated .gallery-track {
+      animation: none;
+    }
+    .gallery-animated .gallery-viewport {
+      overflow-x: auto;
+    }
+  }
+</style>

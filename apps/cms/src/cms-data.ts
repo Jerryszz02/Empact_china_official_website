@@ -101,7 +101,7 @@ export async function serializeLexicalBody(
 }
 /** Call only after request authentication, or from a trusted local administration command. */
 export async function readDraftSnapshot(payload: Payload): Promise<Snapshot> {
-  const [content, company, images] = await Promise.all([
+  const [content, company, images, homeGallery] = await Promise.all([
     payload.find({
       collection: "content",
       pagination: false,
@@ -112,6 +112,11 @@ export async function readDraftSnapshot(payload: Payload): Promise<Snapshot> {
     payload.find({
       collection: "media",
       pagination: false,
+      depth: 0,
+      overrideAccess: true,
+    }),
+    payload.findGlobal({
+      slug: "home-gallery",
       depth: 0,
       overrideAccess: true,
     }),
@@ -185,5 +190,14 @@ export async function readDraftSnapshot(payload: Payload): Promise<Snapshot> {
       }),
     ),
     media,
+    homeGallery: {
+      style: homeGallery.style === "film" ? "film" : "photos",
+      photos: (homeGallery.photos ?? []).map(
+        (photo: { image: unknown; alt?: string | null }) => ({
+          imageId: relation(photo.image) || "",
+          ...(optional(photo.alt) ? { alt: optional(photo.alt) } : {}),
+        }),
+      ),
+    },
   };
 }

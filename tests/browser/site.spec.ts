@@ -59,18 +59,22 @@ test("homepage paths, dropdowns, mobile navigation and draft boundary", async ({
   ).toHaveAttribute("href", "/admin");
   await expect(page.locator("#nav-corporate a")).toHaveCount(5);
   await expect(page.locator(".motion-home > section")).toHaveCount(4);
-  expect(
-    await page
-      .locator("img")
-      .evaluateAll((images) =>
-        images.every(
-          (image) =>
-            image instanceof HTMLImageElement &&
-            image.complete &&
-            image.naturalWidth > 0,
+  // Offscreen gallery originals and loop copies load lazily; the logo and
+  // navigation images must still load before the user interacts.
+  await expect
+    .poll(() =>
+      page
+        .locator('img:not([loading="lazy"])')
+        .evaluateAll((images) =>
+          images.every(
+            (image) =>
+              image instanceof HTMLImageElement &&
+              image.complete &&
+              image.naturalWidth > 0,
+          ),
         ),
-      ),
-  ).toBe(true);
+    )
+    .toBe(true);
   await expect(page.locator('meta[name="robots"]')).toHaveAttribute(
     "content",
     /noindex/,

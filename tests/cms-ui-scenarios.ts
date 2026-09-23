@@ -134,6 +134,81 @@ export async function verifyCmsUI({
     assert.equal(new URL(popup.url()).pathname, "/");
     await expect(page).toHaveURL(base + "/admin");
     await popup.close();
+    const galleryEntry = page.locator(".home-gallery-entry");
+    await expect(galleryEntry).toBeVisible();
+    await expect(galleryEntry).toHaveAttribute(
+      "href",
+      "/admin/globals/home-gallery",
+    );
+    await galleryEntry.click();
+    await page.waitForURL(base + "/admin/globals/home-gallery");
+    const galleryActions = page.getByRole("region", { name: "首页照片操作" });
+    await expect(
+      galleryActions.getByRole("button", { name: "生成预览" }),
+    ).toBeVisible();
+    await expect(
+      galleryActions.getByRole("button", { name: "发布预览版本" }),
+    ).toBeDisabled();
+    await expect(
+      page.getByText("轮播照片（拖动调整顺序）", { exact: true }),
+    ).toBeVisible();
+    // The preceding rollback restores a version from before the gallery existed.
+    // Publish this saved gallery through its own UI before checking edited state.
+    await galleryActions.getByRole("button", { name: "生成预览" }).click();
+    await expect(
+      galleryActions.getByRole("button", { name: "发布预览版本" }),
+    ).toBeEnabled({ timeout: 60_000 });
+    await galleryActions.getByRole("button", { name: "发布预览版本" }).click();
+    await expect(galleryActions).toContainText("首页照片已发布", {
+      timeout: 60_000,
+    });
+    await page.locator("#field-style").getByRole("combobox").click();
+    await page.getByRole("option", { name: "纯照片" }).click();
+    await expect(
+      galleryActions.getByRole("button", { name: "生成预览" }),
+    ).toBeDisabled();
+    await page.getByRole("button", { name: "保存", exact: true }).click();
+    await expect(
+      galleryActions.getByRole("button", { name: "生成预览" }),
+    ).toBeEnabled();
+    assert.equal((await request("/api/globals/home-gallery")).style, "photos");
+    await expect(galleryActions).toContainText("官网仍显示上次发布的照片");
+    let releasePreview: (() => void) | undefined;
+    let markIntercepted!: () => void;
+    const intercepted = new Promise<void>((resolve) => {
+      markIntercepted = resolve;
+    });
+    await page.route("**/api/publication/preview", async (route) => {
+      await new Promise<void>((resolve) => {
+        releasePreview = resolve;
+        markIntercepted();
+      });
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ previewUrl: "/preview/stale-preview/" }),
+      });
+    });
+    await galleryActions.getByRole("button", { name: "生成预览" }).click();
+    await intercepted;
+    await page.locator("#field-style").getByRole("combobox").click();
+    await page.getByRole("option", { name: "胶卷" }).click();
+    await page.getByRole("button", { name: "保存", exact: true }).click();
+    await expect
+      .poll(async () => (await request("/api/globals/home-gallery")).style)
+      .toBe("film");
+    releasePreview!();
+    await expect(galleryActions).toContainText(
+      "照片或样式已修改，请保存后重新生成预览。",
+    );
+    await expect(
+      galleryActions.getByRole("button", { name: "发布预览版本" }),
+    ).toBeDisabled();
+    await expect(
+      galleryActions.getByRole("link", { name: /打开首页预览/ }),
+    ).toHaveCount(0);
+    await page.unroute("**/api/publication/preview");
+    await page.goto(base + "/admin");
     await expect(
       page.getByRole("heading", { name: "项目管理", exact: true }),
     ).toBeVisible();
