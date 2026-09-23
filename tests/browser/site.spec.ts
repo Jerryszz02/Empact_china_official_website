@@ -591,7 +591,7 @@ test("four homepage entrances preserve row order and open their framework pages"
     await expect(page.locator(".case-card")).toHaveCount(0);
     await expect(
       page.locator('.content-wrap a[href="/contact/"]'),
-    ).toBeVisible();
+    ).toHaveCount(0);
   }
 });
 
