@@ -10,9 +10,9 @@
 
 ## 本地入口
 
-日常预览在唯一工作区根目录运行 `npm run dev`，官网、`/admin` 与受保护的 `/preview/` 共用 `http://127.0.0.1:4321`。启动前核对监听进程所属目录，符合项目约定的开发服务可以复用。首次使用按 [README 本机启动](../README.md#本机启动) 初始化配置和数据库；开发服务首次访问后台时加载 CMS，不需另开后台端口。
+日常预览在主目录 `/Users/jerryszz/Desktop/实习/Empact/empactchinaOfficialWeb` 根目录运行 `npm run dev`，官网、`/admin` 与受保护的 `/preview/` 共用 `http://127.0.0.1:4321`。实现任务先更新远端引用，从最新 `origin/main` 创建独立分支和 worktree；已有本任务 worktree 时继续使用，不在主目录或其他任务目录中实现改动。任务验收需要临时从自身 worktree 启动服务时，按 [项目协作规则](../AGENTS.md) 协调 4321 使用权。启动前核对监听进程所属目录、分支和提交，只有符合当前目标的开发服务才可复用。首次使用按 [README 本机启动](../README.md#本机启动) 初始化配置和数据库；开发服务首次访问后台时加载 CMS，不需另开后台端口。
 
-只有正式发布演练或必要的自动化验收才切换服务：先停止本项目开发预览，执行 `npm run build:cms`，再运行 `npm run serve:workspace`；完成后清理该验收服务并恢复根目录 `npm run dev`。
+只有正式发布演练或必要的自动化验收才切换到 `serve:workspace`：先协调端口使用权并停止本项目开发预览，执行 `npm run build:cms`，再运行 `npm run serve:workspace`；无论成功或失败，均清理该验收服务并恢复主目录根目录的 `npm run dev`。
 
 `DATABASE_URL`、`MEDIA_DIR`、`RUNTIME_DIR` 使用绝对路径。默认官网根目录是 `RUNTIME_DIR/current`；纯设计预览可设置 `PUBLIC_ROOT` 指向 Astro 构建目录。`PUBLIC_ROOT` 只适合查看设计，正式发布验收时必须移除，以确保服务读取最新发布版本。
 
