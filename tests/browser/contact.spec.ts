@@ -119,7 +119,54 @@ test("minimal enquiry needs no optional details", async ({ page }) => {
   ).toBe(true);
 });
 
-test("case detail returns to its actual business directory from either end", async ({
+test("business directories and child pages return to their parent", async ({
+  page,
+}) => {
+  for (const segment of ["youth", "corporate", "school", "community"]) {
+    await page.goto(`/${segment}/`);
+    const returnHome = page.locator(".page-hero .back-link");
+    await expect(returnHome).toHaveText(/返回首页/);
+    await expect(returnHome).toHaveAttribute("href", "/");
+  }
+  for (const entry of businesses) {
+    await page.goto(`/${entry.segment}/${entry.slug}/`);
+    const returnParent = page.locator(".page-hero .back-link");
+    await expect(returnParent).toHaveText(/返回上级目录/);
+    await expect(returnParent).toHaveAttribute("href", `/${entry.segment}/`);
+  }
+});
+
+test("external case card opens a new tab while its business page stays open", async ({
+  page,
+}) => {
+  const externalCase = previewSnapshot.entries.find(
+    (item) => item.kind === "case" && item.detailUrl && item.parentId,
+  )!;
+  const parent = businesses.find((item) => item.id === externalCase.parentId)!;
+  const parentUrl = `/${parent.segment}/${parent.slug}/`;
+  await page.goto(parentUrl);
+  const link = page.locator(`#cases .case-card[id="${externalCase.slug}"]`);
+  await expect(link).toHaveAttribute("href", externalCase.detailUrl!);
+  await expect(link).toHaveAttribute("target", "_blank");
+  await expect(link).toHaveAttribute("rel", "noopener noreferrer");
+  await page.context().route(externalCase.detailUrl!, (route) =>
+    route.fulfill({
+      contentType: "text/html",
+      body: "External case destination",
+    }),
+  );
+  const popupPromise = page.waitForEvent("popup");
+  await link.click();
+  const popup = await popupPromise;
+  await expect(popup).toHaveURL(externalCase.detailUrl!);
+  await expect(popup.locator("body")).toContainText(
+    "External case destination",
+  );
+  await expect(page).toHaveURL(new RegExp(`${parentUrl}$`));
+  await popup.close();
+});
+
+test("case detail has one return link after the article content", async ({
   page,
 }) => {
   const entry = previewSnapshot.entries.find(
@@ -131,10 +178,12 @@ test("case detail returns to its actual business directory from either end", asy
   const target = `/${parent.segment}/${parent.slug}/`;
   await page.goto(`/cases/${entry.slug}/`);
   const links = page.getByRole("link", { name: "返回上级目录" });
-  await expect(links).toHaveCount(2);
-  for (const link of await links.all())
-    await expect(link).toHaveAttribute("href", target);
-  await links.last().click();
+  await expect(links).toHaveCount(1);
+  await expect(page.locator(".article-hero .back-link")).toHaveCount(0);
+  await expect(
+    page.locator("main .content-wrap > :last-child.article-return a"),
+  ).toHaveAttribute("href", target);
+  await links.click();
   await expect(page).toHaveURL(new RegExp(`${target}$`));
   await expect(page.locator("main h1")).toHaveText(parent.title);
 });

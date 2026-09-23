@@ -88,6 +88,11 @@ const media = mediaById(entry.imageId);
   type={entry.kind === "news" ? "article" : "website"}
 >
   <section class="page-hero">
+    {entry.kind === "business" && (
+      <a class="back-link" href={entry.segment ? `/${entry.segment}/` : "/"}>
+        <span aria-hidden="true">←</span> 返回上级目录
+      </a>
+    )}
     {media && (
       <img
         class="detail-image"
@@ -144,7 +149,13 @@ const media = mediaById(entry.imageId);
         {entryCases.length > 0 ? (
           <div class="case-grid">
             {entryCases.map((item) => (
-              <a id={item.slug} class="case-card" href={pathFor(item)}>
+              <a
+                id={item.slug}
+                class="case-card"
+                href={pathFor(item)}
+                target={item.detailUrl ? "_blank" : undefined}
+                rel={item.detailUrl ? "noopener noreferrer" : undefined}
+              >
                 <CaseImage entry={item} />
                 <div class="case-card-copy">
                   <h3>{item.title}</h3>
@@ -174,7 +185,15 @@ const media = mediaById(entry.imageId);
                 <span>{sourceTypeLabel(item.sourceType)}</span>
               )}
               {item.eventDate && <span>{item.eventDate}</span>}
-              {item.sourceUrl && <a href={item.sourceUrl}>查看原文 ↗</a>}
+              {item.sourceUrl && (
+                <a
+                  href={item.sourceUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  查看原文 ↗
+                </a>
+              )}
             </p>
           </article>
         ))}
@@ -210,7 +229,14 @@ const media = mediaById(entry.imageId);
         <h2>相关实践</h2>
         {relatedCases.map((item) => (
           <p>
-            <a href={pathFor(item)}>{item.title}</a> · {item.summary}
+            <a
+              href={pathFor(item)}
+              target={item.detailUrl ? "_blank" : undefined}
+              rel={item.detailUrl ? "noopener noreferrer" : undefined}
+            >
+              {item.title}
+            </a>{" "}
+            · {item.summary}
           </p>
         ))}
       </section>

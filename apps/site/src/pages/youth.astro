@@ -14,6 +14,9 @@ const services = youthBusinesses.filter((item) => item !== model);
   description={entry?.summary ?? "面向青年、家长、学校及陪伴者的成长服务。"}
 >
   <section class="page-hero">
+    <a class="back-link" href="/">
+      <span aria-hidden="true">←</span> 返回首页
+    </a>
     <span class="eyebrow">For youth & families</span>
     <h1>{entry?.title ?? "青少年与青年"}</h1>
     <p class="page-summary">

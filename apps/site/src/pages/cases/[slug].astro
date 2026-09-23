@@ -45,9 +45,6 @@ const relatedCases = [
   type="article"
 >
   <section class="page-hero article-hero">
-    <a class="back-link" href={directoryUrl}>
-      <span aria-hidden="true">←</span> 返回上级目录
-    </a>
     <span class="eyebrow">Case study</span>
     <h1>{entry.title}</h1>
     <p class="page-summary">{entry.summary}</p>
@@ -81,7 +78,11 @@ const relatedCases = [
               )}
               {item.eventDate && <span>{item.eventDate}</span>}
               {item.sourceUrl && (
-                <a href={item.sourceUrl} rel="noopener noreferrer">
+                <a
+                  href={item.sourceUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
                   查看原文 ↗
                 </a>
               )}
@@ -95,7 +96,14 @@ const relatedCases = [
         <h2>相关案例</h2>
         {relatedCases.map((item) => (
           <p>
-            <a href={pathFor(item)}>{item.title}</a> · {item.summary}
+            <a
+              href={pathFor(item)}
+              target={item.detailUrl ? "_blank" : undefined}
+              rel={item.detailUrl ? "noopener noreferrer" : undefined}
+            >
+              {item.title}
+            </a>{" "}
+            · {item.summary}
           </p>
         ))}
       </section>
