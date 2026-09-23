@@ -473,7 +473,7 @@ h3 {
 .content-wrap .case-section {
   max-width: 100%;
 }
-.article-hero .back-link {
+.page-hero .back-link {
   display: flex;
   width: fit-content;
   align-items: center;

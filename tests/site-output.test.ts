@@ -107,6 +107,7 @@ test(
           sourceUrl: "https://example.invalid/case-source",
           approved: true,
           parentId: parent.id,
+          relatedIds: ["external-case"],
         },
         {
           id: "coverage-test",
@@ -135,6 +136,13 @@ test(
           publishedAt: "2026-01-01T00:00:00Z",
         },
       );
+      const relatedParent = data.entries.find(
+        (entry) => entry.kind === "business" && entry.id !== parent.id,
+      )!;
+      relatedParent.relatedIds = [
+        ...(relatedParent.relatedIds ?? []),
+        "external-case",
+      ];
       const segments = ["youth", "corporate", "school", "community"] as const;
       const emptyBusinesses: Entry[] = segments.map((segment) => ({
         id: `planning-${segment}`,
@@ -184,6 +192,10 @@ test(
         assert.match(html("#cases").text(), new RegExp(business.title));
         assert.match(html(".prose").text(), /保留现有业务介绍/);
         assert.equal(html(".case-card").length, 0);
+        assert.equal(
+          html(".page-hero .back-link").attr("href"),
+          `/${business.segment}/`,
+        );
         const contactHref = `/contact/?business=${encodeURIComponent(business.id)}`;
         assert.equal(
           html(`#cases a[href="${contactHref}"]`)
@@ -202,6 +214,7 @@ test(
         ),
       );
       assert.equal(model(".model-items li").length, 6);
+      assert.equal(model(".page-hero .back-link").attr("href"), "/youth/");
       assert.equal(model(".growth-path li").length, 5);
       assert.match(model("#approach-title").text(), /真实的行动/);
       assert.match(model(".source-note").text(), /开物 KAIWU/);
@@ -234,6 +247,10 @@ test(
         ),
       );
       assert.equal(business(".project-planning").length, 0);
+      assert.equal(
+        business(".page-hero .back-link").attr("href"),
+        `/${parent.segment}/`,
+      );
       assert.equal(business("#cases h2").text(), "相关案例");
       const home = load(await readFile(join(out, "index.html"), "utf8"));
       for (const html of [home, business]) {
@@ -253,10 +270,28 @@ test(
       assert.equal(home(".motion-home > section").length, 4);
       assert.equal(business("#case-no-image .case-image").length, 0);
       assert.equal(business("#case-test").attr("href"), "/cases/case-test/");
+      assert.equal(business("#case-test").attr("target"), undefined);
+      assert.equal(business("#case-test").attr("rel"), undefined);
       assert.equal(
         business("#external-case").attr("href"),
         "https://example.invalid/project-details",
       );
+      assert.equal(business("#external-case").attr("target"), "_blank");
+      assert.equal(
+        business("#external-case").attr("rel"),
+        "noopener noreferrer",
+      );
+      const relatedBusiness = load(
+        await readFile(
+          join(out, relatedParent.segment!, relatedParent.slug, "index.html"),
+          "utf8",
+        ),
+      );
+      const relatedBusinessLink = relatedBusiness(
+        '.embedded-section a[href="https://example.invalid/project-details"]',
+      );
+      assert.equal(relatedBusinessLink.attr("target"), "_blank");
+      assert.equal(relatedBusinessLink.attr("rel"), "noopener noreferrer");
       await assert.rejects(
         readFile(join(out, "cases/external-case/index.html"), "utf8"),
         { code: "ENOENT" },
@@ -295,10 +330,19 @@ test(
         caseArticle('meta[property="og:type"]').attr("content"),
         "article",
       );
+      assert.equal(caseArticle(".article-hero .back-link").length, 0);
+      assert.equal(caseArticle("main .article-return").length, 1);
       assert.equal(
-        caseArticle(".back-link").attr("href"),
+        caseArticle("main .content-wrap > :last-child.article-return a").attr(
+          "href",
+        ),
         `/${parent.segment}/${parent.slug}/`,
       );
+      const relatedCaseLink = caseArticle(
+        '.embedded-section a[href="https://example.invalid/project-details"]',
+      );
+      assert.equal(relatedCaseLink.attr("target"), "_blank");
+      assert.equal(relatedCaseLink.attr("rel"), "noopener noreferrer");
       const caseNoImage = load(
         await readFile(
           join(out, "cases", "case-no-image", "index.html"),
@@ -332,12 +376,11 @@ test(
       );
       for (const file of ["index.html", "contact/index.html"]) {
         const html = load(await readFile(join(out, file), "utf8"));
-        assert.ok(
-          html('a[href="https://chatcircle.empact.cn"]').length >= 1,
-        );
+        assert.ok(html('a[href="https://chatcircle.empact.cn"]').length >= 1);
         if (file === "contact/index.html") {
           assert.equal(
-            html('.contact-intro a[href="https://chatcircle.empact.cn"]').length,
+            html('.contact-intro a[href="https://chatcircle.empact.cn"]')
+              .length,
             0,
           );
         }
@@ -361,6 +404,8 @@ test(
           /仅用于自动检查页面输出的隔离正文。/,
         );
         assert.ok(landing(".service-list a").length > 0);
+        assert.equal(landing(".page-hero .back-link").attr("href"), "/");
+        assert.match(landing(".page-hero .back-link").text(), /返回首页/);
       }
       const community = load(
         await readFile(join(out, "community/index.html"), "utf8"),
