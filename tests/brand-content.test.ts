@@ -22,6 +22,7 @@ test("brand content preview has the approved shape", () => {
       "leadership-innovation",
       "workplace-resilience",
       "management-innovation",
+      "philanthropy-brand-overseas",
     ],
   );
   assert.deepEqual(
@@ -41,9 +42,9 @@ test("brand content preview has the approved shape", () => {
   const cases = previewSnapshot.entries.filter(
     (entry) => entry.kind === "case",
   );
-  assert.equal(cases.length, 40);
+  assert.equal(cases.length, 41);
   assert.equal(cases.filter((entry) => entry.detailUrl).length, 25);
-  assert.equal(cases.filter((entry) => !entry.detailUrl).length, 15);
+  assert.equal(cases.filter((entry) => !entry.detailUrl).length, 16);
   const yangpu = cases.find(
     (entry) => entry.slug === "yangpu-bilingual-ai-social-innovation",
   );
@@ -94,6 +95,30 @@ test("brand content preview has the approved shape", () => {
     previewSnapshot.entries.find((entry) => entry.slug === "community")?.title,
     "社区业务",
   );
+});
+
+test("overseas philanthropy case stays under corporate services with local article media", () => {
+  const business = previewSnapshot.entries.find(
+    (entry) => entry.slug === "philanthropy-brand-overseas",
+  );
+  const article = previewSnapshot.entries.find(
+    (entry) => entry.slug === "boke-sdg-hero-singapore",
+  );
+  assert.ok(business && article);
+  assert.equal(business.segment, "corporate");
+  assert.equal(article.parentId, business.id);
+  assert.equal(article.segment, "corporate");
+  assert.equal(entryUrl(article), "/cases/boke-sdg-hero-singapore/");
+  assert.equal(article.detailUrl, undefined);
+  assert.equal(article.bodyMediaIds?.length, 3);
+  const referenced = [article.imageId, ...article.bodyMediaIds!];
+  for (const id of referenced) {
+    const media = previewSnapshot.media.find((item) => item.id === id);
+    assert.ok(media);
+    assert.equal(media.mimeType, "image/webp");
+    if (id !== article.imageId)
+      assert.ok(article.bodyHtml.includes(`/media/${media.filename}`));
+  }
 });
 
 test("directory covers exist and links in the workbook's extra columns are retained", async () => {

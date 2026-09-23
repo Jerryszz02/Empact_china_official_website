@@ -57,7 +57,14 @@ test("homepage paths, dropdowns, mobile navigation and draft boundary", async ({
   await expect(
     page.locator(".footer-links").getByRole("link", { name: "后台管理" }),
   ).toHaveAttribute("href", "/admin");
-  await expect(page.locator("#nav-corporate a")).toHaveCount(5);
+  await expect(page.locator("#nav-corporate a")).toHaveCount(6);
+  await expect(
+    page.locator("#nav-corporate").getByRole("link", {
+      name: "公益品牌出海",
+      exact: true,
+      includeHidden: true,
+    }),
+  ).toHaveAttribute("href", "/corporate/philanthropy-brand-overseas/");
   await expect(page.locator(".motion-home > section")).toHaveCount(4);
   // Offscreen gallery originals and loop copies load lazily; the logo and
   // navigation images must still load before the user interacts.
