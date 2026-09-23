@@ -56,6 +56,14 @@ const groups = [
       );
     })}
     <a href="/about/">关于 Empact</a>
+    <a
+      href="/join-us/"
+      aria-current={
+        Astro.url.pathname.startsWith("/join-us/") ? "page" : undefined
+      }
+    >
+      加入我们
+    </a>
     <a class="nav-contact" href="/contact/">
       咨询与合作 <span aria-hidden="true">↗</span>
     </a>

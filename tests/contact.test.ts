@@ -5,7 +5,10 @@ import {
   contactSchema,
   createContactHandler,
   inquiryMailText,
+  recruitmentApplicationSchema,
+  recruitmentMailText,
   smtpDelivery,
+  type ContactMessage,
 } from "../scripts/contact.js";
 
 const origin = "https://empact.cn";
@@ -30,6 +33,20 @@ const detailedInquiry = () => ({
   participants: "30—50 人",
   budget: "人民币 5 万元以内",
   referenceUrl: "https://example.com/project",
+});
+const application = () => ({
+  kind: "recruitment" as const,
+  jobId: "program-coordinator",
+  name: "申请人",
+  email: "candidate@example.com",
+  contact: "13800000000",
+  experience: "曾负责社区项目协调与志愿者培训。",
+  availability: "2026 年 10 月",
+  resumeUrl: "https://example.com/resume.pdf",
+  portfolioUrl: "https://example.com/portfolio",
+  consent: true,
+  website: "",
+  idempotencyKey: randomUUID(),
 });
 test("new inquiry validates optional details and produces a complete readable email", () => {
   const data = contactSchema.parse(detailedInquiry());
@@ -206,4 +223,114 @@ test("rate limiting expires; in-flight duplicate is rejected", async () => {
   assert.equal((await concurrent(data, origin, "5")).status, 409);
   done();
   assert.equal((await first).status, 200);
+});
+
+test("recruitment application validates links and sends canonical job details", async () => {
+  const data = application();
+  assert.equal(recruitmentApplicationSchema.safeParse(data).success, true);
+  for (const bad of [
+    "javascript:alert(1)",
+    "ftp://example.com/cv",
+    "not a link",
+  ])
+    assert.equal(
+      recruitmentApplicationSchema.safeParse({ ...data, resumeUrl: bad })
+        .success,
+      false,
+    );
+  assert.equal(
+    recruitmentApplicationSchema.safeParse({
+      ...data,
+      resumeUrl: "",
+      portfolioUrl: "",
+    }).success,
+    false,
+  );
+  assert.equal(
+    recruitmentApplicationSchema.safeParse({
+      ...data,
+      availability: "Now\nBcc: evil@example.com",
+    }).success,
+    false,
+  );
+  const delivered: ContactMessage[] = [];
+  const handle = createContactHandler({
+    origin,
+    getJob: async () => ({
+      title: "项目协调员",
+      status: "open",
+      isExample: false,
+    }),
+    deliver: async (message) => {
+      delivered.push(message);
+    },
+  });
+  assert.equal(
+    (await handle({ ...data, jobTitle: "伪造岗位" }, origin, "recruit-1"))
+      .status,
+    400,
+  );
+  assert.equal((await handle(data, origin, "recruit-1")).status, 200);
+  assert.equal(delivered.length, 1);
+  const message = delivered[0];
+  assert.equal(message.kind, "recruitment");
+  if (message.kind !== "recruitment") throw new Error("unexpected inquiry");
+  assert.equal(message.jobTitle, "项目协调员");
+  const text = recruitmentMailText(message);
+  for (const value of [
+    "项目协调员",
+    data.name,
+    data.email,
+    data.contact,
+    data.experience,
+    data.availability,
+    data.resumeUrl,
+    data.portfolioUrl,
+  ])
+    assert.ok(text.includes(value), value);
+  assert.equal((await handle(data, origin, "recruit-1")).status, 200);
+  assert.equal(delivered.length, 1);
+  assert.equal(
+    (
+      await handle(
+        { ...data, experience: "增加了新的相关工作经验。" },
+        origin,
+        "recruit-1",
+      )
+    ).status,
+    409,
+  );
+  assert.equal(
+    (
+      await handle(
+        { ...inquiry(), idempotencyKey: data.idempotencyKey },
+        origin,
+        "recruit-1",
+      )
+    ).status,
+    409,
+    "one key cannot be reused between inquiry and recruitment",
+  );
+});
+
+test("recruitment rejects missing, closed and example jobs before delivery", async () => {
+  for (const job of [
+    undefined,
+    { title: "已关闭岗位", status: "closed" as const, isExample: false },
+    { title: "示例岗位", status: "open" as const, isExample: true },
+  ]) {
+    let deliveries = 0;
+    const handle = createContactHandler({
+      origin,
+      getJob: async () => job,
+      deliver: async () => {
+        deliveries++;
+      },
+    });
+    assert.equal(
+      (await handle(application(), origin, "recruit-2")).status,
+      409,
+    );
+    assert.equal(deliveries, 0);
+  }
 });

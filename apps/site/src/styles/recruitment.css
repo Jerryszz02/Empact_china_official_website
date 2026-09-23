@@ -1,0 +1,296 @@
+.recruitment-page {
+  --recruitment-space: clamp(3rem, 6vw, 5.5rem);
+}
+.recruitment-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+  gap: clamp(2rem, 4vw, 4rem);
+  align-items: center;
+  padding-block: 3.5rem var(--recruitment-space);
+}
+.recruitment-hero h1 {
+  font-size: clamp(2.5rem, 4.1vw, 4rem);
+  line-height: 1.25;
+  margin: 1rem 0 1.25rem;
+}
+.recruitment-period {
+  color: var(--red);
+}
+.recruitment-lead {
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+.recruitment-hero-copy > p:not(.recruitment-lead) {
+  max-width: 31rem;
+}
+.recruitment-hero-copy > .button {
+  margin-top: 0.8rem;
+}
+.recruitment-team-photo {
+  margin: 0;
+}
+.recruitment-team-photo img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.recruitment-team-photo figcaption {
+  border-top: 3px solid var(--green);
+  padding-top: 0.8rem;
+  margin-top: 0.75rem;
+  font-size: 0.85rem;
+}
+.recruitment-paper {
+  background: var(--paper);
+  color: var(--blue);
+}
+.recruitment-paper > .section {
+  padding-block: var(--recruitment-space);
+}
+.recruitment-work {
+  display: grid;
+  grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
+  gap: clamp(2rem, 7vw, 7rem);
+}
+.recruitment-section-heading h2 {
+  font-size: clamp(1.9rem, 3vw, 2.75rem);
+  line-height: 1.3;
+  margin: 1rem 0;
+}
+.recruitment-section-heading > p {
+  max-width: 30rem;
+}
+.recruitment-work-list article {
+  padding: 1.5rem 0;
+  border-top: 1px solid var(--dark-line);
+}
+.recruitment-work-list article:first-child {
+  padding-top: 0;
+  border-top: 0;
+}
+.recruitment-work-list h3 {
+  font-size: 1.3rem;
+}
+.recruitment-work-list p {
+  margin-bottom: 0.7rem;
+}
+.recruitment-work-list a {
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+.recruitment-paper > .recruitment-office {
+  padding-top: 0;
+}
+.recruitment-office-photos {
+  display: grid;
+  grid-template-columns: minmax(0, 1.78fr) minmax(0, 1fr);
+  gap: clamp(1rem, 3vw, 2rem);
+  margin-top: 2rem;
+}
+.recruitment-office-photos figure {
+  margin: 0;
+}
+.recruitment-office-photos img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.recruitment-office-photos figcaption {
+  padding-top: 0.7rem;
+  font-size: 0.85rem;
+}
+.recruitment-opportunities {
+  scroll-margin-top: 2rem;
+}
+.recruitment-opportunities-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: end;
+  gap: 2rem;
+  margin-bottom: 2rem;
+}
+.recruitment-opportunities-heading h2 {
+  margin-bottom: 0;
+}
+.recruitment-opportunities-heading p {
+  margin: 0;
+}
+.recruitment-job {
+  border-top: 1px solid var(--dark-line);
+  padding: 2rem 0;
+}
+.recruitment-job:last-child {
+  border-bottom: 1px solid var(--dark-line);
+}
+.recruitment-job-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 2rem;
+}
+.recruitment-job-heading > div {
+  min-width: 0;
+}
+.recruitment-job-heading h3 {
+  font-size: clamp(1.35rem, 2vw, 1.75rem);
+  line-height: 1.35;
+  margin: 0.8rem 0;
+  overflow-wrap: anywhere;
+}
+.recruitment-job-heading p {
+  max-width: 48rem;
+  margin-bottom: 0;
+  overflow-wrap: anywhere;
+}
+.recruitment-job-heading > .button {
+  flex-shrink: 0;
+  background: var(--blue);
+  color: white;
+  border-color: var(--blue);
+}
+.recruitment-job-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 1rem;
+  font-size: 0.85rem;
+}
+.recruitment-job-meta span {
+  overflow-wrap: anywhere;
+}
+.recruitment-job-meta span:first-child {
+  font-weight: 700;
+  border-bottom: 2px solid var(--green);
+}
+.recruitment-job-details {
+  margin-top: 1.25rem;
+}
+.recruitment-job-details summary {
+  cursor: pointer;
+  font-weight: 700;
+  width: fit-content;
+  min-height: 2.75rem;
+  padding-block: 0.5rem;
+}
+.recruitment-job-description {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 2rem;
+  padding: 1.2rem 0 0;
+}
+.recruitment-job-description h4 {
+  font-size: 1rem;
+  margin: 0 0 0.8rem;
+}
+.recruitment-job-description ul {
+  padding-left: 1.3rem;
+  margin: 0;
+}
+.recruitment-job-description li {
+  padding-bottom: 0.5rem;
+  overflow-wrap: anywhere;
+}
+.recruitment-preview-note {
+  border-left: 3px solid var(--green);
+  padding: 0.6rem 1rem;
+  background: white;
+  font-size: 0.9rem;
+}
+.recruitment-empty {
+  border-block: 1px solid var(--dark-line);
+  padding-block: 2rem;
+}
+.recruitment-empty p {
+  margin: 0;
+}
+.recruitment-next {
+  display: flex;
+  justify-content: space-between;
+  gap: 3rem;
+  align-items: center;
+  padding-block: var(--recruitment-space);
+}
+.recruitment-next h2 {
+  margin: 1rem 0;
+  line-height: 1.3;
+}
+.recruitment-next p {
+  max-width: 43rem;
+  margin-bottom: 0;
+}
+.recruitment-next .button {
+  flex-shrink: 0;
+}
+.application-intro > a {
+  display: inline-block;
+  margin-bottom: 1.5rem;
+}
+.application-intro > p {
+  max-width: 31rem;
+}
+.application-guidance {
+  border-top: 1px solid var(--line);
+  padding-top: 1.5rem;
+  margin-top: 2rem;
+}
+.application-guidance h2 {
+  font-size: 1.35rem;
+}
+.application-guidance ol {
+  padding-left: 1.3rem;
+}
+.application-guidance li {
+  padding-bottom: 0.75rem;
+}
+.application-privacy {
+  font-size: 0.85rem;
+}
+.application-empty {
+  padding-block: 4rem;
+}
+.application-form small {
+  font-size: 0.85rem;
+}
+@media (max-width: 56em) {
+  .recruitment-hero,
+  .recruitment-work {
+    grid-template-columns: 1fr;
+  }
+  .recruitment-hero {
+    padding-top: 2rem;
+    gap: 2rem;
+  }
+  .recruitment-hero h1 {
+    font-size: clamp(2.2rem, 7.4vw, 3.8rem);
+  }
+  .recruitment-hero-copy > p:not(.recruitment-lead) {
+    max-width: 40rem;
+  }
+  .recruitment-team-photo {
+    max-width: 40rem;
+  }
+  .recruitment-opportunities-heading,
+  .recruitment-next {
+    flex-direction: column;
+    align-items: start;
+    gap: 1rem;
+  }
+  .recruitment-job-heading {
+    flex-direction: column;
+    align-items: start;
+    gap: 1rem;
+  }
+  .recruitment-job-description {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+}
+@media (max-width: 40em) {
+  .recruitment-office-photos {
+    grid-template-columns: 1fr;
+    gap: 2rem;
+  }
+  .recruitment-office-photos figure:last-child {
+    width: 70%;
+    justify-self: end;
+  }
+}

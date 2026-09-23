@@ -126,6 +126,29 @@ test("youth development model route is reserved from CMS businesses", () => {
   assert.doesNotThrow(() => validateSnapshot(data));
 });
 
+test("careers route is reserved from CMS pages in previews and production", () => {
+  const data = structuredClone(previewSnapshot);
+  data.entries.push({
+    id: "cms-careers-page",
+    kind: "page",
+    slug: "join-us",
+    title: "招聘介绍",
+    summary: "独立页面内容。",
+    bodyHtml: "<p>不应覆盖固定的招聘页面。</p>",
+    approved: true,
+  });
+  assert.throws(() => validateSnapshot(data), /reserved page route/);
+  data.mode = "production";
+  data.company.privacyApproved = true;
+  data.entries = data.entries.map((entry) => ({ ...entry, approved: true }));
+  assert.throws(
+    () => validateSnapshot(data, { production: true }),
+    /reserved page route/,
+  );
+  data.entries.at(-1)!.slug = "careers-story";
+  assert.doesNotThrow(() => validateSnapshot(data, { production: true }));
+});
+
 test("ChatCircle external entry publishes without event dates or venue, while hosted projects still require facts", () => {
   const data = structuredClone(previewSnapshot);
   data.mode = "production";

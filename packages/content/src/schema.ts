@@ -65,6 +65,19 @@ export type HomeGallery = {
   style: "photos" | "film";
   photos: { imageId: string; alt?: string }[];
 };
+export type RecruitmentJob = {
+  id: string;
+  title: string;
+  type: "full-time" | "internship";
+  location: string;
+  summary: string;
+  responsibilities: string;
+  requirements: string;
+  commitment?: string;
+  status: "open" | "closed";
+  isExample: boolean;
+};
+export type Recruitment = { jobs: RecruitmentJob[] };
 export type Snapshot = {
   version: string;
   generatedAt: string;
@@ -73,6 +86,7 @@ export type Snapshot = {
   entries: Entry[];
   media: Media[];
   homeGallery?: HomeGallery;
+  recruitment?: Recruitment;
 };
 
 const slug = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
@@ -191,6 +205,31 @@ const companySchema = z.object({
   contactEnabled: z.boolean(),
   retentionDays: z.number().int().positive(),
 });
+const recruitmentSchema = z
+  .object({
+    jobs: z
+      .array(
+        z
+          .object({
+            id: z
+              .string()
+              .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/)
+              .max(80),
+            title: z.string().trim().min(1).max(100),
+            type: z.enum(["full-time", "internship"]),
+            location: z.string().trim().min(1).max(100),
+            summary: z.string().trim().min(1).max(300),
+            responsibilities: z.string().trim().min(1).max(5000),
+            requirements: z.string().trim().min(1).max(5000),
+            commitment: z.string().trim().max(1000).optional(),
+            status: z.enum(["open", "closed"]),
+            isExample: z.boolean(),
+          })
+          .strict(),
+      )
+      .max(30),
+  })
+  .strict();
 const snapshotSchema = z.object({
   version: z.string().min(1),
   generatedAt: z.string().datetime(),
@@ -206,6 +245,7 @@ const snapshotSchema = z.object({
       ),
     })
     .optional(),
+  recruitment: recruitmentSchema.optional(),
 });
 
 export function effectiveProjectStatus(
@@ -259,6 +299,14 @@ export function validateSnapshot(
 ): Snapshot {
   const parsed = snapshotSchema.parse(input) as Snapshot;
   input = parsed;
+  if (input.recruitment) {
+    const jobIds = new Set<string>();
+    for (const job of input.recruitment.jobs) {
+      if (jobIds.has(job.id))
+        throw new Error(`duplicate recruitment job id: ${job.id}`);
+      jobIds.add(job.id);
+    }
+  }
   if (options.production && input.mode !== "production")
     throw new Error("production publication requires production snapshot");
   const routes = new Set<string>();
@@ -330,6 +378,7 @@ export function validateSnapshot(
         "news",
         "404",
         "media",
+        "join-us",
       ].includes(e.slug)
     )
       throw new Error("reserved page route");
@@ -435,5 +484,14 @@ export function validateSnapshot(
     })),
     media: input.media.map((m) => ({ ...m })),
     company: { ...input.company },
+    ...(input.recruitment
+      ? {
+          recruitment: {
+            jobs: input.recruitment.jobs
+              .filter((job) => !options.production || !job.isExample)
+              .map((job) => ({ ...job })),
+          },
+        }
+      : {}),
   });
 }

@@ -7,6 +7,7 @@ import {
   termsSummary,
 } from "./legal.js";
 import type { Snapshot, Entry } from "./schema.js";
+import { exampleRecruitment } from "./recruitment.js";
 import {
   directoryBusinesses,
   directoryCases,
@@ -136,4 +137,5 @@ export const previewSnapshot: Snapshot = {
     ...directoryCases,
   ],
   media: [...directoryMedia, ...aboutMedia],
+  recruitment: structuredClone(exampleRecruitment),
 };

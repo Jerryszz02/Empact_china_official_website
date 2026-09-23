@@ -5,9 +5,13 @@ import {
 } from "node:http";
 import { createReadStream } from "node:fs";
 import { readFile, realpath, stat } from "node:fs/promises";
-import { extname, join, resolve, sep } from "node:path";
+import { dirname, extname, join, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
-import { createContactHandler, smtpDelivery } from "./contact.js";
+import {
+  createContactHandler,
+  smtpDelivery,
+  type RecruitmentJobForApplication,
+} from "./contact.js";
 
 const mime: Record<string, string> = {
   ".html": "text/html; charset=utf-8",
@@ -33,6 +37,39 @@ export function createPublicServer(options: {
   const contact = createContactHandler({
     origin: options.origin,
     deliver: options.deliver,
+    getJob: async (jobId) => {
+      // The current symlink is resolved for every submission so a page left open
+      // before a publication change cannot apply to a removed or closed job.
+      const current = await realpath(options.root);
+      const snapshot: unknown = JSON.parse(
+        await readFile(join(dirname(current), "snapshot.json"), "utf8"),
+      );
+      if (
+        !snapshot ||
+        typeof snapshot !== "object" ||
+        !("recruitment" in snapshot)
+      )
+        return undefined;
+      const recruitment = snapshot.recruitment;
+      if (
+        !recruitment ||
+        typeof recruitment !== "object" ||
+        !("jobs" in recruitment)
+      )
+        return undefined;
+      const jobs = recruitment.jobs;
+      if (!Array.isArray(jobs)) return undefined;
+      const job: unknown = jobs.find(
+        (item) => item && typeof item === "object" && item.id === jobId,
+      );
+      if (!job || typeof job !== "object") return undefined;
+      const candidate = job as Partial<RecruitmentJobForApplication>;
+      return typeof candidate.title === "string" &&
+        (candidate.status === "open" || candidate.status === "closed") &&
+        typeof candidate.isExample === "boolean"
+        ? (candidate as RecruitmentJobForApplication)
+        : undefined;
+    },
   });
   const json = (res: ServerResponse, status: number, body: unknown) => {
     res.writeHead(status, {

@@ -104,6 +104,15 @@ export async function GET(request: Request) {
             galleryMedia(live?.homeGallery, live?.media ?? []),
           ),
       },
+      recruitment: {
+        live: Boolean(live?.recruitment),
+        modified: !isDeepStrictEqual(
+          content.recruitment && {
+            jobs: content.recruitment.jobs.filter((job) => !job.isExample),
+          },
+          live?.recruitment,
+        ),
+      },
     },
     { headers },
   );
@@ -130,6 +139,7 @@ export async function POST(
       ids?: unknown;
       includeCompany?: boolean;
       includeHomeGallery?: boolean;
+      includeRecruitment?: boolean;
       confirmed?: boolean;
       version?: string;
       receiptId?: string;
@@ -147,7 +157,8 @@ export async function POST(
       !["rollback", "retry"].includes(action) &&
       !ids.length &&
       !body.includeCompany &&
-      !body.includeHomeGallery
+      !body.includeHomeGallery &&
+      !body.includeRecruitment
     )
       throw new Error("请选择要预览或发布的内容。");
     if (action !== "preview" && body.confirmed !== true)
@@ -162,6 +173,7 @@ export async function POST(
         ids,
         Boolean(body.includeCompany),
         Boolean(body.includeHomeGallery),
+        Boolean(body.includeRecruitment),
       );
       const snapshot = validateSnapshot(
         { ...merged, mode: "preview" },
@@ -186,6 +198,7 @@ export async function POST(
           ids,
           includeCompany: Boolean(body.includeCompany),
           includeHomeGallery: Boolean(body.includeHomeGallery),
+          includeRecruitment: Boolean(body.includeRecruitment),
           baseVersion,
           digest: snapshotDigest(snapshot),
         }),
@@ -276,6 +289,7 @@ export async function POST(
           ids?: unknown;
           includeCompany?: unknown;
           includeHomeGallery?: unknown;
+          includeRecruitment?: unknown;
           baseVersion?: unknown;
           digest?: unknown;
         },
@@ -291,6 +305,7 @@ export async function POST(
         JSON.stringify(review.ids) !== JSON.stringify(ids) ||
         review.includeCompany !== Boolean(body.includeCompany) ||
         review.includeHomeGallery !== Boolean(body.includeHomeGallery) ||
+        review.includeRecruitment !== Boolean(body.includeRecruitment) ||
         review.digest !== snapshotDigest(frozen)
       )
         throw new Error("预览内容与当前选择不一致，请重新生成预览。");

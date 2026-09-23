@@ -169,6 +169,7 @@ export function mergeSelectedLive(
   selectedIds: string[],
   includeCompany = false,
   includeHomeGallery = false,
+  includeRecruitment = false,
 ): Snapshot {
   const entries = new Map(
     (live?.entries || []).map((entry) => [entry.id, entry]),
@@ -206,6 +207,9 @@ export function mergeSelectedLive(
   const homeGallery = includeHomeGallery
     ? draft.homeGallery
     : live?.homeGallery;
+  const recruitment = includeRecruitment
+    ? draft.recruitment
+    : live?.recruitment;
   const used = new Set(
     [...entries.values()].flatMap((entry) =>
       [entry.imageId, ...(entry.bodyMediaIds ?? [])].filter(
@@ -221,6 +225,7 @@ export function mergeSelectedLive(
     mode: "production",
     company: structuredClone(includeCompany ? draft.company : live!.company),
     ...(homeGallery ? { homeGallery: structuredClone(homeGallery) } : {}),
+    ...(recruitment ? { recruitment: structuredClone(recruitment) } : {}),
     entries: [...entries.values()],
     media: [...media.values()].filter((item) => used.has(item.id)),
   };

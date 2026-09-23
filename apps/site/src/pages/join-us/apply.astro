@@ -1,0 +1,184 @@
+---
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import { snapshot } from "@/lib/content";
+import { visibleRecruitmentJobs, jobTypeLabel } from "@/lib/recruitment";
+import "@/styles/recruitment.css";
+const preview = import.meta.env.SITE_MODE === "preview";
+const jobs = visibleRecruitmentJobs(snapshot, preview);
+const enabled =
+  !preview &&
+  snapshot.mode === "production" &&
+  snapshot.company.contactEnabled &&
+  snapshot.company.approved &&
+  snapshot.company.privacyApproved;
+const fallback = snapshot.company.approved ? snapshot.company.email : "";
+---
+
+<BaseLayout
+  title="岗位申请"
+  breadcrumbTitle="岗位申请"
+  description="申请加入 Empact。介绍你的相关经历、到岗时间，并提供简历或作品链接。"
+  noIndex={preview}
+>
+  <section class="contact-layout">
+    <div class="contact-intro application-intro">
+      <a href="/join-us/#opportunities">← 返回招聘机会</a>
+      <div class="eyebrow">Your next chapter</div>
+      <h1>
+        从认识你
+        <br />
+        开始<span class="contact-period">。</span>
+      </h1>
+      <p>告诉我们你关注的岗位，以及想带到 Empact 的经验、想法和能力。</p>
+      <div class="application-guidance">
+        <h2>准备这些就好</h2>
+        <ol>
+          <li>一份可以打开的简历或作品链接。</li>
+          <li>与申请岗位有关的经历、项目或技能。</li>
+          <li>可以加入的时间；申请实习时，也请说明每周可到岗天数。</li>
+        </ol>
+        <p>请确认资料链接无需额外申请访问权限。</p>
+      </div>
+    </div>
+    {jobs.length ? (
+      <form
+        class="contact-form application-form"
+        method="post"
+        action="/api/contact"
+        data-application-form
+        data-delivery-enabled={String(enabled)}
+      >
+        <h2>招聘申请</h2>
+        <p class="form-help">带 * 为必填。简历与作品链接至少填写一项。</p>
+        <fieldset>
+          <legend>01 / 申请岗位</legend>
+          <label for="jobId">选择岗位 *</label>
+          <select id="jobId" name="jobId" required>
+            <option value="">请选择申请岗位</option>
+            {jobs.map((job) => (
+              <option value={job.id} data-example={String(job.isExample)}>
+                {job.title} · {jobTypeLabel[job.type]}
+                {job.isExample ? "（示例）" : ""}
+              </option>
+            ))}
+          </select>
+          <small data-job-notice aria-live="polite"></small>
+        </fieldset>
+        <fieldset>
+          <legend>02 / 联系信息</legend>
+          <label for="name">姓名 *</label>
+          <input
+            id="name"
+            name="name"
+            required
+            maxlength="80"
+            autocomplete="name"
+          />
+          <label for="email">联系邮箱 *</label>
+          <input
+            id="email"
+            name="email"
+            type="email"
+            required
+            maxlength="254"
+            autocomplete="email"
+          />
+          <label for="contact">电话或微信（选填）</label>
+          <input id="contact" name="contact" maxlength="160" />
+        </fieldset>
+        <fieldset>
+          <legend>03 / 认识你</legend>
+          <label for="experience">相关经历与申请理由 *</label>
+          <textarea
+            id="experience"
+            name="experience"
+            required
+            minlength="10"
+            maxlength="3000"
+            rows="6"
+            placeholder="介绍一段相关经历、参与过的项目，或你希望在这个岗位做的事（至少 10 个字）。"
+          ></textarea>
+          <label for="availability">可到岗时间 *</label>
+          <input
+            id="availability"
+            name="availability"
+            required
+            maxlength="160"
+            placeholder="例如：10 月起可到岗，实习每周 3 天、持续 3 个月"
+          />
+          <label for="resumeUrl">简历链接</label>
+          <input
+            id="resumeUrl"
+            name="resumeUrl"
+            type="url"
+            maxlength="2000"
+            placeholder="https://，请确认我们有权限查看"
+            aria-describedby="application-links-help"
+          />
+          <label for="portfolioUrl">作品或项目链接</label>
+          <input
+            id="portfolioUrl"
+            name="portfolioUrl"
+            type="url"
+            maxlength="2000"
+            placeholder="https://"
+            aria-describedby="application-links-help"
+          />
+          <small id="application-links-help">
+            简历或作品至少提供一项，支持 http:// 或 https:// 链接。
+          </small>
+        </fieldset>
+        <p class="application-privacy">
+          你填写的信息与资料链接将通过邮件交给 Empact
+          招聘负责人，用于评估本次岗位申请和联系你。
+        </p>
+        <label class="consent">
+          <input type="checkbox" name="consent" required />
+          <span>
+            我同意 Empact 按照上述说明和
+            <a href="/privacy/#recruitment-privacy">隐私政策</a>
+            处理本次招聘申请。
+          </span>
+        </label>
+        <input
+          type="text"
+          name="website"
+          tabindex="-1"
+          autocomplete="off"
+          class="honeypot"
+          aria-hidden="true"
+        />
+        <input type="hidden" name="idempotencyKey" value="" />
+        <p
+          class="form-status"
+          data-form-status
+          role="status"
+          aria-live="polite"
+        >
+          {preview
+            ? "当前为页面预览，暂不发送申请邮件。"
+            : !enabled
+              ? fallback
+                ? `在线申请暂不可用，请通过 ${fallback} 联系我们。`
+                : "在线申请暂不可用，请稍后再试。"
+              : ""}
+        </p>
+        <button class="button button-primary" type="submit" disabled>
+          发送申请 <span aria-hidden="true">↗</span>
+        </button>
+        <noscript>
+          <p>请启用浏览器 JavaScript 后填写申请表。</p>
+        </noscript>
+      </form>
+    ) : (
+      <div class="contact-form application-empty">
+        <h2>目前暂无开放岗位</h2>
+        <p>新的招聘机会会在加入我们页面更新。</p>
+        <a href="/join-us/">返回加入我们 ↗</a>
+      </div>
+    )}
+  </section>
+  <script>
+    import "@/lib/application-form";
+  </script>
+</BaseLayout>
