@@ -397,9 +397,17 @@ test("footer is compact and uses the transparent white logo", async ({
   await expect(singapore).toContainText("Enabling Village");
   await expect(singapore).toContainText("20 Lengkok Bahru");
   await expect(singapore).toContainText("Singapore 159053");
-  await expect(
-    singapore.locator('a[href="mailto:enquiries@empact.sg"]'),
-  ).toBeVisible();
+  const singaporeEnquiry = singapore.getByRole("link", {
+    name: "联系 Empact 新加坡",
+  });
+  await expect(singaporeEnquiry).toBeVisible();
+  await expect(singaporeEnquiry).toHaveAttribute(
+    "href",
+    "https://portal.empact.sg/empact-general-enquiry",
+  );
+  await expect(singaporeEnquiry).toHaveAttribute("target", "_blank");
+  await expect(singaporeEnquiry).toHaveAttribute("rel", "noopener noreferrer");
+  await expect(singapore.locator('a[href^="mailto:"]')).toHaveCount(0);
 
   // Utility navigation, legal name and ICP link stay under the offices.
   for (const href of ["/about/", "/contact/", "/privacy/", "/terms/"])
@@ -409,10 +417,15 @@ test("footer is compact and uses the transparent white logo", async ({
     footer.getByRole("link", { name: "沪ICP备2026002363号-2" }),
   ).toHaveAttribute("href", "https://beian.miit.gov.cn/");
 
-  // China-only social links open the official accounts in a safe new tab.
+  // China and Singapore social links open the official accounts in a safe new tab.
   for (const [name, href] of [
     ["小红书", "https://xhslink.cn/o/A6Nv4ftO0Td"],
     ["Empact中国", "https://weixin.qq.com/r/mp/YBDv99XEyYi2rZGU90Vy"],
+    [
+      "Empact SG · LinkedIn",
+      "https://www.linkedin.com/company/empactsg/posts/?feedView=all",
+    ],
+    ["Empact SG · Facebook", "https://www.facebook.com/empactsg/"],
   ] as const) {
     const link = footer.getByRole("link", { name });
     await expect(link).toBeVisible();
@@ -441,8 +454,9 @@ test("footer is compact and uses the transparent white logo", async ({
   ).toBe(true);
 
   const bounds = await footer.boundingBox();
+  // Four social accounts need more vertical space beside the logo on phones.
   expect(bounds!.height).toBeLessThan(
-    testInfo.project.name === "mobile" ? 272 : 220,
+    testInfo.project.name === "mobile" ? 336 : 220,
   );
 
   expect(
