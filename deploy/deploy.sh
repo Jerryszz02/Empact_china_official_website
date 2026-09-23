@@ -142,6 +142,22 @@ if [[ -n $current_code && -d $current_code ]]; then
   fi
 fi
 
+if $schema_changed; then
+  command -v sqlite3 >/dev/null || { echo 'SQLite CLI is required for schema backup.' >&2; exit 1; }
+  database_path=$(/usr/bin/node --env-file="$ENV_FILE" -e '
+    const url = process.env.DATABASE_URL || "";
+    if (!url.startsWith("file:/") || /[?#]/.test(url)) process.exit(1);
+    console.log(url.slice(5));
+  ')
+  [[ ! -L "$database_path" ]] || { echo "Schema database must not be a symlink." >&2; exit 1; }
+  database_path=$(readlink -e -- "$database_path")
+  database_root=$(readlink -e -- "$ROOT/data")
+  [[ "$database_path" == "$database_root/"* && -f "$database_path" ]] || {
+    echo 'Schema migration requires an existing local database under /srv/empact/data.' >&2
+    exit 1
+  }
+fi
+
 was_cms=false; was_expiry=false; was_timer=false; was_public=false
 systemctl is-active --quiet empact-cms && was_cms=true || true
 systemctl is-active --quiet empact-expiry.service && was_expiry=true || true
@@ -228,15 +244,6 @@ systemctl stop empact-expiry.timer empact-expiry.service empact-cms.service
 if [[ -e $PUBLIC_CURRENT ]]; then previous_public=$(readlink -f "$PUBLIC_CURRENT"); fi
 "$BACKUP" "$backup_dir"
 if $schema_changed; then
-  database_path=$(/usr/bin/node --env-file="$ENV_FILE" -e '
-    const url = process.env.DATABASE_URL || "";
-    if (!url.startsWith("file:/") || /[?#]/.test(url)) process.exit(1);
-    console.log(url.slice(5));
-  ')
-  [[ "$database_path" == "$ROOT/data/"* && -f "$database_path" ]] || {
-    echo 'Schema migration requires an existing local database under /srv/empact/data.' >&2
-    exit 1
-  }
   # Only create new tables/indexes. The helper rehearses on a private copy,
   # preserves existing rows/schema, and applies all statements transactionally.
   "$SCHEMA_PLAN" apply "$schema_plan_file" "$database_path" "$backup_dir/schema-before.db"
