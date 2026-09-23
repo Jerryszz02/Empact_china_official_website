@@ -31,6 +31,22 @@ const text = (name: string, label: string, required = false) => ({
   type: "text" as const,
   required,
 });
+const caseDateIsValid = (value: string) => {
+  const date = value.slice(0, 10);
+  const parsed = Date.parse(date);
+  if (
+    !Number.isFinite(parsed) ||
+    new Date(parsed).toISOString().slice(0, 10) !== date
+  )
+    return false;
+  if (value === date) return true;
+  // Existing snapshots may contain a timestamp instead of a calendar date.
+  return (
+    /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:\d{2})$/.test(
+      value,
+    ) && Number.isFinite(Date.parse(value))
+  );
+};
 const contentFields: Field[] = [
   {
     name: "kind",
@@ -298,6 +314,9 @@ const visible = [
   "order",
   "image",
   "detailUrl",
+  "eventDate",
+  "duration",
+  "location",
   "body",
 ];
 const businessContentFields: Field[] = [
@@ -315,7 +334,14 @@ const businessContentFields: Field[] = [
       (field) => "name" in field && field.name === name,
     )!;
     const onlyBusiness = ["segment", "order"].includes(name),
-      onlyCase = ["parent", "image", "detailUrl"].includes(name);
+      onlyCase = [
+        "parent",
+        "image",
+        "detailUrl",
+        "eventDate",
+        "duration",
+        "location",
+      ].includes(name);
     return {
       ...field,
       label:
@@ -329,6 +355,9 @@ const businessContentFields: Field[] = [
             image: "项目封面（发布时必填）",
             order: "展示顺序（选填，数字越小越靠前）",
             detailUrl: "外链（与网页正文二选一）",
+            eventDate: "活动日期（选填）",
+            duration: "活动时间说明（选填）",
+            location: "地点（选填）",
           } as Record<string, string>
         )[name] ?? ("label" in field ? field.label : undefined),
       admin: {
@@ -338,6 +367,18 @@ const businessContentFields: Field[] = [
           ? {
               description:
                 "填写完整的 http:// 或 https:// 链接，访客点击详情时直接打开外链；留空则使用下方网页正文。已有正文会保留，清空外链后可继续编辑。",
+            }
+          : {}),
+        ...(name === "eventDate"
+          ? {
+              description:
+                "填写 YYYY-MM-DD，例如 2026-09-23。多日活动、长期项目或每周安排请填写在下方活动时间说明。",
+            }
+          : {}),
+        ...(name === "duration"
+          ? {
+              description:
+                "可填日期范围、项目周期或固定安排，例如 9月23日至25日、长期、每周六。",
             }
           : {}),
         condition: (_: unknown, data: Record<string, unknown>) =>
@@ -513,6 +554,18 @@ export const Content: CollectionConfig = {
         }
 
         if ((data.kind || originalDoc?.kind) === "case") {
+          for (const name of ["eventDate", "duration", "location"] as const) {
+            if (typeof data[name] === "string") data[name] = data[name].trim();
+          }
+          if (
+            data.eventDate &&
+            (typeof data.eventDate !== "string" ||
+              !caseDateIsValid(data.eventDate))
+          )
+            throw new APIError(
+              "活动日期请填写有效的 YYYY-MM-DD 日期，或留空。",
+              400,
+            );
           const parentId = Object.hasOwn(data, "parent")
             ? data.parent
             : originalDoc?.parent;

@@ -1,6 +1,7 @@
 ---
 import BaseLayout from "@/layouts/BaseLayout.astro";
 import CaseImage from "@/components/CaseImage.astro";
+import CaseMetadata from "@/components/CaseMetadata.astro";
 import { cases, entries, pathFor, byId, sourceTypeLabel } from "@/lib/content";
 export function getStaticPaths() {
   return cases
@@ -48,14 +49,12 @@ const relatedCases = [
     <span class="eyebrow">Case study</span>
     <h1>{entry.title}</h1>
     <p class="page-summary">{entry.summary}</p>
-    {(publishedLabel || entry.location) && (
+    <CaseMetadata entry={entry} />
+    {publishedLabel && (
       <div class="detail-meta">
-        {publishedLabel && (
-          <span>
-            <time datetime={publishedAt ?? ""}>{publishedLabel}</time>
-          </span>
-        )}
-        {entry.location && <span>地点：{entry.location}</span>}
+        <span>
+          发布于 <time datetime={publishedAt ?? ""}>{publishedLabel}</time>
+        </span>
       </div>
     )}
   </section>
