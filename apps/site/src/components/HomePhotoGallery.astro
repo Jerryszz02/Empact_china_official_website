@@ -2,8 +2,7 @@
 import { isPreviewMode, mediaById, snapshot } from "@/lib/content";
 import { resolveHomeGallery } from "@/lib/home-gallery";
 
-// Local development can consume a production snapshot; its comparison controls
-// and temporary images still belong only to the development / preview surface.
+// Temporary images belong only to the development / preview surface.
 const preview = import.meta.env.DEV || isPreviewMode();
 const { style, images } = resolveHomeGallery(snapshot, mediaById, preview);
 ---
@@ -16,7 +15,13 @@ const { style, images } = resolveHomeGallery(snapshot, mediaById, preview);
     data-gallery-style={style}
     data-preview={preview ? "true" : "false"}
   >
-    <div class="gallery-viewport" data-gallery-viewport>
+    <div
+      class="gallery-viewport"
+      data-gallery-viewport
+      tabindex="0"
+      role="group"
+      aria-label="照片轮播，可左右滑动或使用方向键"
+    >
       <div class="gallery-track" data-gallery-track>
         {images.map((image) => (
           <div class="gallery-card" data-gallery-card>
@@ -39,36 +44,6 @@ const { style, images } = resolveHomeGallery(snapshot, mediaById, preview);
         ))}
       </div>
     </div>
-    <div class="gallery-controls">
-      {preview && (
-        <div
-          class="gallery-style-switch"
-          role="group"
-          aria-label="照片展示样式"
-          hidden
-        >
-          <button
-            type="button"
-            data-gallery-choice="photos"
-            aria-pressed={style === "photos"}
-          >
-            纯照片
-          </button>
-          <button
-            type="button"
-            data-gallery-choice="film"
-            aria-pressed={style === "film"}
-          >
-            胶卷
-          </button>
-        </div>
-      )}
-      {images.length > 1 && (
-        <button type="button" class="gallery-pause" data-gallery-pause hidden>
-          暂停轮播
-        </button>
-      )}
-    </div>
   </section>
 )}
 
@@ -76,9 +51,6 @@ const { style, images } = resolveHomeGallery(snapshot, mediaById, preview);
   function initHomeGallery(root: HTMLElement) {
     const viewport = root.querySelector<HTMLElement>("[data-gallery-viewport]");
     const track = root.querySelector<HTMLElement>("[data-gallery-track]");
-    const pauseButton = root.querySelector<HTMLButtonElement>(
-      "[data-gallery-pause]",
-    );
     const originals = Array.from(
       root.querySelectorAll<HTMLElement>("[data-gallery-card]"),
     );
@@ -86,9 +58,10 @@ const { style, images } = resolveHomeGallery(snapshot, mediaById, preview);
 
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
     const brand = root.closest<HTMLElement>("#brand");
-    let manualPause = false;
-    let hovering = false;
-    let focusing = false;
+    let dragging = false;
+    let pointer: { id: number; x: number } | null = null;
+    let distance = 0;
+    let duration = 0;
     let onScreen = true;
     let resizeTimer = 0;
 
@@ -99,23 +72,13 @@ const { style, images } = resolveHomeGallery(snapshot, mediaById, preview);
     }
 
     function updatePlayback() {
-      const paused =
-        manualPause ||
-        hovering ||
-        focusing ||
-        !onScreen ||
-        document.hidden ||
-        !introReady();
+      const paused = dragging || !onScreen || document.hidden || !introReady();
       track!.style.animationPlayState = paused ? "paused" : "running";
       root.dataset.galleryMotion = !root.classList.contains("gallery-animated")
         ? "static"
         : paused
           ? "paused"
           : "running";
-      if (pauseButton) {
-        pauseButton.textContent = manualPause ? "继续轮播" : "暂停轮播";
-        pauseButton.setAttribute("aria-pressed", String(manualPause));
-      }
     }
 
     function cloneCard(source: HTMLElement) {
@@ -140,7 +103,6 @@ const { style, images } = resolveHomeGallery(snapshot, mediaById, preview);
         window.innerHeight < 540
       ) {
         root.dataset.galleryMotion = "static";
-        if (pauseButton) pauseButton.hidden = true;
         return;
       }
 
@@ -158,74 +120,82 @@ const { style, images } = resolveHomeGallery(snapshot, mediaById, preview);
         next++;
       }
       const secondSequence = firstSequence.map(cloneCard);
-      const distance =
-        secondSequence[0].offsetLeft - firstSequence[0].offsetLeft;
+      distance = secondSequence[0].offsetLeft - firstSequence[0].offsetLeft;
       if (distance <= 0) return;
       track!.style.setProperty("--gallery-distance", `${distance}px`);
-      track!.style.setProperty(
-        "--gallery-duration",
-        `${Math.max(12, distance / 52)}s`,
-      );
+      duration = Math.max(12, distance / 52) * 1000;
+      track!.style.setProperty("--gallery-duration", `${duration}ms`);
       root.classList.add("gallery-animated");
-      if (pauseButton) pauseButton.hidden = false;
       updatePlayback();
     }
 
-    function setStyle(style: "photos" | "film", updateUrl = false) {
-      root.dataset.galleryStyle = style;
-      root
-        .querySelectorAll<HTMLButtonElement>("[data-gallery-choice]")
-        .forEach((button) => {
-          button.setAttribute(
-            "aria-pressed",
-            String(button.dataset.galleryChoice === style),
-          );
-        });
-      if (updateUrl) {
-        const url = new URL(window.location.href);
-        url.searchParams.set("gallery", style);
-        history.replaceState(history.state, "", url);
-      }
-      rebuild();
+    function moveBy(pixels: number) {
+      const animation = track!.getAnimations()[0];
+      if (!animation || distance <= 0) return;
+      const time =
+        Number(animation.currentTime ?? 0) + (pixels / distance) * duration;
+      animation.currentTime = ((time % duration) + duration) % duration;
     }
 
-    if (root.dataset.preview === "true") {
-      const styleSwitch = root.querySelector<HTMLElement>(
-        ".gallery-style-switch",
-      );
-      if (styleSwitch) styleSwitch.hidden = false;
-      const queryStyle = new URLSearchParams(location.search).get("gallery");
-      if (queryStyle === "photos" || queryStyle === "film")
-        setStyle(queryStyle);
-      root
-        .querySelectorAll<HTMLButtonElement>("[data-gallery-choice]")
-        .forEach((button) => {
-          button.addEventListener("click", () => {
-            const style = button.dataset.galleryChoice;
-            if (style === "photos" || style === "film") setStyle(style, true);
-          });
-        });
+    viewport.addEventListener("pointerdown", (event) => {
+      if (
+        !root.classList.contains("gallery-animated") ||
+        !event.isPrimary ||
+        event.button !== 0
+      )
+        return;
+      pointer = { id: event.pointerId, x: event.clientX };
+      dragging = true;
+      viewport!.setPointerCapture(event.pointerId);
+      if (event.pointerType === "mouse") event.preventDefault();
+      updatePlayback();
+    });
+    viewport.addEventListener("pointermove", (event) => {
+      if (!pointer || pointer.id !== event.pointerId) return;
+      moveBy(pointer.x - event.clientX);
+      pointer.x = event.clientX;
+    });
+    function releasePointer() {
+      pointer = null;
+      dragging = false;
+      updatePlayback();
     }
-
-    pauseButton?.addEventListener("click", () => {
-      manualPause = !manualPause;
-      updatePlayback();
-    });
-    root.addEventListener("mouseenter", () => {
-      hovering = true;
-      updatePlayback();
-    });
-    root.addEventListener("mouseleave", () => {
-      hovering = false;
-      updatePlayback();
-    });
-    root.addEventListener("focusin", () => {
-      focusing = true;
-      updatePlayback();
-    });
-    root.addEventListener("focusout", () => {
-      focusing = false;
-      updatePlayback();
+    viewport.addEventListener("pointerup", releasePointer);
+    viewport.addEventListener("pointercancel", releasePointer);
+    viewport.addEventListener("lostpointercapture", releasePointer);
+    viewport.addEventListener("dragstart", (event) => event.preventDefault());
+    viewport.addEventListener(
+      "wheel",
+      (event) => {
+        if (!root.classList.contains("gallery-animated")) return;
+        const delta =
+          event.shiftKey && !event.deltaX ? event.deltaY : event.deltaX;
+        if (
+          !delta ||
+          (!event.shiftKey && Math.abs(event.deltaY) > Math.abs(event.deltaX))
+        )
+          return;
+        event.preventDefault();
+        event.stopPropagation();
+        moveBy(
+          delta *
+            (event.deltaMode === 1
+              ? 16
+              : event.deltaMode === 2
+                ? viewport!.clientWidth
+                : 1),
+        );
+      },
+      { passive: false },
+    );
+    viewport.addEventListener("keydown", (event) => {
+      if (
+        !root.classList.contains("gallery-animated") ||
+        !["ArrowLeft", "ArrowRight"].includes(event.key)
+      )
+        return;
+      event.preventDefault();
+      moveBy((event.key === "ArrowRight" ? 1 : -1) * originals[0].clientWidth);
     });
     document.addEventListener("visibilitychange", updatePlayback);
     reducedMotion.addEventListener("change", rebuild);
@@ -294,6 +264,16 @@ const { style, images } = resolveHomeGallery(snapshot, mediaById, preview);
   }
   .gallery-animated .gallery-viewport {
     overflow-x: hidden;
+    touch-action: pan-y;
+    cursor: grab;
+    user-select: none;
+  }
+  .gallery-animated .gallery-viewport:active {
+    cursor: grabbing;
+  }
+  .gallery-viewport:focus-visible {
+    outline: 2px solid #fff;
+    outline-offset: 4px;
   }
   .gallery-track {
     position: relative;
@@ -374,72 +354,12 @@ const { style, images } = resolveHomeGallery(snapshot, mediaById, preview);
   .home-gallery[data-gallery-style="film"] .gallery-frame {
     border-radius: 0;
   }
-  .gallery-controls {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: space-between;
-    min-height: 2.1rem;
-    gap: 0.75rem;
-    margin: 0.7rem clamp(1rem, 4vw, 3rem) 0;
-  }
-  .gallery-style-switch {
-    display: inline-flex;
-    flex-wrap: wrap;
-    max-width: 100%;
-    gap: 0.35rem;
-  }
-  .gallery-style-switch[hidden] {
-    display: none;
-  }
-  .gallery-controls button {
-    appearance: none;
-    border: 1px solid rgba(255, 255, 255, 0.55);
-    border-radius: 999px;
-    background: rgba(10, 54, 88, 0.56);
-    color: #fff;
-    padding: 0.32rem 0.8rem;
-    font:
-      500 0.78rem/1.35 Arial,
-      "PingFang SC",
-      sans-serif;
-    cursor: pointer;
-  }
-  .gallery-controls button[aria-pressed="true"] {
-    background: #fff;
-    color: #125284;
-  }
-  .gallery-controls button:hover {
-    background: rgba(255, 255, 255, 0.23);
-  }
-  .gallery-controls button[aria-pressed="true"]:hover {
-    background: #fff;
-  }
-  .gallery-controls button:focus-visible {
-    outline: 2px solid #fff;
-    outline-offset: 3px;
-  }
-  .gallery-pause {
-    margin-left: auto;
-    white-space: nowrap;
-  }
-  .gallery-pause[hidden] {
-    display: none;
-  }
   @media (max-width: 600px) {
     .gallery-card {
       width: clamp(11.5rem, 52vw, 14rem);
     }
     .home-gallery[data-gallery-style="film"] .gallery-card {
       width: clamp(12.5rem, 56vw, 15rem);
-    }
-    .gallery-controls {
-      margin-inline: 1rem;
-    }
-  }
-  @media (pointer: coarse) {
-    .gallery-controls button {
-      min-height: 44px;
     }
   }
   @media (prefers-reduced-motion: reduce) {

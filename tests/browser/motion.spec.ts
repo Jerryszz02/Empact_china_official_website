@@ -375,9 +375,23 @@ test("trackpad inertia is treated as one wheel gesture", async ({ page }) => {
   );
   await settleAt(page, "brand");
   const aboutIntro = await sceneTop(page, "about-intro");
-  for (const delta of [12, 12, 12, 12, 12, 12, 12, 12, 12])
-    await page.mouse.wheel(0, delta);
-  await page.waitForTimeout(700);
+  // Keep one gesture inside the browser: slow CI protocol round trips must
+  // not turn its small samples into separate gestures (>180ms apart).
+  await page.evaluate(() => {
+    for (let i = 0; i < 9; i++)
+      window.dispatchEvent(
+        new WheelEvent("wheel", {
+          deltaY: 12,
+          deltaMode: 0,
+          bubbles: true,
+          cancelable: true,
+        }),
+      );
+  });
+  await expect
+    .poll(() => scrollY(page), { timeout: 1800 })
+    .toBeCloseTo(aboutIntro, 0);
+  await page.waitForTimeout(240);
   expect(Math.abs((await scrollY(page)) - aboutIntro)).toBeLessThanOrEqual(3);
 });
 

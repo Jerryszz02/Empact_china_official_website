@@ -1,103 +1,84 @@
 import { expect, test } from "@playwright/test";
 
-test("preview gallery keeps six explicit placeholders and switches both looks", async ({
+test("gallery uses its configured style without homepage controls or URL overrides", async ({
   page,
-}, testInfo) => {
-  await page.goto("/?gallery=photos");
+}) => {
+  await page.goto("/?gallery=film");
   const gallery = page.locator("[data-home-gallery]");
   await expect(gallery).toHaveAttribute("data-gallery-style", "photos");
-  const originals = gallery.locator(
-    "[data-gallery-card]:not([data-gallery-clone])",
-  );
-  await expect(originals).toHaveCount(6);
-  await expect(originals.locator("img").first()).toHaveAttribute(
-    "src",
-    "/gallery/placeholder-01.svg",
-  );
-  await expect(originals.locator("img").last()).toHaveAttribute(
-    "src",
-    "/gallery/placeholder-06.svg",
-  );
+  await expect(gallery.getByRole("button")).toHaveCount(0);
+  await expect(
+    gallery.locator("[data-gallery-card]:not([data-gallery-clone])"),
+  ).toHaveCount(6);
   await expect(gallery.locator("[data-gallery-clone]").first()).toHaveAttribute(
     "aria-hidden",
     "true",
   );
-  await gallery.getByRole("button", { name: "胶卷" }).click();
-  await expect(gallery).toHaveAttribute("data-gallery-style", "film");
-  await expect(page).toHaveURL(/gallery=film/);
-  await expect(originals).toHaveCount(6);
-  await expect
-    .poll(() =>
-      originals
-        .first()
-        .locator("img")
-        .evaluate(
-          (image) =>
-            (image as HTMLImageElement).complete &&
-            (image as HTMLImageElement).naturalWidth > 0,
-        ),
-    )
-    .toBe(true);
-  await page.screenshot({
-    path: `test-results/home-gallery-film-${testInfo.project.name}.png`,
-  });
-  await gallery.getByRole("button", { name: "纯照片" }).click();
-  await expect(gallery).toHaveAttribute("data-gallery-style", "photos");
-  await page.screenshot({
-    path: `test-results/home-gallery-photos-${testInfo.project.name}.png`,
-  });
 });
 
-test("gallery loop covers the viewport and manual pause survives hover", async ({
+test("gallery keeps autoplay on hover and resumes from left and right dragging", async ({
   page,
-}) => {
+}, testInfo) => {
   await page.goto("/");
   const gallery = page.locator("[data-home-gallery]");
-  await expect(gallery).toHaveClass(/gallery-animated/);
-  const geometry = await gallery.evaluate((node) => {
-    const viewport = node.querySelector<HTMLElement>(
-      "[data-gallery-viewport]",
-    )!;
-    const track = node.querySelector<HTMLElement>("[data-gallery-track]")!;
-    const cards = Array.from(
-      track.querySelectorAll<HTMLElement>("[data-gallery-card]"),
-    );
-    const second = cards.findIndex(
-      (card, index) =>
-        index > 0 &&
-        card.querySelector("img")?.getAttribute("src") ===
-          cards[0].querySelector("img")?.getAttribute("src"),
-    );
-    return {
-      viewportWidth: viewport.clientWidth,
-      distance: Number.parseFloat(
-        track.style.getPropertyValue("--gallery-distance"),
-      ),
-      firstCopyGap:
-        second > 0 ? cards[second].offsetLeft - cards[0].offsetLeft : 0,
-      animation: getComputedStyle(track).animationName,
-    };
+  const viewport = gallery.locator("[data-gallery-viewport]");
+  const track = gallery.locator("[data-gallery-track]");
+  await expect(gallery).toHaveAttribute("data-gallery-motion", "running", {
+    timeout: 8_000,
   });
-  expect(geometry.distance).toBeGreaterThan(geometry.viewportWidth);
-  expect(geometry.firstCopyGap).toBeGreaterThan(0);
-  expect(geometry.animation).not.toBe("none");
+  const geometry = await track.evaluate((node) => ({
+    distance: parseFloat(node.style.getPropertyValue("--gallery-distance")),
+    width: node.parentElement!.clientWidth,
+  }));
+  expect(geometry.distance).toBeGreaterThan(geometry.width);
+  const time = () =>
+    track.evaluate((node) => Number(node.getAnimations()[0].currentTime));
+  const box = (await viewport.boundingBox())!;
+  const x = box.x + box.width / 2;
+  const y = box.y + box.height / 2;
+  await page.mouse.move(x, y);
+  await expect(gallery).toHaveAttribute("data-gallery-motion", "running");
+  const beforeHover = await time();
+  await expect.poll(time).toBeGreaterThan(beforeHover + 100);
 
-  const pause = gallery.getByRole("button", { name: "暂停轮播" });
-  await pause.click();
-  await expect(gallery).toHaveAttribute("data-gallery-motion", "paused");
-  await expect(
-    gallery.getByRole("button", { name: "继续轮播" }),
-  ).toHaveAttribute("aria-pressed", "true");
-  await page.mouse.move(0, 0);
-  await expect(gallery).toHaveAttribute("data-gallery-motion", "paused");
-  await gallery.getByRole("button", { name: "继续轮播" }).click();
-  await page.evaluate(() =>
-    (document.activeElement as HTMLElement | null)?.blur(),
-  );
-  await page.mouse.move(0, 0);
-  await expect
-    .poll(() => gallery.getAttribute("data-gallery-motion"))
-    .toBe("running");
+  const drag = async (delta: number) => {
+    await page.mouse.move(x, y);
+    await page.mouse.down();
+    const before = await time();
+    await page.mouse.move(x + delta, y, { steps: 8 });
+    const after = await time();
+    await page.mouse.up();
+    await expect(gallery).toHaveAttribute("data-gallery-motion", "running");
+    return after - before;
+  };
+  expect(await drag(-110)).toBeGreaterThan(1500);
+  expect(await drag(70)).toBeLessThan(-900);
+  const released = await time();
+  await expect.poll(time).toBeGreaterThan(released + 100);
+
+  if (testInfo.project.name === "mobile") {
+    const cdp = await page.context().newCDPSession(page);
+    await cdp.send("Input.dispatchTouchEvent", {
+      type: "touchStart",
+      touchPoints: [{ x, y }],
+    });
+    const before = await time();
+    await cdp.send("Input.dispatchTouchEvent", {
+      type: "touchMove",
+      touchPoints: [{ x: x - 100, y }],
+    });
+    expect(await time()).toBeGreaterThan(before + 1400);
+    await cdp.send("Input.dispatchTouchEvent", {
+      type: "touchEnd",
+      touchPoints: [],
+    });
+    await expect(gallery).toHaveAttribute("data-gallery-motion", "running");
+    await cdp.detach();
+  }
+  await viewport.focus();
+  const beforeKey = await time();
+  await page.keyboard.press("ArrowRight");
+  expect(await time()).toBeGreaterThan(beforeKey + 2000);
 });
 
 test("reduced motion gives a static, manually scrollable strip", async ({
@@ -124,7 +105,7 @@ test("mobile gallery stays inside the document width", async ({ page }) => {
   await page.goto("/?gallery=film");
   await expect(page.locator("[data-home-gallery]")).toHaveAttribute(
     "data-gallery-style",
-    "film",
+    "photos",
   );
   const dimensions = await page.evaluate(() => ({
     document: document.documentElement.scrollWidth,
