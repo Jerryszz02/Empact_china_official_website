@@ -1,36 +1,11 @@
 ---
 import { snapshot, news, pathFor } from "@/lib/content";
+import { socialLinks } from "@/lib/social-links";
 const updates = [...news].sort((a, b) =>
   (b.publishedAt ?? "").localeCompare(a.publishedAt ?? ""),
 );
 const company = snapshot.company;
-const socials = [
-  {
-    platform: "小红书",
-    name: "Empact AI 社创营",
-    href: "https://xhslink.cn/o/A6Nv4ftO0Td",
-  },
-  {
-    platform: "小红书",
-    name: "Empact中国",
-    href: "https://xhslink.cn/o/30HZaQmiwlS",
-  },
-  {
-    platform: "微信公众号",
-    name: "Empact中国",
-    href: "https://weixin.qq.com/r/mp/YBDv99XEyYi2rZGU90Vy",
-  },
-  {
-    platform: "LinkedIn",
-    name: "Empact SG · LinkedIn",
-    href: "https://www.linkedin.com/company/empactsg/posts/?feedView=all",
-  },
-  {
-    platform: "Facebook",
-    name: "Empact SG · Facebook",
-    href: "https://www.facebook.com/empactsg/",
-  },
-];
+const socials = Object.values(socialLinks);
 ---
 
 <footer class="site-footer">

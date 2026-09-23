@@ -1,0 +1,179 @@
+---
+import { socialLinks } from "@/lib/social-links";
+import type { Segment } from "@empact/content/schema";
+
+interface Props {
+  businessId: string;
+  segment?: Segment;
+  consultationLabel?: string;
+}
+
+const { businessId, segment, consultationLabel = "提交咨询需求" } = Astro.props;
+const channels = [
+  socialLinks.wechatChina,
+  segment === "youth" || segment === "school"
+    ? socialLinks.xiaohongshuYouth
+    : socialLinks.xiaohongshuChina,
+];
+---
+
+<div class="business-next-steps">
+  <section class="business-consultation" aria-labelledby="consultation-title">
+    <h2 id="consultation-title">咨询与合作</h2>
+    <p>聊聊你的需求，一起探讨参与或合作的可能。</p>
+    <a
+      class="button button-primary"
+      href={`/contact/?business=${encodeURIComponent(businessId)}`}
+    >
+      {consultationLabel} <span aria-hidden="true">↗</span>
+    </a>
+  </section>
+
+  <section class="business-content-channels" aria-labelledby="channels-title">
+    <h2 id="channels-title">更多内容与案例</h2>
+    <p>关注我们的公众号与小红书，了解项目故事与活动动态。</p>
+    <nav class="content-channels" aria-label="更多内容与案例">
+      {channels.map((channel) => (
+        <a
+          class="channel-link"
+          href={channel.href}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label={`${channel.platform}：${channel.name}（在新窗口打开）`}
+        >
+          {channel.platform === "小红书" ? (
+            <img
+              class="channel-icon"
+              src="/brand/xiaohongshu.svg"
+              alt=""
+              aria-hidden="true"
+              width="28"
+              height="28"
+            />
+          ) : (
+            <svg
+              class="channel-icon"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+              focusable="false"
+            >
+              <path
+                d="M10 3C5.58 3 2 5.91 2 9.5c0 2.08 1.2 3.94 3.09 5.13L4.3 17l2.83-1.42c.91.27 1.87.42 2.87.42 4.42 0 8-2.91 8-6.5S14.42 3 10 3Z"
+                fill="currentColor"
+              />
+              <circle cx="7" cy="8" r="1" fill="var(--channel-surface)" />
+              <circle cx="12" cy="8" r="1" fill="var(--channel-surface)" />
+              <path
+                d="M16 10c-3.6 0-6.5 2.35-6.5 5.25S12.4 20.5 16 20.5c.8 0 1.58-.12 2.3-.33l2.3 1.13-.65-1.9c1.55-.96 2.55-2.48 2.55-4.15C22.5 12.35 19.6 10 16 10Z"
+                fill="currentColor"
+                stroke="var(--channel-surface)"
+                stroke-width="1"
+              />
+              <circle cx="13.5" cy="14" r=".85" fill="var(--channel-surface)" />
+              <circle cx="18" cy="14" r=".85" fill="var(--channel-surface)" />
+            </svg>
+          )}
+          <span class="channel-copy">
+            <span class="channel-platform">{channel.platform}</span>
+            <strong>{channel.name}</strong>
+          </span>
+          <span class="channel-arrow" aria-hidden="true">
+            ↗
+          </span>
+        </a>
+      ))}
+    </nav>
+  </section>
+</div>
+
+<style>
+  .business-next-steps {
+    display: grid;
+    grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
+    gap: clamp(1.5rem, 4vw, 3rem);
+    max-width: 64rem;
+    margin: 3rem auto 0;
+    padding-top: 2rem;
+    border-top: 1px solid var(--dark-line);
+  }
+  .business-next-steps section {
+    min-width: 0;
+  }
+  .business-next-steps h2 {
+    margin: 0 0 0.85rem;
+    font-size: clamp(1.5rem, 2.4vw, 1.9rem);
+  }
+  .business-next-steps p {
+    margin: 0 0 1.35rem;
+    color: var(--secondary);
+    font-size: 0.95rem;
+    line-height: 1.7;
+  }
+  .business-content-channels {
+    border-left: 1px solid var(--dark-line);
+    padding-left: clamp(1.5rem, 4vw, 3rem);
+  }
+  .content-channels {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+  }
+  .channel-link {
+    --channel-surface: var(--paper);
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    min-height: 4.5rem;
+    min-width: 0;
+    padding: 0.7rem;
+    border: 1px solid var(--dark-line);
+    background: var(--channel-surface);
+    text-decoration: none;
+  }
+  .channel-link:hover,
+  .channel-link:focus-visible {
+    --channel-surface: #fff;
+    border-color: var(--blue);
+  }
+  .channel-icon {
+    width: 1.75rem;
+    height: 1.75rem;
+    flex: 0 0 auto;
+  }
+  .channel-copy {
+    display: grid;
+    gap: 0.2rem;
+    min-width: 0;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+  }
+  .channel-platform {
+    color: var(--secondary);
+    font-size: 0.75rem;
+  }
+  .channel-copy strong {
+    font-size: 0.9rem;
+  }
+  .channel-arrow {
+    margin-left: auto;
+    flex: 0 0 auto;
+  }
+  @media (max-width: 900px) {
+    .content-channels {
+      grid-template-columns: 1fr;
+    }
+  }
+  @media (max-width: 700px) {
+    .business-next-steps {
+      grid-template-columns: 1fr;
+      gap: 1.75rem;
+      margin-top: 2rem;
+      padding-top: 1.5rem;
+    }
+    .business-content-channels {
+      border-left: 0;
+      border-top: 1px solid var(--dark-line);
+      padding: 1.75rem 0 0;
+    }
+  }
+</style>
