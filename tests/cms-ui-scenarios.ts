@@ -256,6 +256,83 @@ export async function verifyCmsUI({
       (item: any) => item.slug === "international-talent-model",
     );
     assert.ok(model, "the fixed model content is preserved");
+    const youthFirst = state.items.find(
+      (item: any) => item.slug === "monthly-camp",
+    );
+    const youthSecond = state.items.find(
+      (item: any) => item.slug === "public-speaking",
+    );
+    assert.ok(youthFirst?.live && youthSecond?.live);
+    await page.goto(base + "/admin#business-types");
+    const businessRow = (title: string) =>
+      page.locator(".case-row").filter({
+        has: page.getByRole("heading", { name: title, exact: true }),
+      });
+    await expect(businessRow(model.title)).toHaveCount(0);
+    for (const [business, order] of [
+      [youthFirst, 1000],
+      [youthSecond, -1000],
+    ] as const) {
+      const row = businessRow(business.title);
+      await row.getByLabel("展示顺序").fill(String(order));
+      await row.getByRole("button", { name: "保存排序" }).click();
+      await expect
+        .poll(async () => (await request(`/api/content/${business.id}`)).order)
+        .toBe(order);
+      await expect(page.locator(".admin-notice")).toContainText(
+        "排序已保存到草稿",
+      );
+    }
+    await page.goto(base + "/youth/");
+    await expect(page.locator("#nav-youth a").first()).toHaveAttribute(
+      "href",
+      "/youth/international-talent-model/",
+    );
+    const originalYouthLinks = await page
+      .locator("#nav-youth a")
+      .allTextContents();
+    assert.ok(
+      originalYouthLinks.findIndex((label) =>
+        label.includes(youthFirst.title),
+      ) <
+        originalYouthLinks.findIndex((label) =>
+          label.includes(youthSecond.title),
+        ),
+      "draft order must not change the public navigation",
+    );
+    await page.goto(base + "/admin#business-types");
+    for (const business of [youthFirst, youthSecond]) {
+      await businessRow(business.title)
+        .getByRole("button", { name: "发布更新" })
+        .click();
+      await expect
+        .poll(
+          async () =>
+            (await request("/api/business-admin/state")).items.find(
+              (item: any) => item.id === business.id,
+            )?.modified,
+          { timeout: 60_000 },
+        )
+        .toBe(false);
+    }
+    await page.goto(base + "/youth/");
+    await expect(page.locator("#nav-youth a").first()).toHaveAttribute(
+      "href",
+      "/youth/international-talent-model/",
+    );
+    await expect(page.locator("#nav-youth a").nth(1)).toContainText(
+      youthSecond.title,
+    );
+    await expect(page.locator("#nav-youth a").last()).toContainText(
+      youthFirst.title,
+    );
+    await expect(page.locator(".service-list a").first()).toContainText(
+      youthSecond.title,
+    );
+    await expect(page.locator(".service-list a").last()).toContainText(
+      youthFirst.title,
+    );
+    await page.goto(base + "/admin");
     await page.getByRole("button", { name: "新增项目", exact: true }).click();
     const parentSelect = page
       .getByRole("dialog", { name: "新增项目", exact: true })
@@ -441,6 +518,25 @@ export async function verifyCmsUI({
       path: "test-results/cms-dashboard-mobile.png",
       fullPage: true,
     });
+    await page.goto(base + "/admin#business-types");
+    const mobileOrder = page.locator(".case-row").filter({
+      has: page.getByRole("heading", { name: youthFirst.title, exact: true }),
+    });
+    await mobileOrder.getByLabel("展示顺序").fill("999");
+    await mobileOrder.getByRole("button", { name: "保存排序" }).click();
+    await expect
+      .poll(async () => (await request(`/api/content/${youthFirst.id}`)).order)
+      .toBe(999);
+    await expect(page.locator(".admin-notice")).toContainText(
+      "排序已保存到草稿",
+    );
+    assert.equal(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= window.innerWidth,
+      ),
+      true,
+      "mobile business order form overflows",
+    );
     assert.deepEqual(errors, []);
     console.log(
       "PASS: four admin workflows, project business/name filters and reset on desktop/mobile, school/community business creation, required/optional fields, selected business, drafts/published transitions, external details, editor and mobile admin.",

@@ -1,4 +1,5 @@
 "use client";
+import { isFixedYouthModel } from "@empact/content/business";
 import {
   useAllFormFields,
   useDocumentInfo,
@@ -59,6 +60,13 @@ export function ContentDocumentActions() {
       });
   }, [id, dispatchFields, initializing, fields.kind]);
   if (kind !== "business" && kind !== "case") return null;
+  if (isFixedYouthModel({ kind, slug: fields.slug?.value ?? data?.slug }))
+    return (
+      <p>
+        国际人才培养模型为固定页面，始终显示在青少年业务首位，无需后台编辑。
+        <a href="/admin#business-types">返回业务管理</a>
+      </p>
+    );
   async function run(action: "preview" | "publish" | "unpublish" | "delete") {
     if (!id || modified) return;
     if (

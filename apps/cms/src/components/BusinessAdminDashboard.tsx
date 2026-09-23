@@ -1,6 +1,7 @@
 "use client";
 
 import { CreateContentButton } from "./CreateContentButton.js";
+import { isFixedYouthModel } from "@empact/content/business";
 import { useEffect, useState } from "react";
 
 type Item = {
@@ -35,7 +36,7 @@ const parts = [
   {
     id: "business-types",
     title: "新增业务类型",
-    description: "添加业务类型，维护业务介绍",
+    description: "添加业务类型，维护业务介绍与子业务排序",
   },
 ] as const;
 type Part = (typeof parts)[number]["id"];
@@ -99,11 +100,12 @@ export function BusinessAdminDashboard() {
   }, []);
 
   const businesses = items
-    .filter((item) => item.kind === "business")
-    .sort((a, b) => (a.order || 0) - (b.order || 0));
-  const projectBusinesses = businesses.filter(
-    (business) => business.slug !== "international-talent-model",
-  );
+    .filter((item) => item.kind === "business" && !isFixedYouthModel(item))
+    .sort(
+      (a, b) =>
+        (a.segment ?? "").localeCompare(b.segment ?? "") ||
+        (a.order || 0) - (b.order || 0),
+    );
   const projects = items
     .filter((item) => item.kind === "case")
     .sort(
@@ -130,6 +132,46 @@ export function BusinessAdminDashboard() {
   function clearFilters() {
     setBusinessId("");
     setSearch("");
+  }
+
+  async function saveOrder(
+    event: React.FormEvent<HTMLFormElement>,
+    item: Item,
+  ) {
+    event.preventDefault();
+    const value = new FormData(event.currentTarget).get("order");
+    const order = Number(value);
+    if (value === "" || !Number.isFinite(order)) return;
+    if (order === (item.order ?? 0)) {
+      setError("");
+      setResultUrl("");
+      setMessage("排序未改变。");
+      return;
+    }
+    setBusy(true);
+    setMessage("");
+    setError("");
+    setResultUrl("");
+    try {
+      const response = await fetch(`/api/content/${item.id}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ order }),
+      });
+      const data = await response.json();
+      if (!response.ok)
+        throw new Error(data.errors?.[0]?.message || "排序保存失败，请重试。");
+      await refresh();
+      setMessage(
+        `“${item.title}”的排序已保存到草稿；点击该业务的“${item.live ? "发布更新" : "发布到官网"}”后在官网生效。`,
+      );
+    } catch (caught) {
+      setError(
+        caught instanceof Error ? caught.message : "排序保存失败，请重试。",
+      );
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function action(
@@ -252,10 +294,10 @@ export function BusinessAdminDashboard() {
             <p>
               标题、摘要和所属业务类型必填。创建后可继续添加封面，填写外链或站内网页正文。
             </p>
-            {projectBusinesses.length ? (
+            {businesses.length ? (
               <CreateContentButton
                 kind="case"
-                businesses={projectBusinesses}
+                businesses={businesses}
                 label="新增项目"
               />
             ) : (
@@ -272,7 +314,10 @@ export function BusinessAdminDashboard() {
             {part === "business-types" && (
               <div className="admin-workspace__create">
                 <CreateContentButton kind="business" label="新增业务类型" />
-                <p>已有业务类型可在下方编辑介绍、发布或调整展示顺序。</p>
+                <p>
+                  同一业务分组内，数字越小越靠前。保存排序后，点击该业务的发布按钮更新官网。
+                </p>
+                <p>国际人才培养模型固定在青少年业务首位，无需后台编辑。</p>
               </div>
             )}
             {part === "published" && (
@@ -294,7 +339,7 @@ export function BusinessAdminDashboard() {
                     onChange={(event) => setBusinessId(event.target.value)}
                   >
                     <option value="">全部业务类型</option>
-                    {projectBusinesses.map((business) => (
+                    {businesses.map((business) => (
                       <option key={business.id} value={business.id}>
                         {business.segment
                           ? `${segmentLabels[business.segment]} · `
@@ -370,6 +415,30 @@ export function BusinessAdminDashboard() {
                               : "未选择业务分组"}
                         </p>
                         <p>{item.summary || "暂无摘要"}</p>
+                        {item.kind === "business" && (
+                          <form
+                            className="business-order"
+                            onSubmit={(event) => void saveOrder(event, item)}
+                          >
+                            <label htmlFor={`order-${item.id}`}>展示顺序</label>
+                            <input
+                              id={`order-${item.id}`}
+                              name="order"
+                              type="number"
+                              step="any"
+                              required
+                              defaultValue={item.order ?? 0}
+                              disabled={busy}
+                            />
+                            <button
+                              type="submit"
+                              className="button button--quiet"
+                              disabled={busy}
+                            >
+                              保存排序
+                            </button>
+                          </form>
+                        )}
                         {item.lastError && (
                           <p className="admin-error">{item.lastError}</p>
                         )}
