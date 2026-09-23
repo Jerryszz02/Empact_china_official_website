@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "from": "613cae70b2c06d2bdb0243fce6c8ad7627bffdd7152553cf900d66ab509e51de",
-  "to": "bab219d43cd7e9f1c119496246193ed1a8b835111255c1d854f71350e1bb4bcf",
+  "from": "0d0045e8c4b85e03ab31a9b05a6b90b8c048189c995c2a1abf45a1facda5348a",
+  "to": "3248778ea57172a9c9c673a3c8808f1bd645071c836160dfd3b23ece1842e8c2",
   "description": "Add the recruitment global and ordered editable job rows without changing existing tables or content.",
   "statements": [
     "CREATE TABLE `recruitment` (\n    `id` integer PRIMARY KEY NOT NULL,\n    `updated_at` text,\n    `created_at` text\n  );",

@@ -378,6 +378,7 @@ export function validateSnapshot(
         "news",
         "404",
         "media",
+        "join-us",
       ].includes(e.slug)
     )
       throw new Error("reserved page route");
