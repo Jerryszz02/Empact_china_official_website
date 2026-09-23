@@ -2,6 +2,7 @@
 import BaseLayout from "@/layouts/BaseLayout.astro";
 import CaseList from "@/components/CaseList.astro";
 import ProjectPlanning from "@/components/ProjectPlanning.astro";
+import BusinessNextSteps from "@/components/BusinessNextSteps.astro";
 import { effectiveProjectStatus } from "@empact/content/schema";
 import {
   entries,
@@ -149,7 +150,7 @@ const media = mediaById(entry.imageId);
         {entryCases.length > 0 ? (
           <CaseList cases={entryCases} businessSlug={entry.slug} />
         ) : (
-          <ProjectPlanning businessId={entry.id} businessTitle={entry.title} />
+          <ProjectPlanning businessTitle={entry.title} />
         )}
       </section>
     )}
@@ -222,12 +223,24 @@ const media = mediaById(entry.imageId);
         ))}
       </section>
     )}
-    {!isPlanning && (
+    {entry.kind === "business" ? (
+      <BusinessNextSteps
+        businessId={entry.id}
+        segment={entry.segment}
+        consultationLabel={
+          isPlanning
+            ? "交流合作想法"
+            : entry.segment === "youth"
+              ? "个人、家庭或学校咨询"
+              : "提交咨询需求"
+        }
+      />
+    ) : (
       <section class="embedded-section">
         <h2>咨询与合作</h2>
         <a
           class="button button-primary"
-          href={`/contact/?business=${encodeURIComponent(entry.kind === "business" ? entry.id : entry.parentId || "")}`}
+          href={`/contact/?business=${encodeURIComponent(entry.parentId || "")}`}
         >
           {entry.segment === "youth" ? "个人、家庭或学校咨询" : "提交咨询需求"}
         </a>

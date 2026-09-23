@@ -1,6 +1,10 @@
 ---
 import BaseLayout from "@/layouts/BaseLayout.astro";
 import YouthDevelopmentModel from "@/components/YouthDevelopmentModel.astro";
+import BusinessNextSteps from "@/components/BusinessNextSteps.astro";
+import { businesses } from "@/lib/content";
+import { isFixedYouthModel } from "@empact/content/business";
+const modelBusinessId = businesses.find(isFixedYouthModel)?.id ?? "youth";
 const stages = [
   ["经历", "进入真实情境，在交流与实践中行动。"],
   ["反思", "回看经验，觉察自己的假设与感受。"],
@@ -116,6 +120,13 @@ const stages = [
         探索青少年项目 <span aria-hidden="true">↗</span>
       </a>
     </section>
+  </div>
+  <div class="content-wrap">
+    <BusinessNextSteps
+      businessId={modelBusinessId}
+      segment="youth"
+      consultationLabel="个人、家庭或学校咨询"
+    />
   </div>
 </BaseLayout>
 <style>

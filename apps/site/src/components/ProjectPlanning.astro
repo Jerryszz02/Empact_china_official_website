@@ -1,9 +1,8 @@
 ---
 interface Props {
-  businessId: string;
   businessTitle: string;
 }
-const { businessId, businessTitle } = Astro.props;
+const { businessTitle } = Astro.props;
 ---
 
 <div class="project-planning">
@@ -13,12 +12,6 @@ const { businessId, businessTitle } = Astro.props;
     关于「{businessTitle}」的项目内容将在这里陆续更新。
     欢迎告诉我们你的关注与需求，一起探讨参与或合作的可能。
   </p>
-  <a
-    class="button button-primary"
-    href={`/contact/?business=${encodeURIComponent(businessId)}`}
-  >
-    交流合作想法 <span aria-hidden="true">↗</span>
-  </a>
 </div>
 
 <style>
@@ -43,7 +36,7 @@ const { businessId, businessTitle } = Astro.props;
   }
   p {
     max-width: 34rem;
-    margin-bottom: 1.75rem;
+    margin-bottom: 0;
     color: var(--secondary);
     overflow-wrap: anywhere;
   }
