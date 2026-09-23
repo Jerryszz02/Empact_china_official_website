@@ -203,7 +203,7 @@ test(
         );
         const contactHref = `/contact/?business=${encodeURIComponent(business.id)}`;
         assert.equal(
-          html(`#cases a[href="${contactHref}"]`)
+          html(`.business-next-steps a[href="${contactHref}"]`)
             .text()
             .trim()
             .replace(/\s+/g, " "),
@@ -211,6 +211,20 @@ test(
         );
         assert.equal(html(`main a[href="${contactHref}"]`).length, 1);
         assert.ok(!html("#cases").text().includes("相关案例"));
+        const channels = html(".content-channels a");
+        assert.deepEqual(
+          channels.toArray().map((link) => html(link).attr("href")),
+          [
+            "https://weixin.qq.com/r/mp/YBDv99XEyYi2rZGU90Vy",
+            business.segment === "youth" || business.segment === "school"
+              ? "https://xhslink.cn/o/A6Nv4ftO0Td"
+              : "https://xhslink.cn/o/30HZaQmiwlS",
+          ],
+        );
+        for (const link of channels.toArray()) {
+          assert.equal(html(link).attr("target"), "_blank");
+          assert.equal(html(link).attr("rel"), "noopener noreferrer");
+        }
       }
       const model = load(
         await readFile(
@@ -224,6 +238,19 @@ test(
       assert.match(model("#approach-title").text(), /真实的行动/);
       assert.match(model(".source-note").text(), /开物 KAIWU/);
       assert.equal(model(".project-planning").length, 0);
+      assert.equal(
+        model(".business-consultation a").attr("href"),
+        "/contact/?business=youth",
+      );
+      assert.deepEqual(
+        model(".content-channels a")
+          .toArray()
+          .map((link) => model(link).attr("href")),
+        [
+          "https://weixin.qq.com/r/mp/YBDv99XEyYi2rZGU90Vy",
+          "https://xhslink.cn/o/A6Nv4ftO0Td",
+        ],
+      );
       const legacyModel = load(
         await readFile(join(out, "youth/development-model/index.html"), "utf8"),
       );
