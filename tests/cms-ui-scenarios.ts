@@ -29,6 +29,8 @@ export async function verifyCmsUI({
     part: "published" | "drafts",
     parentId: string,
   ) {
+    const initialViewport = page.viewportSize()!;
+    await page.setViewportSize({ width: 1440, height: 1000 });
     const { items } = await request("/api/business-admin/state");
     const projects = items.filter(
       (item: any) =>
@@ -36,7 +38,9 @@ export async function verifyCmsUI({
     );
     const rows = page.locator(".case-row");
     const filters = page.getByRole("search", { name: "筛选项目" });
-    const business = filters.getByLabel("业务类型", { exact: true });
+    const segment = filters.getByLabel("业务范围", { exact: true });
+    const business = filters.getByLabel("子业务", { exact: true });
+    const parent = items.find((item: any) => item.id === parentId);
     const name = filters.getByLabel("项目名称", { exact: true });
     const clear = filters.getByRole("button", { name: "清空筛选" });
     const project = rows.filter({ hasText: "浏览器案例 Empact 工作流" });
@@ -46,14 +50,32 @@ export async function verifyCmsUI({
       (item: any) => item.slug === "international-talent-model",
     );
     assert.ok(fixedModel, "the fixed model remains in CMS data");
-    await expect(
-      business.locator(`option[value="${fixedModel.id}"]`),
-    ).toHaveCount(0);
-    await expect(business.locator("option")).toHaveCount(
-      items.filter(
-        (item: any) => item.kind === "business" && item.id !== fixedModel.id,
-      ).length + 1,
-    );
+    await expect(business).toBeDisabled();
+    for (const value of ["youth", "corporate", "school", "community"]) {
+      await segment.selectOption(value);
+      const children = items.filter(
+        (item: any) =>
+          item.kind === "business" &&
+          item.segment === value &&
+          item.id !== fixedModel.id,
+      );
+      await expect(business).toBeEnabled();
+      await expect(business.locator("option")).toHaveCount(children.length + 1);
+      for (const child of children) {
+        await expect(
+          business.locator(`option[value="${child.id}"]`),
+        ).toHaveCount(1);
+      }
+      await expect(
+        business.locator(`option[value="${fixedModel.id}"]`),
+      ).toHaveCount(0);
+      await expect(rows).toHaveCount(
+        projects.filter((item: any) =>
+          children.some((child: any) => child.id === item.parentId),
+        ).length,
+      );
+    }
+    await segment.selectOption(parent.segment);
     await business.selectOption(parentId);
     const related = projects.filter((item: any) => item.parentId === parentId);
     await expect(rows).toHaveCount(related.length);
@@ -69,15 +91,21 @@ export async function verifyCmsUI({
       `显示 1 / ${projects.length} 个项目`,
     );
     // A matching name under a different business must not leak into results.
-    await business.selectOption(businessIds[0]);
+    const otherBusiness = items.find((item: any) => item.id === businessIds[0]);
+    await segment.selectOption(otherBusiness.segment);
+    await expect(business).toHaveValue("");
+    await business.selectOption(otherBusiness.id);
     await expect(rows).toHaveCount(0);
     await expect(
       page.getByText("没有符合筛选条件的项目", { exact: true }),
     ).toBeVisible();
+    await segment.selectOption(parent.segment);
+    await expect(business).toHaveValue("");
     await business.selectOption(parentId);
     await expect(project).toBeVisible();
     await page.getByRole("button", { name: "刷新", exact: true }).click();
     await expect(project).toBeVisible();
+    await expect(segment).toHaveValue(parent.segment);
     await expect(business).toHaveValue(parentId);
     await expect(name).toHaveValue("  案例 empact 工  ");
     await page
@@ -95,8 +123,54 @@ export async function verifyCmsUI({
     await expect(project).toBeVisible();
     await clear.click();
     await expect(rows).toHaveCount(projects.length);
+    await expect(segment).toHaveValue("");
+    await expect(business).toBeDisabled();
     await expect(business).toHaveValue("");
     await expect(name).toHaveValue("");
+    // Desktop uses two equal columns; mobile stacks cards without overflow.
+    const list = page.locator(".case-list");
+    await expect
+      .poll(() =>
+        list.evaluate(
+          (node) =>
+            getComputedStyle(node).gridTemplateColumns.split(" ").length,
+        ),
+      )
+      .toBe(2);
+    if (projects.length >= 2) {
+      const first = await rows.nth(0).boundingBox();
+      const second = await rows.nth(1).boundingBox();
+      assert.ok(
+        first &&
+          second &&
+          Math.abs(first.y - second.y) < 1 &&
+          second.x > first.x,
+      );
+    }
+    if (part === "published") {
+      await page.screenshot({
+        path: "test-results/cms-projects-desktop.png",
+        fullPage: true,
+      });
+    }
+    await page.setViewportSize({ width: 390, height: 844 });
+    await expect
+      .poll(() =>
+        list.evaluate(
+          (node) =>
+            getComputedStyle(node).gridTemplateColumns.split(" ").length,
+        ),
+      )
+      .toBe(1);
+    assert.ok(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= window.innerWidth,
+      ),
+    );
+    await expect(
+      rows.first().getByRole("link", { name: "编辑", exact: true }),
+    ).toBeVisible();
+    await page.setViewportSize({ width: 1440, height: 1000 });
     // Search is by project name, not summary or business name.
     await name.fill("由实际浏览器录入的案例摘要");
     await expect(project).toHaveCount(0);
@@ -114,6 +188,7 @@ export async function verifyCmsUI({
       })
       .click();
     await expect(rows).toHaveCount(projects.length);
+    await page.setViewportSize(initialViewport);
   }
   try {
     await page.goto(base + "/admin/login");
