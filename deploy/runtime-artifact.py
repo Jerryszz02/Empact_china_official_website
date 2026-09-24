@@ -687,6 +687,63 @@ def _pack_layer(paths, root, output, manifest, manifest_name):
     return manifest
 
 
+def _excluded_dependency_roots(root):
+    """npm retains installed optional peers and other libc variants on prune."""
+    tools = {"@playwright/test", "playwright", "playwright-core", "prettier",
+             "prettier-plugin-astro", "@astrojs/check"}
+    lock = json.loads((root / "package-lock.json").read_text())
+    excluded = set()
+    for relative, package in lock.get("packages", {}).items():
+        parts = Path(relative).parts
+        if "node_modules" not in parts or package.get("link"):
+            continue
+        index = len(parts) - 1 - parts[::-1].index("node_modules")
+        name = "/".join(parts[index + 1:])
+        libc = package.get("libc", [])
+        # Next's PHASE_PRODUCTION_SERVER skips loadBindings. SWC belongs to
+        # the CI build; Astro's compiler, esbuild, and GNU bindings stay here.
+        if (name in tools or name.startswith("@next/swc-") or package.get("dev") is True or
+                (libc and "glibc" not in libc)):
+            excluded.add(relative)
+    return excluded
+
+
+def _selected_layers(root):
+    excluded = _excluded_dependency_roots(root)
+    selected = []
+    for relative in _runtime_paths(root):
+        parts = Path(relative).parts
+        dependency = "node_modules" in parts
+        if any(relative == prefix or relative.startswith(prefix + "/") for prefix in excluded):
+            continue
+        if relative.startswith(("apps/cms/.next/dev/", "apps/cms/.next/cache/",
+                                "apps/cms/.next/types/", "apps/cms/.next/diagnostics/")):
+            continue
+        if relative in ("apps/cms/.next/dev", "apps/cms/.next/cache", "apps/cms/.next/types",
+                        "apps/cms/.next/diagnostics", "apps/cms/.next/trace", "apps/cms/.next/trace-build"):
+            continue
+        if (dependency or relative.startswith("apps/cms/.next/")) and relative.endswith(".map"):
+            continue
+        selected.append(relative)
+    present = set(selected)
+    for relative in selected:
+        present.update(str(parent) for parent in Path(relative).parents if str(parent) != ".")
+    app_paths, dependency_paths = [], []
+    for relative in selected:
+        path = root / relative
+        if path.is_symlink():
+            try:
+                target = path.resolve(strict=True).relative_to(root).as_posix()
+            except (OSError, RuntimeError, ValueError):
+                raise ValueError("invalid runtime source symlink: " + relative)
+            if target not in present:
+                if ".bin" in Path(relative).parts:
+                    continue  # The command belongs to an intentionally excluded tool.
+                raise ValueError("runtime selection omits symlink target: " + relative)
+        (dependency_paths if "node_modules" in Path(relative).parts else app_paths).append(relative)
+    return app_paths, dependency_paths
+
+
 def pack_layers(sha, output, root=Path(".")):
     if not SHA.fullmatch(sha):
         raise ValueError("invalid runtime SHA")
@@ -698,25 +755,10 @@ def pack_layers(sha, output, root=Path(".")):
         raise ValueError("runtime must be packed from matching SHA on Linux x64 with Node 22")
     output = Path(output)
     output.mkdir(parents=True, exist_ok=True)
-    app_paths, dependency_paths = [], []
-    for relative in _runtime_paths(root):
-        parts = Path(relative).parts
-        dependency = "node_modules" in parts
-        # CI's dev/publication acceptance creates .next/dev after the CMS build.
-        # Never ship that development server tree, build traces, or source maps.
-        if relative.startswith(("apps/cms/.next/dev/", "apps/cms/.next/cache/",
-                                "apps/cms/.next/types/", "apps/cms/.next/diagnostics/")):
-            continue
-        if relative in ("apps/cms/.next/dev", "apps/cms/.next/cache", "apps/cms/.next/types",
-                        "apps/cms/.next/diagnostics", "apps/cms/.next/trace", "apps/cms/.next/trace-build"):
-            continue
-        if ((dependency or relative.startswith("apps/cms/.next/")) and
-                (relative.endswith(".map") or any(part in ("test", "tests", "__tests__") for part in parts))):
-            continue
-        (dependency_paths if dependency else app_paths).append(relative)
+    app_paths, dependency_paths = _selected_layers(root)
     base = {"format": 2, "platform": "linux", "arch": "x64", "nodeMajor": 22,
             "nodeVersion": node_version, "glibcFloor": "2.32", "runtimeVersion": 2,
-            "selectionPolicy": "production-with-content-publisher-v1"}
+            "selectionPolicy": "production-with-content-publisher-v2"}
     lock_hash = _sha256(root / "package-lock.json")
     deps = output / DEPENDENCIES_NAME
     dep_manifest = _pack_layer(dependency_paths, root, deps,

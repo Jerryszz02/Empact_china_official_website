@@ -377,6 +377,36 @@ class LayeredRuntimeTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             runtime.validate_artifact(SHA, 7, artifact(), run(), REPOSITORY, "dependencies")
 
+    def test_excluded_optional_tools_and_musl_packages_do_not_leave_commands(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder).resolve()
+            command = self.fixture(root)
+            packages = {
+                "node_modules/@playwright/test": {"devOptional": True},
+                "node_modules/@rolldown/binding-linux-x64-musl": {"libc": ["musl"]},
+                "node_modules/@rolldown/binding-linux-x64-gnu": {"libc": ["glibc"]},
+                "node_modules/@next/swc-linux-x64-gnu": {"libc": ["glibc"]},
+                "node_modules/pkg": {},
+            }
+            (root / "package-lock.json").write_text(json.dumps({"packages": packages}))
+            for name in packages:
+                directory = root / name
+                directory.mkdir(parents=True, exist_ok=True)
+                (directory / "cli.js").write_text("module.exports = 1")
+            commands = root / "node_modules/.bin"
+            commands.mkdir()
+            (commands / "playwright").symlink_to("../@playwright/test/cli.js")
+            (commands / "app-command").symlink_to("../pkg/cli.js")
+            with patch.object(runtime.subprocess, "check_output", side_effect=command):
+                app, deps = runtime._selected_layers(root)
+            self.assertNotIn("node_modules/.bin/playwright", deps)
+            self.assertNotIn("node_modules/@playwright/test/cli.js", deps)
+            self.assertNotIn("node_modules/@rolldown/binding-linux-x64-musl/cli.js", deps)
+            self.assertIn("node_modules/@rolldown/binding-linux-x64-gnu/cli.js", deps)
+            self.assertNotIn("node_modules/@next/swc-linux-x64-gnu/cli.js", deps)
+            self.assertIn("node_modules/.bin/app-command", deps)
+            self.assertIn("node_modules/@empact/content", deps)
+
     def test_cache_symlinks_and_invalid_descriptors_fail_closed(self):
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)
