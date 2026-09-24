@@ -90,7 +90,9 @@ test("four scenes keep real paths, hero copy and navigation without runtime erro
   await page.goto("/");
   await expect(page.locator(".motion-home > section")).toHaveCount(4);
   await expect(page.locator("#brand h1")).toBeVisible();
-  await expect(page.locator("#brand h1")).toContainText(/赋能更大的\s*影响力/);
+  await expect(page.locator("#brand h1")).toContainText(
+    "empowering greater impact",
+  );
   await expect(page.locator("#brand")).toContainText(
     "empowering greater impact",
   );

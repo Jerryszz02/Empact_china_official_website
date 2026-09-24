@@ -185,3 +185,69 @@ test.describe("without JavaScript", () => {
     await expect(viewport).toHaveCSS("overflow-x", "auto");
   });
 });
+
+for (const style of ["photos", "film"]) {
+  test(`${style} hero places a half-screen gallery between the logo and small English heading`, async ({
+    page,
+  }, testInfo) => {
+    if (style === "film") {
+      await page.route("**/", async (route) => {
+        const response = await route.fetch();
+        await route.fulfill({
+          response,
+          body: (await response.text()).replace(
+            'data-gallery-style="photos"',
+            'data-gallery-style="film"',
+          ),
+        });
+      });
+    }
+    const sizes =
+      testInfo.project.name === "desktop"
+        ? [
+            { width: 1440, height: 700 },
+            { width: 1920, height: 1304 },
+          ]
+        : [
+            { width: 390, height: 844 },
+            { width: 320, height: 568 },
+          ];
+    for (const size of sizes) {
+      await page.setViewportSize(size);
+      await page.goto("/");
+      await expect(page.locator("html")).toHaveAttribute(
+        "data-home-intro",
+        "ready",
+      );
+      await expect(page.locator("html")).not.toHaveClass(/motion-overflow/);
+      await expect(page.locator("#brand")).not.toContainText(
+        "赋能更大的影响力",
+      );
+      await expect(page.locator("#brand h1")).toHaveText(
+        "empowering greater impact",
+      );
+      const layout = await page.evaluate(() => {
+        const rect = (selector: string) =>
+          document.querySelector(selector)!.getBoundingClientRect().toJSON();
+        return {
+          header: rect(".site-header"),
+          logo: rect(".motion-logo-brand"),
+          gallery: rect("[data-home-gallery]"),
+          heading: rect("#brand h1"),
+          fontSize: parseFloat(
+            getComputedStyle(document.querySelector("#brand h1")!).fontSize,
+          ),
+          width: document.documentElement.scrollWidth,
+        };
+      });
+      expect(layout.logo.top).toBeGreaterThan(layout.header.bottom);
+      expect(layout.logo.bottom).toBeLessThan(layout.gallery.top);
+      expect(layout.gallery.bottom).toBeLessThan(layout.heading.top);
+      expect(layout.heading.bottom).toBeLessThan(size.height - 40);
+      expect(layout.gallery.height / size.height).toBeGreaterThanOrEqual(0.37);
+      expect(layout.gallery.height / size.height).toBeLessThanOrEqual(0.48);
+      expect(layout.fontSize).toBeLessThanOrEqual(16);
+      expect(layout.width).toBeLessThanOrEqual(size.width);
+    }
+  });
+}
