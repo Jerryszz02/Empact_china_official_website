@@ -2,24 +2,13 @@
 
 import { CreateContentButton } from "./CreateContentButton.js";
 import { isFixedYouthModel } from "@empact/content/business";
-import { useEffect, useState } from "react";
-
-type Item = {
-  id: string;
-  title: string;
-  kind: string;
-  slug: string;
-  segment?: "youth" | "corporate" | "school" | "community";
-  parentId?: string;
-  summary?: string;
-  order?: number;
-  live?: boolean;
-  modified?: boolean;
-  url?: string;
-  publishedAt?: string;
-  lastError?: string;
-  lastAction?: string;
-};
+import { useEffect, useRef, useState } from "react";
+import {
+  BusinessTypeBoard,
+  itemStatus,
+  segmentLabels,
+  type AdminItem as Item,
+} from "./BusinessTypeBoard.js";
 
 const parts = [
   {
@@ -40,24 +29,6 @@ const parts = [
   },
 ] as const;
 type Part = (typeof parts)[number]["id"];
-const segmentLabels = {
-  corporate: "企业服务",
-  youth: "青少年与青年",
-  school: "学校业务",
-  community: "社区业务",
-} as const;
-
-function status(item: Item) {
-  if (item.lastError) return { label: "操作失败 · 可重试", tone: "changed" };
-  if (item.live && item.modified)
-    return { label: "已发布 · 有未发布修改", tone: "changed" };
-  if (item.live) return { label: "已发布", tone: "live" };
-  return {
-    label: item.lastAction === "unpublished" ? "已撤下 · 草稿" : "草稿",
-    tone: "draft",
-  };
-}
-
 export function BusinessAdminDashboard() {
   const [items, setItems] = useState<Item[]>([]);
   const [part, setPart] = useState<Part>("new-project");
@@ -69,8 +40,10 @@ export function BusinessAdminDashboard() {
   const [businessId, setBusinessId] = useState("");
   const [search, setSearch] = useState("");
 
-  async function refresh() {
-    setLoading(true);
+  const orderSaving = useRef(false);
+
+  async function refresh(showLoading = true) {
+    if (showLoading) setLoading(true);
     setError("");
     try {
       const response = await fetch("/api/business-admin/state", {
@@ -79,12 +52,14 @@ export function BusinessAdminDashboard() {
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "项目数据暂时无法加载");
       setItems(Array.isArray(data.items) ? data.items : []);
+      return true;
     } catch (caught) {
       setError(
         caught instanceof Error ? caught.message : "项目数据暂时无法加载",
       );
+      return false;
     } finally {
-      setLoading(false);
+      if (showLoading) setLoading(false);
     }
   }
 
@@ -134,42 +109,64 @@ export function BusinessAdminDashboard() {
     setSearch("");
   }
 
-  async function saveOrder(
-    event: React.FormEvent<HTMLFormElement>,
-    item: Item,
-  ) {
-    event.preventDefault();
-    const value = new FormData(event.currentTarget).get("order");
-    const order = Number(value);
-    if (value === "" || !Number.isFinite(order)) return;
-    if (order === (item.order ?? 0)) {
-      setError("");
-      setResultUrl("");
-      setMessage("排序未改变。");
+  async function moveBusiness(item: Item, targetIndex: number) {
+    if (busy || loading || orderSaving.current) return;
+    const group = businesses.filter((entry) => entry.segment === item.segment);
+    const currentIndex = group.findIndex((entry) => entry.id === item.id);
+    if (
+      currentIndex === targetIndex ||
+      targetIndex < 0 ||
+      targetIndex >= group.length
+    )
       return;
-    }
+    orderSaving.current = true;
     setBusy(true);
     setMessage("");
     setError("");
     setResultUrl("");
     try {
-      const response = await fetch(`/api/content/${item.id}`, {
-        method: "PATCH",
+      const response = await fetch("/api/business-admin/reorder", {
+        method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ order }),
+        body: JSON.stringify({
+          id: item.id,
+          targetIndex,
+          expected: group.map((entry) => ({
+            id: entry.id,
+            order: entry.order ?? 0,
+          })),
+        }),
       });
       const data = await response.json();
-      if (!response.ok)
-        throw new Error(data.errors?.[0]?.message || "排序保存失败，请重试。");
-      await refresh();
-      setMessage(
-        `“${item.title}”的排序已保存到草稿；点击该业务的“${item.live ? "发布更新" : "发布到官网"}”后在官网生效。`,
+      if (!response.ok) throw new Error(data.error || "排序保存失败，请重试。");
+      const changes = new Map<string, number>(
+        data.changes.map((change: { id: string; order: number }) => [
+          change.id,
+          change.order,
+        ]),
       );
+      setItems((current) =>
+        current.map((entry) => {
+          const order = changes.get(entry.id);
+          return order === undefined
+            ? entry
+            : {
+                ...entry,
+                order,
+                modified: entry.live || entry.modified,
+              };
+        }),
+      );
+      setMessage(data.message);
+      // Keep the board mounted so focus and scroll survive each move.
+      if (!(await refresh(false)))
+        setError("排序已保存，但最新发布状态暂时无法加载，请稍后刷新。");
     } catch (caught) {
       setError(
         caught instanceof Error ? caught.message : "排序保存失败，请重试。",
       );
     } finally {
+      orderSaving.current = false;
       setBusy(false);
     }
   }
@@ -210,6 +207,61 @@ export function BusinessAdminDashboard() {
     } finally {
       setBusy(false);
     }
+  }
+
+  function renderActions(item: Item) {
+    return (
+      <div className="case-row__actions">
+        <a
+          className="button button--quiet"
+          href={`/admin/collections/content/${item.id}`}
+        >
+          编辑
+        </a>
+        <button
+          className="button button--quiet"
+          disabled={busy}
+          onClick={() => void action("preview", item)}
+        >
+          预览草稿
+        </button>
+        {(!item.live || item.modified) && (
+          <button
+            className="button button--primary"
+            disabled={busy}
+            onClick={() => void action("publish", item)}
+          >
+            {item.live ? "发布更新" : "发布到官网"}
+          </button>
+        )}
+        {item.live && (
+          <>
+            <a
+              className="button button--quiet"
+              href={item.url}
+              target="_blank"
+              rel="noreferrer"
+            >
+              查看详情 ↗
+            </a>
+            <button
+              className="button button--quiet"
+              disabled={busy}
+              onClick={() => void action("unpublish", item)}
+            >
+              撤下
+            </button>
+          </>
+        )}
+        <button
+          className="button button--danger"
+          disabled={busy}
+          onClick={() => void action("delete", item)}
+        >
+          删除
+        </button>
+      </div>
+    );
   }
 
   return (
@@ -315,9 +367,8 @@ export function BusinessAdminDashboard() {
               <div className="admin-workspace__create">
                 <CreateContentButton kind="business" label="新增业务类型" />
                 <p>
-                  同一业务分组内，数字越小越靠前。保存排序后，点击该业务的发布按钮更新官网。
+                  使用上下箭头移动一位，或拖动手柄调整组内顺序。排序自动保存到草稿；发布有未发布修改的业务后，官网才会更新。
                 </p>
-                <p>国际人才培养模型固定在青少年业务首位，无需后台编辑。</p>
               </div>
             )}
             {part === "published" && (
@@ -372,132 +423,68 @@ export function BusinessAdminDashboard() {
                 </p>
               </div>
             )}
-            <div className="case-list">
-              {visibleItems.length === 0 ? (
-                <div className="empty-state">
-                  <strong>
-                    {isProjectList && hasFilters
-                      ? "没有符合筛选条件的项目"
-                      : part === "published"
-                        ? "还没有已发布项目"
-                        : part === "drafts"
-                          ? "目前没有项目草稿"
-                          : "还没有业务类型"}
-                  </strong>
-                  {isProjectList && hasFilters ? (
-                    <p>请调整业务类型或名称关键词，或清空筛选查看全部项目。</p>
-                  ) : (
-                    part !== "business-types" && (
+            {part === "business-types" ? (
+              <BusinessTypeBoard
+                items={businesses}
+                busy={busy || loading}
+                onMove={moveBusiness}
+                renderActions={renderActions}
+              />
+            ) : (
+              <div className="case-list">
+                {visibleItems.length === 0 ? (
+                  <div className="empty-state">
+                    <strong>
+                      {isProjectList && hasFilters
+                        ? "没有符合筛选条件的项目"
+                        : part === "published"
+                          ? "还没有已发布项目"
+                          : part === "drafts"
+                            ? "目前没有项目草稿"
+                            : "还没有业务类型"}
+                    </strong>
+                    {isProjectList && hasFilters ? (
+                      <p>
+                        请调整业务类型或名称关键词，或清空筛选查看全部项目。
+                      </p>
+                    ) : (
                       <a className="text-link" href="#new-project">
                         新增一个项目 →
                       </a>
-                    )
-                  )}
-                </div>
-              ) : (
-                visibleItems.map((item) => {
-                  const current = status(item);
-                  const business = businesses.find(
-                    (candidate) => candidate.id === item.parentId,
-                  );
-                  return (
-                    <article className="case-row" key={item.id}>
-                      <div className="case-row__body">
-                        <span className={`status status--${current.tone}`}>
-                          {current.label}
-                        </span>
-                        <h3>{item.title}</h3>
-                        <p>
-                          {item.kind === "case"
-                            ? `所属业务：${business?.title || "未选择"}`
-                            : item.segment
-                              ? segmentLabels[item.segment]
-                              : "未选择业务分组"}
-                        </p>
-                        <p>{item.summary || "暂无摘要"}</p>
-                        {item.kind === "business" && (
-                          <form
-                            className="business-order"
-                            onSubmit={(event) => void saveOrder(event, item)}
-                          >
-                            <label htmlFor={`order-${item.id}`}>展示顺序</label>
-                            <input
-                              id={`order-${item.id}`}
-                              name="order"
-                              type="number"
-                              step="any"
-                              required
-                              defaultValue={item.order ?? 0}
-                              disabled={busy}
-                            />
-                            <button
-                              type="submit"
-                              className="button button--quiet"
-                              disabled={busy}
-                            >
-                              保存排序
-                            </button>
-                          </form>
-                        )}
-                        {item.lastError && (
-                          <p className="admin-error">{item.lastError}</p>
-                        )}
-                      </div>
-                      <div className="case-row__actions">
-                        <a
-                          className="button button--quiet"
-                          href={`/admin/collections/content/${item.id}`}
-                        >
-                          编辑
-                        </a>
-                        <button
-                          className="button button--quiet"
-                          disabled={busy}
-                          onClick={() => void action("preview", item)}
-                        >
-                          预览草稿
-                        </button>
-                        {(!item.live || item.modified) && (
-                          <button
-                            className="button button--primary"
-                            disabled={busy}
-                            onClick={() => void action("publish", item)}
-                          >
-                            {item.live ? "发布更新" : "发布到官网"}
-                          </button>
-                        )}
-                        {item.live && (
-                          <>
-                            <a
-                              className="button button--quiet"
-                              href={item.url}
-                              target="_blank"
-                              rel="noreferrer"
-                            >
-                              查看详情 ↗
-                            </a>
-                            <button
-                              className="button button--quiet"
-                              disabled={busy}
-                              onClick={() => void action("unpublish", item)}
-                            >
-                              撤下
-                            </button>
-                          </>
-                        )}
-                        <button
-                          className="button button--danger"
-                          disabled={busy}
-                          onClick={() => void action("delete", item)}
-                        >
-                          删除
-                        </button>
-                      </div>
-                    </article>
-                  );
-                })
-              )}
-            </div>
+                    )}
+                  </div>
+                ) : (
+                  visibleItems.map((item) => {
+                    const current = itemStatus(item);
+                    const business = businesses.find(
+                      (candidate) => candidate.id === item.parentId,
+                    );
+                    return (
+                      <article className="case-row" key={item.id}>
+                        <div className="case-row__body">
+                          <span className={`status status--${current.tone}`}>
+                            {current.label}
+                          </span>
+                          <h3>{item.title}</h3>
+                          <p>
+                            {item.kind === "case"
+                              ? `所属业务：${business?.title || "未选择"}`
+                              : item.segment
+                                ? segmentLabels[item.segment]
+                                : "未选择业务分组"}
+                          </p>
+                          <p>{item.summary || "暂无摘要"}</p>
+                          {item.lastError && (
+                            <p className="admin-error">{item.lastError}</p>
+                          )}
+                        </div>
+                        {renderActions(item)}
+                      </article>
+                    );
+                  })
+                )}
+              </div>
+            )}
           </>
         )}
       </section>
