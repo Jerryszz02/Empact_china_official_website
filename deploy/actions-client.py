@@ -8,6 +8,8 @@ import re
 from pathlib import Path
 import subprocess
 import sys
+import threading
+import urllib.error
 import urllib.request
 
 spec = importlib.util.spec_from_file_location("auto_update", Path(__file__).with_name("auto-update.py"))
@@ -92,16 +94,33 @@ def select():
             handle.write("Skipped: current main has no successful latest push CI run. Its successful completion will trigger another deployment.\n")
 
 
-def download_runtime(sha, destination):
-    run = gate.approved_run(sha)
-    name = runtime.artifact_name(sha, run["run_attempt"])
+def runtime_metadata(sha, kind="runtime", run=None):
+    if run is None:
+        run = gate.approved_run(sha)
+    name = (runtime.artifact_name(sha, run["run_attempt"]) if kind == "runtime" else
+            runtime.artifact_name(sha, run["run_attempt"], kind=kind))
     data = gate.github_json("/repos/{}/actions/runs/{}/artifacts?name={}&per_page=100".format(
         gate.REPOSITORY, run["id"], name))
     artifacts = data.get("artifacts", [])
     if data.get("total_count") != 1 or len(artifacts) != 1:
-        raise ValueError("Exactly one approved runtime artifact is required; rerun Website checks if it expired.")
+        raise ValueError("Exactly one approved {} artifact is required; rerun Website checks if it expired.".format(kind))
     artifact = artifacts[0]
-    metadata = runtime.validate_artifact(sha, artifact.get("id"), artifact, run, gate.REPOSITORY)
+    if kind == "runtime":
+        return runtime.validate_artifact(sha, artifact.get("id"), artifact, run, gate.REPOSITORY)
+    return runtime.validate_artifact(sha, artifact.get("id"), artifact, run, gate.REPOSITORY, kind=kind)
+
+
+def deployment_artifacts(sha):
+    run = gate.approved_run(sha)
+    application = runtime_metadata(sha, kind="runtime", run=run)
+    dependencies = runtime_metadata(sha, kind="dependencies", run=run)
+    if application["artifactId"] == dependencies["artifactId"]:
+        raise ValueError("application and dependency artifacts must differ")
+    return application, dependencies
+
+
+def download_runtime(sha, destination):
+    metadata = runtime_metadata(sha)
     # gh handles GitHub authentication and the short-lived download redirect.
     # The token stays on the runner; ECS receives only these verified ZIP bytes.
     destination = Path(destination)
@@ -121,6 +140,152 @@ def download_runtime(sha, destination):
     print("Verified runtime artifact {} from CI run {} attempt {}".format(
         metadata["artifactId"], metadata["runId"], metadata["runAttempt"]))
     return metadata
+
+
+class NoRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, request, fp, code, msg, headers, newurl):
+        return None
+
+
+def signed_download_url(artifact_id):
+    token = os.environ.get("GITHUB_TOKEN", "")
+    if not token or not isinstance(artifact_id, int) or artifact_id < 1:
+        raise ValueError("GitHub artifact URL request is not configured")
+    request = urllib.request.Request(
+        "https://api.github.com/repos/{}/actions/artifacts/{}/zip".format(gate.REPOSITORY, artifact_id),
+        headers={"Accept": "application/vnd.github+json", "Authorization": "Bearer " + token,
+                 "User-Agent": "empact-actions-deploy"},
+    )
+    opener = urllib.request.build_opener(NoRedirect)
+    try:
+        response = opener.open(request, timeout=20)
+    except urllib.error.HTTPError as error:
+        try:
+            if error.code != 302:
+                raise ValueError("GitHub artifact redirect returned HTTP {}".format(error.code)) from None
+            location = error.headers.get("Location")
+        finally:
+            error.close()
+    except (urllib.error.URLError, TimeoutError):
+        raise ValueError("GitHub artifact redirect request failed") from None
+    else:
+        response.close()
+        raise ValueError("GitHub artifact API did not return a redirect")
+    try:
+        return runtime.validate_download_url(location)
+    except (ValueError, TypeError):
+        raise ValueError("GitHub artifact redirect URL failed validation") from None
+
+
+def _forward_stderr(stream):
+    for line in iter(stream.readline, b""):
+        try:
+            sys.stderr.write(line.decode("utf-8", errors="replace"))
+            sys.stderr.flush()
+        except (OSError, ValueError):
+            pass
+
+
+def _close_input(process):
+    if process.stdin and not process.stdin.closed:
+        try:
+            process.stdin.close()
+        except (OSError, ValueError):
+            pass
+
+
+def _stop_process(process):
+    _close_input(process)
+    try:
+        return process.wait(timeout=15)
+    except subprocess.TimeoutExpired:
+        process.terminate()
+        try:
+            return process.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            process.kill()
+            return process.wait(timeout=5)
+
+
+def deploy_runtime(sha):
+    if not isinstance(sha, str) or not gate.SHA_RE.fullmatch(sha):
+        raise ValueError("deployment target must be a full SHA")
+    host = os.environ.get("DEPLOY_HOST", "")
+    if not re.fullmatch(r"[a-zA-Z0-9][a-zA-Z0-9.-]*", host):
+        raise ValueError("Invalid EMPACT_DEPLOY_HOST: expected a hostname or IPv4 address")
+    connection = Path(os.environ["RUNNER_TEMP"]) / "empact-ssh"
+    key = connection / "key"
+    known_hosts = connection / "known_hosts"
+    if not key.is_file() or not known_hosts.is_file():
+        raise ValueError("restricted deployment connection files are missing")
+    application, dependencies = deployment_artifacts(sha)
+    artifact_id = application["artifactId"]
+    dependency_id = dependencies["artifactId"]
+    command = ["ssh", "-T", "-i", str(key),
+               "-o", "IdentitiesOnly=yes", "-o", "BatchMode=yes",
+               "-o", "StrictHostKeyChecking=yes", "-o", "UserKnownHostsFile=" + str(known_hosts),
+               "-o", "ConnectTimeout=15", "-o", "ServerAliveInterval=15", "-o", "ServerAliveCountMax=4",
+               "empact-deploy@" + host, "deploy"]
+    process = subprocess.Popen(command, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    stderr_reader = threading.Thread(target=_forward_stderr, args=(process.stderr,), daemon=True)
+    stderr_reader.start()
+    app_ready_line = "EMPACT_ARTIFACT_READY {} {}".format(sha, artifact_id).encode("ascii") + b"\n"
+    dependency_ready_line = "EMPACT_ARTIFACT_READY {} {}".format(sha, dependency_id).encode("ascii") + b"\n"
+    complete_line = "EMPACT_ARTIFACTS_COMPLETE {}".format(sha).encode("ascii") + b"\n"
+    app_ready = False
+    dependency_ready = False
+    complete = False
+    try:
+        request = json.dumps({"sha": sha, "artifactId": artifact_id,
+                              "dependencyArtifactId": dependency_id, "transport": "https-layers"},
+                             separators=(",", ":")).encode("ascii") + b"\n"
+        process.stdin.write(request)
+        process.stdin.flush()
+        for line in iter(process.stdout.readline, b""):
+            if line.startswith(b"EMPACT_ARTIFACT_READY "):
+                if complete:
+                    raise ValueError("restricted server returned an unexpected READY response")
+                if line == app_ready_line and not app_ready:
+                    requested_id = artifact_id
+                    app_ready = True
+                elif line == dependency_ready_line and app_ready and not dependency_ready:
+                    requested_id = dependency_id
+                    dependency_ready = True
+                else:
+                    raise ValueError("restricted server returned an unexpected READY response")
+                url = signed_download_url(requested_id)
+                try:
+                    url_line = url.encode("ascii") + b"\n"
+                except UnicodeError:
+                    raise ValueError("GitHub artifact redirect URL failed validation") from None
+                process.stdin.write(url_line)
+                process.stdin.flush()
+            elif line.startswith(b"EMPACT_ARTIFACTS_COMPLETE "):
+                if complete or not app_ready or line != complete_line:
+                    raise ValueError("restricted server returned an unexpected COMPLETE response")
+                complete = True
+                _close_input(process)
+            elif line.startswith(b"EMPACT_ARTIFACT_") or line.startswith(b"EMPACT_ARTIFACTS_"):
+                raise ValueError("restricted server returned an unknown artifact control response")
+            else:
+                sys.stdout.write(line.decode("utf-8", errors="replace"))
+                sys.stdout.flush()
+        result = process.wait()
+        if not complete:
+            if result == 3 and not app_ready:
+                return 3
+            raise ValueError("restricted server exited without artifact COMPLETE (status {})".format(result))
+        return result
+    except BaseException as error:
+        result = _stop_process(process)
+        if not app_ready and isinstance(error, OSError) and result == 3:
+            return 3
+        raise
+    finally:
+        _close_input(process)
+        process.stdout.close()
+        process.stderr.close()
+        stderr_reader.join(timeout=5)
 
 
 def fetch(path):
@@ -158,6 +323,8 @@ def main():
     artifact = commands.add_parser("download-runtime")
     artifact.add_argument("sha")
     artifact.add_argument("destination")
+    deployment = commands.add_parser("deploy-runtime")
+    deployment.add_argument("sha")
     verification = commands.add_parser("verify")
     verification.add_argument("sha")
     args = parser.parse_args()
@@ -167,6 +334,8 @@ def main():
         select()
     elif args.command == "download-runtime":
         download_runtime(args.sha, args.destination)
+    elif args.command == "deploy-runtime":
+        sys.exit(deploy_runtime(args.sha))
     elif args.command == "verify":
         release = verify(args.sha)
         with open(os.environ["GITHUB_STEP_SUMMARY"], "a") as handle:
@@ -174,7 +343,7 @@ def main():
                 args.sha, release.get("version", "unknown")
             ))
     else:
-        parser.error("select, check-connection, download-runtime or verify is required")
+        parser.error("select, check-connection, download-runtime, deploy-runtime or verify is required")
 
 
 if __name__ == "__main__":

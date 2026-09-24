@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # CI-only acceptance of the exact archive after moving it out of the checkout.
 set -Eeuo pipefail
-[[ $# == 1 && -f $1 ]] || { echo 'Usage: smoke-runtime.sh runtime.tar.gz' >&2; exit 2; }
+[[ $# == 2 && -f $1 && -f $2 ]] || { echo 'Usage: smoke-runtime.sh runtime.tar.gz dependencies.tar.gz' >&2; exit 2; }
 archive=$(realpath "$1")
+dependencies=$(realpath "$2")
 helper=$(realpath "$(dirname "${BASH_SOURCE[0]}")/runtime-artifact.py")
 node_binary=$(command -v node)
 sha=${GITHUB_SHA:-$(git rev-parse HEAD)}
@@ -19,10 +20,10 @@ cleanup() {
 }
 trap cleanup EXIT
 mkdir "$work/data" "$work/data/media" "$work/data/site"
-sudo install -d -o root -g root -m 700 "$work/staging" "$work/runtime"
+sudo install -d -o root -g root -m 700 "$work/staging" "$work/dependency-staging" "$work/runtime"
 # Exercise the installed release's ZIP, digest, manifest, and tar member checks.
 # Only this disposable CI directory receives root-owned files.
-sudo python3 -I - "$helper" "$archive" "$sha" "$work" "$node_binary" <<'PY'
+sudo python3 -I - "$helper" "$archive" "$dependencies" "$sha" "$work" "$node_binary" <<'PY'
 import hashlib
 import importlib.util
 import json
@@ -30,23 +31,31 @@ from pathlib import Path
 import sys
 import zipfile
 
-helper, archive, sha, work, node_binary = sys.argv[1:]
+helper, archive, dependencies, sha, work, node_binary = sys.argv[1:]
 spec = importlib.util.spec_from_file_location("runtime_artifact", helper)
 runtime = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(runtime)
 staging = Path(work) / "staging"
+dependency_staging = Path(work) / "dependency-staging"
+cache = Path(work) / "cache"
 destination = Path(work) / "runtime"
-zip_path = staging / ("artifact-" + sha + ".zip")
-with zipfile.ZipFile(str(zip_path), "w", compression=zipfile.ZIP_STORED) as outer:
-    outer.write(archive, arcname=runtime.RUNTIME_NAME)
-digest = hashlib.sha256()
-with zip_path.open("rb") as source:
-    for chunk in iter(lambda: source.read(1024 * 1024), b""):
-        digest.update(chunk)
-metadata = {"format": 1, "sha": sha, "size": zip_path.stat().st_size,
-            "expectedDigest": "sha256:" + digest.hexdigest()}
-(staging / ("artifact-" + sha + ".json")).write_text(json.dumps(metadata))
-runtime.extract(sha, destination, staging=staging, node_binary=node_binary)
+def stage_layer(source, name, location):
+    zip_path = location / ("artifact-" + sha + ".zip")
+    with zipfile.ZipFile(str(zip_path), "w", compression=zipfile.ZIP_STORED) as outer:
+        outer.write(source, arcname=name)
+    digest = hashlib.sha256()
+    with zip_path.open("rb") as stream:
+        for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+            digest.update(chunk)
+    metadata = {"format": 1, "sha": sha, "size": zip_path.stat().st_size,
+                "expectedDigest": "sha256:" + digest.hexdigest()}
+    (location / ("artifact-" + sha + ".json")).write_text(json.dumps(metadata))
+
+stage_layer(archive, runtime.RUNTIME_NAME, staging)
+stage_layer(dependencies, runtime.DEPENDENCIES_NAME, dependency_staging)
+manifest = runtime.application_manifest(sha, staging=staging)
+runtime.install_dependencies(sha, manifest["dependencies"], dependency_staging, cache=cache)
+runtime.extract(sha, destination, staging=staging, node_binary=node_binary, cache=cache)
 PY
 sudo chown -hR -- "$(id -u):$(id -g)" "$work/runtime"
 cd "$work/runtime"

@@ -49,6 +49,8 @@ jobs:
         run: |
           python3 tests/deploy-auto.test.py
           python3 tests/deploy-actions.test.py
+          python3 tests/deploy-download.test.py
+          python3 tests/deploy-layers.test.py
           python3 tests/deploy-preflight.test.py
           python3 tests/deploy-prune.test.py
           python3 tests/deploy-schema.test.py
@@ -57,16 +59,27 @@ jobs:
           bash -n deploy/deploy.sh
           bash -n deploy/install-tools.sh
           bash -n deploy/smoke-runtime.sh
-      - name: Package the checked runtime
-        run: python3 deploy/runtime-artifact.py pack "$GITHUB_SHA" "$RUNNER_TEMP/empact-runtime.tar.gz"
+      - name: Keep only production dependencies for the checked runtime
+        run: npm prune --omit=dev --ignore-scripts
+      - name: Package the checked application and dependencies
+        run: python3 deploy/runtime-artifact.py pack-layers "$GITHUB_SHA" "$RUNNER_TEMP"
       - name: Verify relocated runtime without installing or rebuilding CMS
-        run: bash deploy/smoke-runtime.sh "$RUNNER_TEMP/empact-runtime.tar.gz"
-      - name: Store approved main runtime
+        run: bash deploy/smoke-runtime.sh "$RUNNER_TEMP/empact-runtime.tar.gz" "$RUNNER_TEMP/empact-dependencies.tar.gz"
+      - name: Store approved main application
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: actions/upload-artifact@v4
         with:
           name: empact-runtime-${{ github.sha }}-${{ github.run_attempt }}
           path: ${{ runner.temp }}/empact-runtime.tar.gz
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 3
+      - name: Store approved main dependencies
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: actions/upload-artifact@v4
+        with:
+          name: empact-dependencies-${{ github.sha }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/empact-dependencies.tar.gz
           if-no-files-found: error
           compression-level: 0
           retention-days: 3

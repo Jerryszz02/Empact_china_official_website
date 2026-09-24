@@ -30,9 +30,11 @@ Actions 展示目标提交、对应 CI、服务器部署日志、公网验收和
 
 ## 服务器发布与回退
 
-`Website checks` 在同一次安装依赖、CMS 构建和完整测试之后，用 `runtime-artifact.py pack` 打包已验证的源码、工作区依赖、内容发布器和 CMS `.next`。包不包含 `.env`、业务数据库、媒体数据或预览站点输出。打包时将硬链接分别写成普通文件，保留安全的相对符号链接。CI 使用服务器同一解包器验证 ZIP 摘要、清单和归档成员，将包解到另一个目录，以新建测试库启动 CMS 并运行内容构建，验证程序可迁移且采用运行时配置。Linux x64/Node 22 和原生依赖的 GLIBC 2.32 上限检查用于匹配当前 ECS；服务器还会在维护前实际加载 sharp、SQLite 和 esbuild。
+`Website checks` 在同一次安装依赖、CMS 构建和完整测试之后，先用 `npm prune --omit=dev --ignore-scripts` 移除开发依赖，再用 `runtime-artifact.py pack-layers` 将已验证的源码、内容发布器和 CMS `.next` 放入应用包，将工作区运行依赖放入独立依赖包。保留运行所需的 tsx、Astro 与 Payload；排除 `.next/dev`、构建缓存、源码映射、测试工具以及 `.env`、业务数据库、媒体数据和预览站点输出。打包时将硬链接分别写成普通文件，保留安全的相对符号链接。CI 使用服务器同一解包器验证 ZIP 摘要、清单和归档成员，将包解到另一个目录，以新建测试库启动 CMS 并运行内容构建，验证程序可迁移且采用运行时配置。Linux x64/Node 22 和原生依赖的 GLIBC 2.32 上限检查用于匹配当前 ECS；服务器还会在维护前实际加载 sharp、SQLite 和 esbuild。
 
-仅成功的 `main` push 上传 `empact-runtime-<SHA>-<CI attempt>`，保存 3 天。Deploy production 重新选择最新合格的 main，从该次 CI 下载唯一产物，核对 GitHub 提供的 SHA-256 和大小，再通过受限 SSH 发送短 JSON 请求头及原始 ZIP。GitHub token 留在 runner。ECS 独立读取 GitHub 元数据，核对提交、CI run/attempt、来源仓库、main/push、产物名、摘要和失效状态，不信任客户端自报摘要。过期或缺包须重新运行 Website checks；不会降级到服务器重装依赖或重新构建 CMS。GitHub 的产物字段与校验约定见[官方 REST 文档](https://docs.github.com/en/rest/actions/artifacts)。
+仅成功的 `main` push 上传 `empact-runtime-<SHA>-<CI attempt>` 和 `empact-dependencies-<SHA>-<CI attempt>`，保存 3 天。Deploy production 重新选择最新合格的 main，从同一次 CI 分别选择唯一应用与依赖产物并验证元数据。受限 SSH 先发送提交、两个产物 ID 和 HTTPS 分层传输模式；ECS 独立读取 GitHub 元数据，核对提交、CI run/attempt、来源仓库、main/push、产物名、摘要和失效状态，并完成加锁、清理和空间预检。
+
+ECS 返回匹配 SHA 和产物 ID 的 READY 后，runner 才用现有 GitHub token 换取该产物的短期下载地址，通过同一 SSH 的 stdin 发送。下载地址一分钟后过期，因此不能在服务器预检前取得。GitHub token 留在 runner；短期地址只留在内存，不进入命令参数、环境变量、文件或日志。服务器只接受指定 GitHub 构件存储域的 HTTPS 地址，不跟随重定向，以最多 8 个不重叠 Range 并行接收 ZIP，核对每个响应的边界和长度，再核对整个文件与 GitHub 元数据中的大小和 SHA-256。临时地址只决定运输路径，不替代独立来源校验。GitHub artifact 过期或缺包须重新运行 Website checks；短期下载 URL 过期则重新取得地址并续传，无需重建；不会降级到服务器重装依赖或重新构建 CMS。GitHub 的产物字段和短期下载地址约定见[官方 REST 文档](https://docs.github.com/en/rest/actions/artifacts)。
 
 接收端持有 Actions 锁和部署锁，在上传前运行 `prune-build-cache.py --phase prepare --discard-candidate`：
 
@@ -40,12 +42,12 @@ Actions 展示目标提交、对应 CI、服务器部署日志、公网验收和
 - 正常成功状态保留当前和回滚两份完整代码。准备失败时仍保留当前代码；已淘汰的旧回滚通过精确退休回执记录，重试不会因旧回执指向已清理目录而卡死。
 - 重复部署当前 SHA 不淘汰已有回滚版本。首次部署尚无当前指针时，接收前只回收该候选明确归属的残留，保留其他路径。
 - 活动进程引用、未知/标记无效目录、符号链接、包含业务数据或挂载点的目录保留，输出诊断供维护人处理。保护对象优先于数量上限。
-- 已知源码压缩包、上传半包和失败解包目录按尝试归属回收；迁移计划和审计回执保留。普通 prepare 保留本次正在准备的包，只有接收前的 discard 模式或成功收尾才清理它。
+- 已知源码压缩包、旧二进制上传半包和失败解包目录按尝试归属回收；HTTPS 分段缓存另按下述有界续传规则管理；迁移计划和审计回执保留。普通 prepare 保留本次正在准备的包，只有接收前的 discard 模式或成功收尾才清理它。
 - 自动备份使用明确回执识别；保留最近两个完整成功恢复点和当前/回滚所需恢复点。比成功点更新的失败恢复点最多额外保留一个。删除前验证保留点的 SHA-256、完整 gzip 和 tar；明确失败且不完整的本次备份只在已有两份有效成功恢复点时回收。手工或无法确认的备份保留，坏备份不会被当作有效恢复点。
 
-接收端先检查 3 GiB 运行余量、上传包大小和 150,000 个 inode；ZIP 不超过 2 GiB、解压总量不超过 4 GiB。预检和上传合计限时 60 分钟，每约 32 MiB 报告收到字节数及耗时，读满后明确记录 EOF 校验阶段；失败日志保留接收字节数，再清理半包。该预算覆盖现场出现的慢速跨境传输：311 MB 构件曾在 30 分钟时仅收到约 296 MB。Actions 总限时 90 分钟，覆盖上传及服务器安装，不会因接收超时而停掉当前站点。安装器在解包临时副本、展开文件、维护前备份等阶段检查实际新增占用预算。维护前还预留数据目录两倍大小给备份和迁移演练。检查失败保留健康旧站，不能通过调低阈值强行放行。
+接收端先检查 3 GiB 运行余量、构件大小和 150,000 个 inode；ZIP 不超过 2 GiB、解压总量不超过 4 GiB。预检和接收合计限时 60 分钟，每约 32 MiB 报告累计收到的字节数及耗时。每段每 2 MiB（或中断收尾时）同步数据并原子记录前缀摘要。网络中断、超时和短期地址失效时先停止并等待下载线程退出，保留已验证进度；重试绑定同一 artifact ID、大小与总摘要，重新校验各段前缀，只请求缺失范围。最终仍校验完整 ZIP 的 SHA-256；协议矛盾、缓存损坏或总摘要错误不使用该缓存。应用和依赖各最多保留一组 root-only 断点文件，切换目标时回收旧组。日志保留接收进度，不记录签名地址。并行传输用于减少单条跨境连接的影响，不保证网络不会中断。Actions 总限时 90 分钟，覆盖传输及服务器安装，不会因接收超时而停掉当前站点。安装器在解包临时副本、展开文件、维护前备份等阶段检查实际新增占用预算。维护前还预留数据目录两倍大小给备份和迁移演练。检查失败保留健康旧站，不能通过调低阈值强行放行。
 
-上传成功后受限入口启动 `empact-release@<完整 SHA>.service`，调用固定安装路径 `/usr/local/lib/empact/deploy.sh`。systemd 管理已开始的部署，SSH 断线后服务可继续；上传中断则清理本次半包，下次准备可回收崩溃残留。服务限时 15 分钟、`MemoryMax=1400M`。ECS 校验并解包现成运行包到 `/srv/empact/code/<SHA>`，不执行 `npm ci` 或 `build:cms`。解包拒绝路径穿越、危险链接和特殊文件，只接受目录内部的工作区链接。
+上传成功后受限入口启动 `empact-release@<完整 SHA>.service`，调用固定安装路径 `/usr/local/lib/empact/deploy.sh`。systemd 管理已开始的部署，SSH 断线后服务可继续；HTTPS 接收中断时保留可校验进度，下次准备可续传；旧二进制输入仍清理半包。服务限时 15 分钟、`MemoryMax=1400M`。ECS 校验并解包现成运行包到 `/srv/empact/code/<SHA>`，不执行 `npm ci` 或 `build:cms`。解包拒绝路径穿越、危险链接和特殊文件，只接受目录内部的工作区链接。
 
 安装器在准备前注册失败处理，记录阶段、提交和实际安装器摘要。解包、结构门禁、容量或原生依赖检查失败时清理本次候选；维护后失败先恢复指针/服务再清理，仍有活动引用的候选保留。成功回执写入后才执行 complete 清理；清理失败输出告警，不把已提交的健康站点回退。
 
@@ -68,9 +70,11 @@ Actions 展示目标提交、对应 CI、服务器部署日志、公网验收和
 
 Actions 随后独立核对公网精确 SHA、生产模式、首页、青少年页、咨询页和人才模型页的内容，并再次核对版本号。公网验收失败会令工作流和部署记录失败；这一步不会在远端成功后自行回退，需要维护人结合服务器回执判断。SSH 断线或人工取消工作流时，远端可能继续完成，必须先查服务器状态，不能据此宣称已经回退。
 
+应用清单绑定依赖包的 SHA-256、大小和 package-lock 摘要；依赖清单同时绑定 Linux x64、Node 版本、GLIBC 要求和筛选规则。稳定的文件顺序、权限、时间戳和 gzip 头让未变化的依赖包在不同代码提交间保持相同摘要。ECS 先接收应用包，在 `/srv/empact/dependencies/` 重新校验内容寻址缓存，命中时不请求依赖 URL；缺失或损坏才下载该次 CI 的依赖包。缓存保留仍被代码版本引用的依赖及本次候选；旧回滚退休后，其独有缓存也可回收。每个版本解包自己的依赖和相对 workspace 链接，不将整个 node_modules 链接到缓存目录。
+
 ## 首次安装与切换（维护人）
 
-必须从已审查且检查通过的代码显式安装固定脚本；网站部署不会自行升级 root 管理的脚本。`install-tools.sh` 持有两把部署锁，备份旧工具，检查 Python/Shell 语法，安装兼容的一组脚本和服务，记录校验和并停用旧 timer。新受限请求协议与旧协议不兼容，须在启用新工作流前一并安装。以下命令在服务器执行：
+必须从已审查且检查通过的代码显式安装固定脚本；网站部署不会自行升级 root 管理的脚本。`install-tools.sh` 持有两把部署锁，备份旧工具，检查 Python/Shell 语法，安装兼容的一组脚本和服务，记录校验和并停用旧 timer。分层 HTTPS 模式须在启用新工作流前安装；接收端继续兼容原始 ZIP 输入，供切换期间的旧工作流使用。以下命令在服务器执行：
 
 ```sh
 # 在检查通过、经审查的部署工具目录执行；先等运行中的部署结束。
@@ -86,7 +90,7 @@ sudo systemctl is-active empact-deploy.timer    # 应为 inactive
 restrict,command="/usr/bin/sudo -n /usr/local/lib/empact/actions-command.py" ssh-ed25519 <专用公钥> empact-github-actions
 ```
 
-`restrict` 禁止端口/代理/X11 转发、PTY 和用户 rc；固定命令忽略客户端请求的 shell 命令，仅从 stdin 接收一行只含 `sha` 和 `artifactId` 的 JSON，再接已认证元数据指定长度的 ZIP。不接受路径、URL 或任意命令。`actions-command.py` 使用隔离的系统 Python，校验输入、上传长度和摘要，只启动固定模板服务。通过 `visudo -cf` 校验以下 root 所有、权限 0440 的 `/etc/sudoers.d/empact-deploy`：
+`restrict` 禁止端口/代理/X11 转发、PTY 和用户 rc；固定命令忽略客户端请求的 shell 命令，仅从 stdin 接收包含 `sha`、`artifactId`、`dependencyArtifactId` 和 `transport: "https-layers"` 的短 JSON。每次 READY 后只接收对应产物的一行限定域名短期地址；应用优先、依赖按缓存需要接收，COMPLETE 后要求 EOF。旧的单包 HTTPS/二进制模式保留切换兼容，二进制模式只接收已认证元数据指定长度的 ZIP。不接受本地路径、任意地址或命令。`actions-command.py` 使用隔离的系统 Python，校验输入、传输长度和摘要，只启动固定模板服务。通过 `visudo -cf` 校验以下 root 所有、权限 0440 的 `/etc/sudoers.d/empact-deploy`：
 
 ```text
 empact-deploy ALL=(root) NOPASSWD: /usr/local/lib/empact/actions-command.py ""

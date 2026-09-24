@@ -286,5 +286,111 @@ class ExtractionTests(unittest.TestCase):
             self.extract(good_members([(".code-revision", "link", "../outside")]))
 
 
+class LayeredRuntimeTests(unittest.TestCase):
+    def fixture(self, root):
+        files = {
+            "package.json": b'{"workspaces":["apps/*","packages/*"]}',
+            "package-lock.json": b'{"lockfileVersion":3}',
+            "apps/site/src/main.ts": b"export {}",
+            "packages/content/package.json": b'{"name":"@empact/content"}',
+            "apps/cms/.next/server/app.js": b"built cms",
+            "apps/cms/.next/dev/server/dev.js": b"unwanted dev server",
+            "node_modules/pkg/index.js": b"module.exports = 1",
+            "node_modules/pkg/index.js.map": b"unwanted source map",
+        }
+        for name, content in files.items():
+            path = root / name
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(content)
+        (root / "node_modules/@empact").mkdir()
+        (root / "node_modules/@empact/content").symlink_to("../../packages/content")
+        tracked = b"\0".join(name.encode() for name in list(files)[:4]) + b"\0"
+        def command(args, **kwargs):
+            if args[:2] == ["git", "rev-parse"]:
+                return (SHA + "\n").encode()
+            if args[:2] == ["git", "ls-files"]:
+                return tracked
+            if args == ["node", "--version"]:
+                return b"v22.23.1\n"
+            raise AssertionError(args)
+        return command
+
+    def staged(self, directory, archive, name):
+        directory.mkdir()
+        outer = directory / ("artifact-" + SHA + ".zip")
+        with zipfile.ZipFile(str(outer), "w") as bundle:
+            bundle.write(str(archive), arcname=name)
+        (directory / ("artifact-" + SHA + ".json")).write_text(json.dumps({
+            "format": 1, "sha": SHA, "size": outer.stat().st_size,
+            "expectedDigest": runtime._sha256(outer),
+        }))
+        return outer
+
+    def test_stable_dependency_bytes_and_relocated_cache_hit(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            command = self.fixture(root)
+            with patch.object(runtime.subprocess, "check_output", side_effect=command), patch.object(
+                runtime.platform, "system", return_value="Linux"
+            ), patch.object(runtime.platform, "machine", return_value="x86_64"):
+                first = runtime.pack_layers(SHA, root / "one", root)
+                (root / "apps/site/src/main.ts").write_text("export const changed = true")
+                second = runtime.pack_layers(SHA, root / "two", root)
+            self.assertEqual(first["dependencies"], second["dependencies"])
+            self.assertNotEqual((root / "one" / runtime.RUNTIME_NAME).read_bytes(),
+                                (root / "two" / runtime.RUNTIME_NAME).read_bytes())
+            app_zip = self.staged(root / "app-staging", root / "two" / runtime.RUNTIME_NAME, runtime.RUNTIME_NAME)
+            dep_zip = self.staged(root / "dep-staging", root / "two" / runtime.DEPENDENCIES_NAME, runtime.DEPENDENCIES_NAME)
+            cache = root / "cache"
+            real_stat = runtime.os.stat
+            def root_owned(path, *args, **kwargs):
+                result = real_stat(path, *args, **kwargs)
+                fields = list(result)
+                fields[4] = 0
+                return os.stat_result(fields)
+            with patch.object(runtime.os, "stat", side_effect=root_owned), patch.object(
+                runtime, "_check_runtime_platform"
+            ), patch.object(runtime, "_check_headroom"):
+                manifest = runtime.application_manifest(SHA, root / "app-staging")
+                descriptor = manifest["dependencies"]
+                self.assertIsNone(runtime.cached_dependencies(descriptor, cache))
+                cached = runtime.install_dependencies(SHA, descriptor, root / "dep-staging", cache)
+                # A second application install can use the verified cache even
+                # after the entire downloaded dependency artifact is gone.
+                dep_zip.unlink()
+                self.assertEqual(runtime.install_dependencies(SHA, descriptor, root / "dep-staging", cache), cached)
+                out = root / "out"
+                out.mkdir()
+                runtime.extract(SHA, out, staging=root / "app-staging", cache=cache)
+                self.assertEqual((out / "node_modules/@empact/content").resolve(), (out / "packages/content").resolve())
+                self.assertFalse((out / "apps/cms/.next/dev").exists())
+                self.assertFalse((out / "node_modules/pkg/index.js.map").exists())
+                self.assertEqual((out / ".code-revision").read_text().strip(), SHA)
+                cached.write_bytes(b"corrupted")
+                self.assertIsNone(runtime.cached_dependencies(descriptor, cache))
+                self.assertFalse(cached.exists())
+
+    def test_dependency_kind_is_bound_to_same_approved_ci(self):
+        meta = runtime.validate_artifact(SHA, 7,
+            artifact(name=runtime.artifact_name(SHA, 2, "dependencies")), run(), REPOSITORY, "dependencies")
+        self.assertEqual(meta["name"], "empact-dependencies-" + SHA + "-2")
+        with self.assertRaises(ValueError):
+            runtime.validate_artifact(SHA, 7, artifact(), run(), REPOSITORY, "dependencies")
+
+    def test_cache_symlinks_and_invalid_descriptors_fail_closed(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            real = root / "real"
+            real.mkdir()
+            linked = root / "link"
+            linked.symlink_to(real)
+            descriptor = {"digest": "sha256:" + "f" * 64, "size": 1, "lockHash": "sha256:" + "e" * 64}
+            with self.assertRaises(ValueError):
+                runtime.cached_dependencies(descriptor, linked)
+            for invalid in ({}, dict(descriptor, digest="../escape"), dict(descriptor, size=True)):
+                with self.assertRaises(ValueError):
+                    runtime.cached_dependencies(invalid, real)
+
+
 if __name__ == "__main__":
     unittest.main()

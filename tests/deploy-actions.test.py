@@ -9,6 +9,7 @@ from pathlib import Path
 import subprocess
 import tempfile
 import unittest
+import urllib.error
 from unittest.mock import patch
 
 ROOT = Path(__file__).parents[1]
@@ -117,6 +118,257 @@ class RuntimeDownloadTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "rerun Website checks"):
                 client.download_runtime(SHA, "/unused")
             download.assert_not_called()
+
+
+class DirectRuntimeDeploymentTests(unittest.TestCase):
+    URL = "https://productionresultssa1.blob.core.windows.net/path?sig=private-token"
+    DEPS_URL = "https://productionresultssa2.blob.core.windows.net/path?sig=second-private-token"
+
+    def layers(self):
+        return {"artifactId": 7}, {"artifactId": 8}
+
+    class RecordingInput(io.BytesIO):
+        def close(self):
+            self.sent = self.getvalue()
+            super().close()
+
+    class Process:
+        def __init__(self, stdout, returncode=0):
+            self.stdin = DirectRuntimeDeploymentTests.RecordingInput()
+            self.stdout = io.BytesIO(stdout)
+            self.stderr = io.BytesIO(b"")
+            self.returncode = returncode
+            self.waited = 0
+            self.terminated = False
+            self.killed = False
+        def wait(self, timeout=None):
+            self.waited += 1
+            return self.returncode
+        def terminate(self):
+            self.terminated = True
+        def kill(self):
+            self.killed = True
+
+    def fixture(self, folder, stdout, code=0):
+        connection = Path(folder) / "empact-ssh"
+        connection.mkdir()
+        (connection / "key").write_text("private")
+        (connection / "known_hosts").write_text("host key")
+        return self.Process(stdout, code)
+
+    def test_two_layers_reuse_one_approved_run(self):
+        ci = run(repository={"full_name": client.gate.REPOSITORY})
+        artifacts = {
+            "runtime": {"id": 7},
+            "dependencies": {"id": 8},
+        }
+        def lookup(path):
+            kind = "dependencies" if "empact-dependencies-" in path else "runtime"
+            return {"total_count": 1, "artifacts": [artifacts[kind]]}
+        def name(sha, attempt, kind="runtime"):
+            return "empact-{}-{}-{}".format(kind, sha, attempt)
+        def validate(sha, artifact_id, artifact, approved, repository, kind="runtime"):
+            self.assertIs(approved, ci)
+            self.assertEqual(artifact_id, artifacts[kind]["id"])
+            return {"artifactId": artifact_id}
+        with patch.object(client.gate, "approved_run", return_value=ci) as approved, patch.object(
+            client.gate, "github_json", side_effect=lookup
+        ), patch.object(client.runtime, "artifact_name", side_effect=name), patch.object(
+            client.runtime, "validate_artifact", side_effect=validate
+        ):
+            self.assertEqual(client.deployment_artifacts(SHA), ({"artifactId": 7}, {"artifactId": 8}))
+        approved.assert_called_once_with(SHA)
+
+    def test_cache_hit_only_app_url_then_complete(self):
+        with tempfile.TemporaryDirectory() as folder:
+            ready = "EMPACT_ARTIFACT_READY {} 7\n".format(SHA).encode()
+            complete = "EMPACT_ARTIFACTS_COMPLETE {}\n".format(SHA).encode()
+            process = self.fixture(folder, b"Gate approved\n" + ready + complete + b"Release complete\n")
+            calls = []
+            def get_url(artifact_id):
+                calls.append((artifact_id, process.stdin.getvalue(), output.getvalue()))
+                return self.URL
+            output = io.StringIO()
+            with patch.dict(os.environ, {"RUNNER_TEMP": folder, "DEPLOY_HOST": "example.com"}), patch.object(
+                client, "deployment_artifacts", return_value=self.layers()
+            ), patch.object(client.subprocess, "Popen", return_value=process) as started, patch.object(
+                client, "signed_download_url", side_effect=get_url
+            ), patch.object(client.sys, "stdout", output):
+                self.assertEqual(client.deploy_runtime(SHA), 0)
+            self.assertEqual(calls, [(7, json.dumps({"sha": SHA, "artifactId": 7,
+                                                    "dependencyArtifactId": 8, "transport": "https-layers"},
+                                                    separators=(",", ":")).encode() + b"\n", "Gate approved\n")])
+            self.assertEqual(process.stdin.sent, calls[0][1] + self.URL.encode() + b"\n")
+            self.assertNotIn(self.URL, repr(started.call_args[0][0]))
+            self.assertNotIn(self.URL, output.getvalue())
+            self.assertIn("Gate approved", output.getvalue())
+            self.assertIn("Release complete", output.getvalue())
+            self.assertNotIn("EMPACT_ARTIFACT_READY", output.getvalue())
+            self.assertNotIn("EMPACT_ARTIFACTS_COMPLETE", output.getvalue())
+
+    def test_cache_miss_requests_app_then_dependencies_and_keeps_input_open(self):
+        with tempfile.TemporaryDirectory() as folder:
+            controls = ("EMPACT_ARTIFACT_READY {} 7\nEMPACT_ARTIFACT_READY {} 8\n"
+                        "EMPACT_ARTIFACTS_COMPLETE {}\n").format(SHA, SHA, SHA).encode()
+            process = self.fixture(folder, controls + b"Release complete\n")
+            calls = []
+            def get_url(artifact_id):
+                calls.append((artifact_id, process.stdin.getvalue(), process.stdin.closed))
+                return self.URL if artifact_id == 7 else self.DEPS_URL
+            with patch.dict(os.environ, {"RUNNER_TEMP": folder, "DEPLOY_HOST": "example.com"}), patch.object(
+                client, "deployment_artifacts", return_value=self.layers()
+            ), patch.object(client.subprocess, "Popen", return_value=process), patch.object(
+                client, "signed_download_url", side_effect=get_url
+            ), patch.object(client.sys, "stdout", io.StringIO()):
+                self.assertEqual(client.deploy_runtime(SHA), 0)
+            header = json.dumps({"sha": SHA, "artifactId": 7, "dependencyArtifactId": 8,
+                                 "transport": "https-layers"}, separators=(",", ":")).encode() + b"\n"
+            self.assertEqual(calls, [(7, header, False), (8, header + self.URL.encode() + b"\n", False)])
+            self.assertEqual(process.stdin.sent, header + self.URL.encode() + b"\n" + self.DEPS_URL.encode() + b"\n")
+            self.assertTrue(process.stdin.closed)
+
+    def test_early_superseded_exit_and_wrong_ready_never_fetch_url(self):
+        with tempfile.TemporaryDirectory() as folder:
+            process = self.fixture(folder, b"main advanced\n", code=3)
+            with patch.dict(os.environ, {"RUNNER_TEMP": folder, "DEPLOY_HOST": "example.com"}), patch.object(
+                client, "deployment_artifacts", return_value=self.layers()
+            ), patch.object(client.subprocess, "Popen", return_value=process), patch.object(
+                client, "signed_download_url"
+            ) as get_url, patch.object(client.sys, "stdout", io.StringIO()):
+                self.assertEqual(client.deploy_runtime(SHA), 3)
+                get_url.assert_not_called()
+            self.assertEqual(process.waited, 1)
+        for line in ("EMPACT_ARTIFACT_READY {} 9\n".format(SHA),
+                     "EMPACT_ARTIFACT_READY {} 7\n".format(NEWER),
+                     "EMPACT_ARTIFACT_READY {} 8\n".format(SHA)):
+            with self.subTest(line=line), tempfile.TemporaryDirectory() as folder:
+                process = self.fixture(folder, line.encode(), code=1)
+                with patch.dict(os.environ, {"RUNNER_TEMP": folder, "DEPLOY_HOST": "example.com"}), patch.object(
+                    client, "deployment_artifacts", return_value=self.layers()
+                ), patch.object(client.subprocess, "Popen", return_value=process), patch.object(
+                    client, "signed_download_url"
+                ) as get_url:
+                    with self.assertRaisesRegex(ValueError, "unexpected READY"):
+                        client.deploy_runtime(SHA)
+                    get_url.assert_not_called()
+                self.assertEqual(process.waited, 1)
+
+    def test_missing_ready_fails_and_server_exit_code_is_preserved_after_ready(self):
+        with tempfile.TemporaryDirectory() as folder:
+            process = self.fixture(folder, b"preflight failed\n", code=75)
+            with patch.dict(os.environ, {"RUNNER_TEMP": folder, "DEPLOY_HOST": "example.com"}), patch.object(
+                client, "deployment_artifacts", return_value=self.layers()
+            ), patch.object(client.subprocess, "Popen", return_value=process), patch.object(
+                client, "signed_download_url"
+            ) as get_url, patch.object(client.sys, "stdout", io.StringIO()):
+                with self.assertRaisesRegex(ValueError, "without artifact COMPLETE"):
+                    client.deploy_runtime(SHA)
+                get_url.assert_not_called()
+            self.assertTrue(process.stdin.closed)
+            self.assertEqual(process.waited, 2)
+        with tempfile.TemporaryDirectory() as folder:
+            process = self.fixture(folder, ("EMPACT_ARTIFACT_READY {} 7\n"
+                                            "EMPACT_ARTIFACTS_COMPLETE {}\n").format(SHA, SHA).encode(), code=75)
+            with patch.dict(os.environ, {"RUNNER_TEMP": folder, "DEPLOY_HOST": "example.com"}), patch.object(
+                client, "deployment_artifacts", return_value=self.layers()
+            ), patch.object(client.subprocess, "Popen", return_value=process), patch.object(
+                client, "signed_download_url", return_value=self.URL
+            ):
+                self.assertEqual(client.deploy_runtime(SHA), 75)
+
+    def test_invalid_or_incomplete_layer_control_is_rejected(self):
+        app = "EMPACT_ARTIFACT_READY {} 7\n".format(SHA)
+        deps = "EMPACT_ARTIFACT_READY {} 8\n".format(SHA)
+        cases = [
+            ("EMPACT_ARTIFACTS_COMPLETE {}\n".format(SHA), "unexpected COMPLETE"),
+            (app + app, "unexpected READY"),
+            (app + deps + deps, "unexpected READY"),
+            (app + "EMPACT_ARTIFACTS_COMPLETE {}\n".format(NEWER), "unexpected COMPLETE"),
+            (app + "EMPACT_ARTIFACTS_COMPLETE {}\n".format(SHA) + app, "unexpected READY"),
+            (app + "EMPACT_ARTIFACTS_COMPLETE {}\n".format(SHA) +
+             "EMPACT_ARTIFACTS_COMPLETE {}\n".format(SHA), "unexpected COMPLETE"),
+            (app + "EMPACT_ARTIFACT_UNKNOWN x\n", "unknown artifact control"),
+            (app, "without artifact COMPLETE"),
+        ]
+        for transcript, message in cases:
+            with self.subTest(transcript=transcript), tempfile.TemporaryDirectory() as folder:
+                process = self.fixture(folder, transcript.encode(), code=0)
+                with patch.dict(os.environ, {"RUNNER_TEMP": folder, "DEPLOY_HOST": "example.com"}), patch.object(
+                    client, "deployment_artifacts", return_value=self.layers()
+                ), patch.object(client.subprocess, "Popen", return_value=process), patch.object(
+                    client, "signed_download_url", return_value=self.URL
+                ):
+                    with self.assertRaisesRegex(ValueError, message):
+                        client.deploy_runtime(SHA)
+                self.assertTrue(process.stdin.closed)
+
+    def test_early_superseded_broken_pipe_still_returns_three(self):
+        class BrokenInput(self.RecordingInput):
+            def write(self, value):
+                raise BrokenPipeError("server exited")
+        with tempfile.TemporaryDirectory() as folder:
+            process = self.fixture(folder, b"", code=3)
+            process.stdin = BrokenInput()
+            with patch.dict(os.environ, {"RUNNER_TEMP": folder, "DEPLOY_HOST": "example.com"}), patch.object(
+                client, "deployment_artifacts", return_value=self.layers()
+            ), patch.object(client.subprocess, "Popen", return_value=process), patch.object(
+                client, "signed_download_url"
+            ) as get_url:
+                self.assertEqual(client.deploy_runtime(SHA), 3)
+                get_url.assert_not_called()
+            self.assertTrue(process.stdin.closed)
+            self.assertEqual(process.waited, 1)
+
+    def test_url_request_failure_closes_input_and_reaps_ssh_without_secret(self):
+        with tempfile.TemporaryDirectory() as folder:
+            process = self.fixture(folder, "EMPACT_ARTIFACT_READY {} 7\n".format(SHA).encode(), code=1)
+            with patch.dict(os.environ, {"RUNNER_TEMP": folder, "DEPLOY_HOST": "example.com"}), patch.object(
+                client, "deployment_artifacts", return_value=self.layers()
+            ), patch.object(client.subprocess, "Popen", return_value=process), patch.object(
+                client, "signed_download_url", side_effect=ValueError("safe URL failure")
+            ):
+                with self.assertRaisesRegex(ValueError, "safe URL failure") as error:
+                    client.deploy_runtime(SHA)
+            self.assertNotIn(self.URL, str(error.exception))
+            self.assertTrue(process.stdin.closed)
+            self.assertEqual(process.waited, 1)
+
+    def test_signed_url_uses_only_github_api_token_and_never_follows_redirect(self):
+        headers = {"Location": self.URL}
+        error = urllib.error.HTTPError("https://api.github.com/artifact", 302, "redirect", headers, io.BytesIO(b""))
+        class Opener:
+            def open(self, request, timeout):
+                self_request = request
+                self.assert_request = self_request
+                raise error
+        opener = Opener()
+        with patch.dict(os.environ, {"GITHUB_TOKEN": "runner-only-secret"}), patch.object(
+            client.urllib.request, "build_opener", return_value=opener
+        ), patch.object(client.runtime, "validate_download_url", return_value=self.URL, create=True) as validate:
+            self.assertEqual(client.signed_download_url(7), self.URL)
+        request = opener.assert_request
+        self.assertEqual(request.full_url,
+                         "https://api.github.com/repos/{}/actions/artifacts/7/zip".format(client.gate.REPOSITORY))
+        self.assertEqual(request.get_header("Authorization"), "Bearer runner-only-secret")
+        validate.assert_called_once_with(self.URL)
+        self.assertNotIn(self.URL, repr(request.header_items()))
+        with patch.dict(os.environ, {"GITHUB_TOKEN": "runner-only-secret"}), patch.object(
+            client.urllib.request, "build_opener", return_value=opener
+        ), patch.object(client.runtime, "validate_download_url", side_effect=ValueError(self.URL), create=True):
+            error = urllib.error.HTTPError("https://api.github.com/artifact", 302, "redirect", headers, io.BytesIO(b""))
+            with self.assertRaisesRegex(ValueError, "failed validation") as failure:
+                client.signed_download_url(7)
+            self.assertNotIn(self.URL, str(failure.exception))
+
+    def test_workflow_uses_direct_client_after_deployment_record(self):
+        workflow = (ROOT / ".github/workflows/deploy.yml").read_text()
+        self.assertNotIn("Download the exact CI-built runtime", workflow)
+        self.assertNotIn("cat \"$RUNNER_TEMP/empact-runtime.zip\"", workflow)
+        self.assertIn('python3 deploy/actions-client.py deploy-runtime "$TARGET_SHA"', workflow)
+        self.assertLess(workflow.index("Record exact deployment revision"),
+                        workflow.index("deploy-runtime \"$TARGET_SHA\""))
+        self.assertIn("if [ \"$result\" -eq 3 ]", workflow)
+        self.assertIn("Publish deployment result", workflow)
 
 
 class PublicVerificationTests(unittest.TestCase):
