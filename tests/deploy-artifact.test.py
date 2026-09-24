@@ -34,6 +34,28 @@ def artifact(**changes):
 
 
 class ArtifactMetadataTests(unittest.TestCase):
+    def test_runtime_uses_system_glibc_not_python_binary_symbols(self):
+        with patch.object(runtime.platform, "system", return_value="Linux"), patch.object(
+            runtime.platform, "machine", return_value="x86_64"
+        ), patch.object(runtime.platform, "libc_ver", return_value=("glibc", "2.3.4")) as old_probe, patch.object(
+            runtime.subprocess, "check_output", return_value=b"v22.12.0\n"
+        ), patch.object(runtime.os, "confstr", return_value="glibc 2.32") as system_probe:
+            runtime._check_runtime_platform()
+        system_probe.assert_called_once_with("CS_GNU_LIBC_VERSION")
+        old_probe.assert_not_called()
+
+    def test_runtime_rejects_old_or_unavailable_system_glibc(self):
+        with patch.object(runtime.platform, "system", return_value="Linux"), patch.object(
+            runtime.platform, "machine", return_value="x86_64"
+        ), patch.object(runtime.subprocess, "check_output", return_value=b"v22.12.0\n"):
+            for value in ("glibc 2.31", None, "musl 1.2", "glibc unknown"):
+                with self.subTest(value=value), patch.object(runtime.os, "confstr", return_value=value):
+                    with self.assertRaisesRegex(ValueError, "glibc 2.32"):
+                        runtime._check_runtime_platform()
+            with patch.object(runtime.os, "confstr", side_effect=OSError("unsupported")):
+                with self.assertRaisesRegex(ValueError, "glibc 2.32"):
+                    runtime._check_runtime_platform()
+
     def test_pack_keeps_public_assets_and_runtime_without_env_or_next_cache(self):
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)

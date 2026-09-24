@@ -84,9 +84,12 @@ def _check_runtime_platform():
     node = subprocess.check_output(["/usr/bin/node", "--version"]).decode().strip()
     if not node.startswith("v22."):
         raise ValueError("runtime requires Node 22")
-    name, version = platform.libc_ver()
-    match = re.fullmatch(r"([0-9]+)\.([0-9]+)(?:\.[0-9]+)?", version)
-    if name != "glibc" or not match or (int(match.group(1)), int(match.group(2))) < (2, 32):
+    try:
+        libc = os.confstr("CS_GNU_LIBC_VERSION")
+    except (AttributeError, OSError, ValueError):
+        libc = None
+    match = re.fullmatch(r"glibc ([0-9]+)\.([0-9]+)(?:\.[0-9]+)?", libc or "")
+    if not match or (int(match.group(1)), int(match.group(2))) < (2, 32):
         raise ValueError("runtime requires glibc 2.32 or newer")
 
 
