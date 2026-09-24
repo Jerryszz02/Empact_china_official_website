@@ -13,6 +13,7 @@ import os
 from pathlib import Path
 import platform
 import re
+import stat
 import subprocess
 import sys
 import tarfile
@@ -78,10 +79,12 @@ def _sha256(path):
     return "sha256:" + digest.hexdigest()
 
 
-def _check_runtime_platform():
+def _check_runtime_platform(node_binary="/usr/bin/node"):
     if platform.system() != "Linux" or platform.machine() not in ("x86_64", "amd64"):
         raise ValueError("runtime requires Linux x64")
-    node = subprocess.check_output(["/usr/bin/node", "--version"]).decode().strip()
+    if not isinstance(node_binary, str) or not os.path.isabs(node_binary):
+        raise ValueError("runtime Node path must be absolute")
+    node = subprocess.check_output([node_binary, "--version"]).decode().strip()
     if not node.startswith("v22."):
         raise ValueError("runtime requires Node 22")
     try:
@@ -140,7 +143,7 @@ def _validate_members(members):
             if total > MAX_EXPANDED_BYTES:
                 raise ValueError("runtime exceeds expanded size budget")
         elif not member.isdir():
-            raise ValueError("unsafe runtime archive entry")
+            raise ValueError("unsafe runtime archive entry: {!r} (type {!r})".format(name, member.type))
     for name in seen:
         parts = name.split("/")
         if any("/".join(parts[:index]) in links for index in range(1, len(parts))):
@@ -169,13 +172,13 @@ def _verify_zip(sha, staging):
     return archive
 
 
-def extract(sha, destination, staging=STAGING):
+def extract(sha, destination, staging=STAGING, node_binary="/usr/bin/node"):
     if not SHA.fullmatch(sha):
         raise ValueError("invalid runtime SHA")
     destination = Path(destination)
     if destination.is_symlink() or not destination.is_dir() or any(destination.iterdir()):
         raise ValueError("runtime extraction destination must be an empty directory")
-    _check_runtime_platform()
+    _check_runtime_platform(node_binary)
     archive = _verify_zip(sha, Path(staging))
     with zipfile.ZipFile(str(archive)) as outer:
         entries = outer.infolist()
@@ -336,7 +339,29 @@ def pack(sha, output, root=Path(".")):
     output = Path(output)
     with tarfile.open(str(output), "w:gz", format=tarfile.PAX_FORMAT) as bundle:
         for relative in paths:
-            bundle.add(str(root / relative), arcname=relative, recursive=False)
+            path = root / relative
+            source_mode = path.lstat().st_mode
+            info = tarfile.TarInfo(relative)
+            if stat.S_ISLNK(source_mode):
+                info.type = tarfile.SYMTYPE
+                info.linkname = os.readlink(str(path))
+                _safe_link(relative, info.linkname)
+                info.mode = 0o777
+                bundle.addfile(info)
+            elif stat.S_ISDIR(source_mode):
+                info.type = tarfile.DIRTYPE
+                info.mode = 0o755
+                bundle.addfile(info)
+            elif stat.S_ISREG(source_mode):
+                # TarFile.add deduplicates equal inodes as hardlink entries,
+                # which the production extractor deliberately refuses.
+                info.type = tarfile.REGTYPE
+                info.size = path.stat().st_size
+                info.mode = 0o755 if source_mode & 0o111 else 0o644
+                with path.open("rb") as source:
+                    bundle.addfile(info, source)
+            else:
+                raise ValueError("unsupported runtime source entry: " + relative)
         info = tarfile.TarInfo(MANIFEST_NAME)
         info.size = len(payload)
         info.mode = 0o644

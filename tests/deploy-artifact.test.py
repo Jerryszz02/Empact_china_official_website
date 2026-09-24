@@ -2,6 +2,7 @@
 import importlib.util
 import io
 import json
+import os
 from pathlib import Path
 import tarfile
 import tempfile
@@ -39,9 +40,12 @@ class ArtifactMetadataTests(unittest.TestCase):
             runtime.platform, "machine", return_value="x86_64"
         ), patch.object(runtime.platform, "libc_ver", return_value=("glibc", "2.3.4")) as old_probe, patch.object(
             runtime.subprocess, "check_output", return_value=b"v22.12.0\n"
-        ), patch.object(runtime.os, "confstr", return_value="glibc 2.32") as system_probe:
+        ) as node_probe, patch.object(runtime.os, "confstr", return_value="glibc 2.32") as system_probe:
             runtime._check_runtime_platform()
-        system_probe.assert_called_once_with("CS_GNU_LIBC_VERSION")
+            runtime._check_runtime_platform("/opt/toolcache/node22/bin/node")
+        self.assertEqual(system_probe.call_count, 2)
+        self.assertEqual(node_probe.call_args_list[0][0][0], ["/usr/bin/node", "--version"])
+        self.assertEqual(node_probe.call_args_list[1][0][0], ["/opt/toolcache/node22/bin/node", "--version"])
         old_probe.assert_not_called()
 
     def test_runtime_rejects_old_or_unavailable_system_glibc(self):
@@ -74,6 +78,8 @@ class ArtifactMetadataTests(unittest.TestCase):
                 path = root / relative
                 path.parent.mkdir(parents=True, exist_ok=True)
                 path.write_bytes(content)
+            duplicate = root / "node_modules/pkg/duplicate.js"
+            os.link(str(root / "node_modules/pkg/index.js"), str(duplicate))
             tracked = b"\0".join(name.encode() for name in list(files)[:4]) + b"\0"
             def command(args, **kwargs):
                 if args[:2] == ["git", "rev-parse"]:
@@ -93,6 +99,7 @@ class ArtifactMetadataTests(unittest.TestCase):
                 self.assertIn("apps/site/public/assets/logo.png", names)
                 self.assertIn("apps/cms/.next/server/app.js", names)
                 self.assertIn("node_modules/pkg/index.js", names)
+                self.assertIn("node_modules/pkg/duplicate.js", names)
                 self.assertIn("apps/cms/node_modules/payload/package.json", names)
                 self.assertIn("apps/site/node_modules/site-only/index.js", names)
                 self.assertNotIn("apps/cms/.next/cache/old", names)
@@ -100,6 +107,35 @@ class ArtifactMetadataTests(unittest.TestCase):
                 manifest = json.load(bundle.extractfile(runtime.MANIFEST_NAME))
                 self.assertEqual(manifest["sha"], SHA)
                 self.assertEqual(manifest["expandedBytes"], runtime._validate_members(bundle.getmembers()))
+                self.assertTrue(bundle.getmember("node_modules/pkg/index.js").isfile())
+                self.assertTrue(bundle.getmember("node_modules/pkg/duplicate.js").isfile())
+                self.assertEqual(bundle.extractfile("node_modules/pkg/duplicate.js").read(), files["node_modules/pkg/index.js"])
+            staging = root / "staging"
+            staging.mkdir()
+            zip_path = staging / ("artifact-" + SHA + ".zip")
+            with zipfile.ZipFile(zip_path, "w") as outer:
+                outer.write(archive, arcname=runtime.RUNTIME_NAME)
+            (staging / ("artifact-" + SHA + ".json")).write_text(json.dumps({
+                "format": 1, "sha": SHA, "size": zip_path.stat().st_size,
+                "expectedDigest": runtime._sha256(zip_path),
+            }))
+            destination = root / "extracted"
+            destination.mkdir()
+            real_stat = os.stat
+            def root_owned(path, *args, **kwargs):
+                result = real_stat(path, *args, **kwargs)
+                if str(path) in {str(staging), str(zip_path), str(staging / ("artifact-" + SHA + ".json"))}:
+                    fields = list(result)
+                    fields[4] = 0
+                    return os.stat_result(fields)
+                return result
+            with patch.object(runtime.os, "stat", side_effect=root_owned), patch.object(
+                runtime, "_check_runtime_platform"
+            ), patch.object(runtime, "_check_headroom"):
+                runtime.extract(SHA, destination, staging=staging)
+            self.assertEqual((destination / "node_modules/pkg/index.js").read_bytes(),
+                             (destination / "node_modules/pkg/duplicate.js").read_bytes())
+            self.assertEqual((destination / ".code-revision").read_text().strip(), SHA)
 
     def test_elf_glibc_guard_matches_server_ceiling(self):
         with tempfile.TemporaryDirectory() as folder:

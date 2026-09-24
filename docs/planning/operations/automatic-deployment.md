@@ -30,7 +30,7 @@ Actions 展示目标提交、对应 CI、服务器部署日志、公网验收和
 
 ## 服务器发布与回退
 
-`Website checks` 在同一次安装依赖、CMS 构建和完整测试之后，用 `runtime-artifact.py pack` 打包已验证的源码、工作区依赖、内容发布器和 CMS `.next`。包不包含 `.env`、业务数据库、媒体数据或预览站点输出。CI 将包解到另一个目录，以新建测试库启动 CMS 并运行内容构建，验证程序可迁移且采用运行时配置。Linux x64/Node 22 和原生依赖的 GLIBC 2.32 上限检查用于匹配当前 ECS；服务器还会在维护前实际加载 sharp、SQLite 和 esbuild。
+`Website checks` 在同一次安装依赖、CMS 构建和完整测试之后，用 `runtime-artifact.py pack` 打包已验证的源码、工作区依赖、内容发布器和 CMS `.next`。包不包含 `.env`、业务数据库、媒体数据或预览站点输出。打包时将硬链接分别写成普通文件，保留安全的相对符号链接。CI 使用服务器同一解包器验证 ZIP 摘要、清单和归档成员，将包解到另一个目录，以新建测试库启动 CMS 并运行内容构建，验证程序可迁移且采用运行时配置。Linux x64/Node 22 和原生依赖的 GLIBC 2.32 上限检查用于匹配当前 ECS；服务器还会在维护前实际加载 sharp、SQLite 和 esbuild。
 
 仅成功的 `main` push 上传 `empact-runtime-<SHA>-<CI attempt>`，保存 3 天。Deploy production 重新选择最新合格的 main，从该次 CI 下载唯一产物，核对 GitHub 提供的 SHA-256 和大小，再通过受限 SSH 发送短 JSON 请求头及原始 ZIP。GitHub token 留在 runner。ECS 独立读取 GitHub 元数据，核对提交、CI run/attempt、来源仓库、main/push、产物名、摘要和失效状态，不信任客户端自报摘要。过期或缺包须重新运行 Website checks；不会降级到服务器重装依赖或重新构建 CMS。GitHub 的产物字段与校验约定见[官方 REST 文档](https://docs.github.com/en/rest/actions/artifacts)。
 
