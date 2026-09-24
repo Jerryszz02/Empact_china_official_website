@@ -114,6 +114,7 @@ export const previewSnapshot: Snapshot = {
     phone: "",
     address: "上海市虹漕路88号越虹广场B座1609",
     icp: "沪ICP备2026002363号-2",
+    publicSecurityRecord: "沪公网安备31010402337130号",
     approved: true,
     privacyApproved: false,
     contactEnabled: false,
