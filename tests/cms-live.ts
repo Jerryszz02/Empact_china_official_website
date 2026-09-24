@@ -234,6 +234,7 @@ try {
     .join("; ");
   for (const path of [
     "/api/business-admin/publish",
+    "/api/business-admin/reorder",
     "/api/publication/publish",
   ]) {
     for (const origin of [undefined, "https://attacker.invalid"]) {
@@ -249,6 +250,21 @@ try {
       assert.ok([401, 403].includes(response.status), `${path}: CSRF`);
     }
   }
+  assert.equal(
+    (
+      await fetch(base + "/api/business-admin/reorder", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Origin: base },
+        body: JSON.stringify({
+          id: "1",
+          targetIndex: 0,
+          expected: [{ id: "1", order: 0 }],
+        }),
+      })
+    ).status,
+    401,
+    "business ordering requires an authenticated administrator",
+  );
   const unlock = await fetch(base + "/api/users/unlock", {
     method: "POST",
     headers: { "Content-Type": "application/json", Origin: base },
@@ -461,6 +477,11 @@ try {
     order: -100,
   });
   await rejectContentMutation(`/api/content/${model.id}`, "DELETE");
+  await rejectContentMutation("/api/business-admin/reorder", "POST", {
+    id: model.id,
+    targetIndex: 0,
+    expected: [{ id: model.id, order: model.order ?? 0 }],
+  });
   await rejectContentMutation(`/api/content/${business.id}`, "PATCH", {
     slug: "international-talent-model",
   });
