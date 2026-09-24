@@ -53,9 +53,13 @@ class AutoDeployTests(unittest.TestCase):
                 (candidate / ".code-revision").write_text(SHA if marker_matches else OTHER)
                 archive = root / (SHA + ".tar.gz")
                 archive.write_text("downloaded archive")
+                helper = root / "prune-fixture.py"
+                helper.write_text("def active_revisions(code, proc): return set()\ndef release(code, sha): return code / sha\n")
                 script = 'set -euo pipefail\ncleanup_failed_preparation() {' + function + '\n}\ncleanup_failed_preparation\n'
                 subprocess.run(["bash", "-c", script], check=True, env=dict(
                     os.environ, candidate=str(candidate), archive=str(archive), sha=SHA,
+                    ROOT=str(root), CURRENT=str(root / "current"), PRUNE_BUILD_CACHE=str(helper),
+                    artifact_metadata=str(root / "artifact.json"), tmp=str(root / "attempt.tmp"),
                     candidate_created="true" if created else "false",
                     current_code=str(candidate) if is_current else str(root / OTHER),
                 ))
