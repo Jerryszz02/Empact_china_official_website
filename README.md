@@ -12,6 +12,16 @@
 
 首次克隆项目后，在项目根目录运行 `npm ci` 安装依赖。
 
+### Codex 工作树环境
+
+`.codex/environments/environment.toml` 提供 `EmpactChinaWeb` 本地环境。在 Codex 中创建工作树时使用该环境，会检查 Node.js 版本、执行 `npm ci --no-audit --no-fund`，再通过 `npm run setup:local` 生成该工作树独立的 `.env` 和 `.data` 目录；不会复制主目录或生产环境的密钥、数据库和媒体。已有本地配置按 `setup:local` 的规则保留，仅迁移旧的本机端口。
+
+初始化不启动服务。需要后台时，再按下方说明运行 `npm run seed:local -w @empact/cms`；需要浏览器测试时，先运行 `npx playwright install chromium --only-shell`。环境提供类型检查、单元测试和结构预览构建三个快捷操作，不自动执行占用 4321 的测试或服务。工作树预览须按 `AGENTS.md` 协调端口，结束后恢复主目录预览。
+
+不使用 Codex 环境也可以：在新工作树根目录手动运行 `npm ci` 和 `npm run setup:local` 即可；通过命令行 `git worktree add` 创建目录不会自动执行 Codex 初始化。
+
+### 开发预览
+
 日常修改官网前台，在项目根目录运行：
 
 ```bash

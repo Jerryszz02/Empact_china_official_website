@@ -1,0 +1,26 @@
+version = 1
+name = "EmpactChinaWeb"
+
+[setup]
+script = '''
+set -eu
+cd "${CODEX_WORKTREE_PATH:-.}"
+node -e 'const [major, minor] = process.versions.node.split(".").map(Number); if (major !== 22 || minor < 12) { console.error("需要 Node.js 22.12+（22 系列）。"); process.exit(1); }'
+npm ci --no-audit --no-fund
+npm run setup:local
+'''
+
+[[actions]]
+name = "类型检查"
+icon = "test"
+command = "npm run check"
+
+[[actions]]
+name = "单元测试"
+icon = "test"
+command = "npm test"
+
+[[actions]]
+name = "构建结构预览"
+icon = "run"
+command = "npm run build:preview"
