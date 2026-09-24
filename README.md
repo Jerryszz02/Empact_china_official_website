@@ -1,8 +1,10 @@
 # Empact China 官网
 
-中文内容官网：Astro 静态页面 + Payload 图形内容后台。青少年项目与企业服务各有总览和下拉导航，另设学校、社区入口；业务页展示案例卡片，案例详情可使用站内图文或外链，ChatCircle 使用独立平台入口。
+中文内容官网：Astro 静态页面 + Payload 图形内容后台。首页为四屏，首屏包含照片图库；青少年项目、企业服务、学校业务、社区业务各有总览，17 个细分业务以当前内容快照和代码为准。业务页展示案例卡片，案例详情可使用站内图文或外链；ChatCircle 从社区入口跳转独立平台。另有「加入我们」和招聘申请页。
 
-**官网已部署至 [empact.cn](https://empact.cn/)，公开内容来自已批准的正式快照；草稿仍受后台鉴权保护。在线咨询邮件服务尚未开启，部署与验收详情见 [首次服务器部署记录](docs/deployment-2026-09-20.md)。**
+**官网已部署至 [empact.cn](https://empact.cn/)，公开内容来自已批准的正式快照；草稿仍受后台鉴权保护。2026-09-24 公开 `release.json` 显示 `contactEnabled: true`，咨询页和表单可访问；真实邮件投递与收件仍待验证。当前状态见 [交付验收状态](docs/planning/readiness.md)。**
+
+文档从 [docs 索引](docs/README.md)及 [planning 索引](docs/planning/README.md)进入。图片、工作簿等原始素材放 [assets](assets/README.md)；`artifacts/` 保存临时验收产物；其中独有的发布前快照、日志和回执需确认失效后再清理。`apps/site/src/assets` 和 `packages/content/fixtures/media` 是代码使用的资源目录，不能当作原始素材归档；`.data` 是本机运行数据，包含数据库等私有内容，不能随意清理。
 
 ## 本机启动
 
@@ -36,15 +38,15 @@ npm run dev
 
 本机初始化命令将随机账号凭据保存到 **`.data/local-admin.json`**（权限 600），不打印密码；已有账号和内容不会覆盖。后台支持用户名或邮箱登录。管理员维护命令 `npm run create-admin -w @empact/cms` 从环境变量 `ADMIN_EMAIL` 定位现有账号，使用 `ADMIN_PASSWORD`（至少 8 位）重设密码；可同时用 `ADMIN_USERNAME` 设置登录用户名。重设时会清除旧会话并解除登录锁定。真实凭据只放在本机私有环境或凭据文件中，不写入代码。
 
-升级已有数据库需先备份，并执行 `npm run migrate -w @empact/cms`；本次新增的用户名字段不会覆盖已有账号，旧账号仍可使用邮箱登录。统一开发预览不自动修改数据库结构。`.env`、数据库、媒体与预览均被 Git 排除。不能把本机草稿部署到公开预览地址。
+本机空白数据库可通过 `npm run migrate -w @empact/cms` 初始化；升级已有数据库须先备份并确认迁移基线。生产库保留 Payload `dev / -1` 历史，只能通过[自动部署的精确增量计划](docs/planning/operations/automatic-deployment.md)升级，不能直接重放原生 Payload `migrate`。统一开发预览不自动修改数据库结构。`.env`、数据库、媒体与预览均被 Git 排除。不能把本机草稿部署到公开预览地址。
 
 项目详情外链使用独立的 `detailUrl` 字段。`20260918_120000_project_detail_url` 迁移只为内容及历史版本添加可空字段，不复制或修改原有 `sourceUrl` 来源链接，已有站内文章继续保留原地址与引用来源。
 
-演练正式发布时，停止开发预览后使用 `npm run build:cms` 和 `npm run serve:workspace`，服务读取 `RUNTIME_DIR/current`；结构预览可在构建后设置 `PUBLIC_ROOT="$PWD/apps/site/dist"`。验收后恢复 `npm run dev`。首次建立官网需要经核对的基础快照，见 [业务后台、迁移与首次发布](docs/business-content-migration.md)。
+演练正式发布时，停止开发预览后使用 `npm run build:cms` 和 `npm run serve:workspace`，服务读取 `RUNTIME_DIR/current`；结构预览可在构建后设置 `PUBLIC_ROOT="$PWD/apps/site/dist"`。验收后恢复 `npm run dev`。首次建立官网需要经核对的基础快照，见 [业务后台、迁移与首次发布](docs/planning/content/business-content-migration.md)。
 
 ## 运营流程
 
-1. 后台按「新增项目」「管理已发布项目」「管理草稿」「新增业务类型」组织。新增业务类型时选择企业、青少年、学校或社区分组，也可在该入口维护已有业务介绍及顺序。
+1. 后台按「新增项目」「管理已发布项目」「管理草稿」「新增业务类型」组织。新增业务类型时选择企业、青少年、学校或社区分组，也可在该入口维护已有业务介绍，通过分组看板拖动或上下箭头排序。排序只保存草稿，发布受影响的业务后才更新官网。
 2. 新增项目时填写标题、摘要并选择所属业务类型，随后补充封面。详情外链与网页正文二选一；来源名称和来源链接仅作为站内文章的选填引用，不影响详情跳转。
 3. 保存只写草稿。站内文章的「预览草稿」生成需登录、有效期一小时的预览；外链项目则直接提供详情外链。
 4. 点击当前内容的「发布到官网」或「发布更新」，成功后显示结果链接；其他草稿不会随之发布。构建失败保留官网原版本。
@@ -52,7 +54,7 @@ npm run dev
 
 构建失败时，维护人可在服务器查看私有日志：发布日志位于 `$RUNTIME_DIR/releases/<回执 ID>/build.log`，草稿预览日志位于 `$RUNTIME_DIR/build-logs/<预览 ID>.building.log`。预览失败会清理未完成页面，但保留日志；日志不通过网站或预览链接提供。
 
-生产咨询仅在正式快照、公司隐私审批、收件人和 SMTP 配置均到位时开放。SMTP 未接受投递时显示失败，不伪造收件成功。
+生产咨询已开放；服务端仅在正式快照、公司隐私审批、收件人和 SMTP 配置均到位时接收。SMTP 未接受投递时显示失败，不伪造收件成功。公开表单可访问不能证明邮件真实送达。
 
 ## 验证
 
@@ -73,8 +75,8 @@ npm audit --omit=dev --audit-level=high
 - `scripts`、`tests`：静态服务、SMTP 接收、页面检查和自动验收。
 - `deploy`：复用现有 Caddy 的配置片段、官网独立服务/定时截止检查、备份恢复脚本。
 
-目标是 ECS 106.15.44.81 / empact.cn；2026-09-20 已连接 ECS 并安装官网独立服务。服务器、内容版本及公网解析验收分别记录在 [首次服务器部署记录](docs/deployment-2026-09-20.md)。
+官网部署在 ECS 106.15.44.81 / empact.cn。2026-09-24 公网 `release.json` 的 `codeRevision` 为 `c32b89900ba86597d0099857454773ba671f2e2e`；历史部署见 [首次服务器部署记录](docs/planning/history/deployment-2026-09-20.md)，当前自动部署见 [自动部署](docs/planning/operations/automatic-deployment.md)。
 
-空白数据库通过 `npm run migrate -w @empact/cms` 初始化；已有数据库升级前先备份并核对迁移基线。本次导入库有 schema-push 历史，不能直接重放初始化迁移链，具体边界见部署记录。代码构建由 CI 验证，运营内容更新在官网服务账号下的独立子进程构建并原子切换。`RUNTIME_DIR/current` 只指向成功检查的静态产物，CMS 暂不可用时旧站仍可读。
+空白数据库可通过 `npm run migrate -w @empact/cms` 初始化；生产导入库有 schema-push 历史，须经自动部署的精确增量计划升级，不能直接运行原生迁移。代码构建由 CI 验证，运营内容更新在官网服务账号下的独立子进程构建并原子切换。`RUNTIME_DIR/current` 只指向成功检查的静态产物，CMS 暂不可用时旧站仍可读。
 
-详见 [实施计划](docs/planning/implementation.md)、[内容补充表](docs/content-checklist.md)、[运行与恢复](docs/operations.md)、[依赖审查](docs/dependency-review.md) 和 [交付验收状态](docs/readiness.md)。
+详见 [实施计划](docs/planning/implementation.md)、[内容补充表](docs/planning/content/content-checklist.md)、[运行与恢复](docs/planning/operations/operations.md)、[依赖审查](docs/planning/operations/dependency-review.md) 和 [交付验收状态](docs/planning/readiness.md)。

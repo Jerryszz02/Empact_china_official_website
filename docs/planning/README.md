@@ -1,38 +1,60 @@
-# 规划文档索引
+# 长期文档索引
 
-维护核对：2026-09-18，代码基线 `eb8f417`。本目录保留前端方案与阶段验收记录；当前交付范围见[交付验收状态](../readiness.md)，日常入口见[项目 README](../../README.md)。
+维护核对：2026-09-24，代码基线 `f8529cf`。当前事实见[交付状态](readiness.md)，启动入口见[项目 README](../../README.md)，图片与原始资料见[素材目录](../../assets/README.md)。历史记录保留日期及当时证据，不作为最新上线状态证明。
 
-主目录 `/Users/jerryszz/Desktop/实习/Empact/empactchinaOfficialWeb` 用于同步 `main` 和日常预览。每个任务在修改前更新远端引用，从最新 `origin/main` 创建独立分支和 worktree；已有本任务 worktree 时继续使用，不与其他任务共用目录。历史验收记录中的旧工作树、分支和提交仅用于追溯，不应直接复用为新任务入口。日常预览从主目录运行 `npm run dev`，使用 4321；任务 worktree 验收须先协调端口使用权，结束后恢复主目录预览。完整约定见 [项目协作规则](../../AGENTS.md)。
+## 当前状态与实现约定
 
-## 当前实施依据
+- [交付状态、公开核验与待办](readiness.md)
+- [工程架构和发布约定](implementation.md)
+- [首页与品牌设计](design/frontend-motion-design.md)
 
-| 文档                                        | 用途与状态                                                       |
-| ------------------------------------------- | ---------------------------------------------------------------- |
-| [青少年人才培养模型](youth-development-model.md) | 模型页面的内容、结构及验收记录 |
-| [首页 Logo 汇聚与照片带](home-logo-gallery.md) | 首页图库的范围、交互、验证及迁移说明 |
-| [前端优化计划](前端优化计划.md)             | 三屏粒子首页的范围、步骤、降级和验收要求；已实现，实机验收待完成 |
-| [动效设计规范](frontend-motion-design.md)   | 已确认配色、排版、粒子规则与用户原话                             |
-| [实施与验收](frontend-motion-acceptance.md) | 动效实现阶段的检查记录与实机／发布边界；不是当前版本复验结果 |
-| [可滚动样张](motion-demo.html)              | 已确认蓝—米白—蓝视觉基准，保留作对照，不是生产模板               |
-| [品牌颜色图](motion-brand-reference.png)    | 用户提供的 HEX 色值来源                                          |
-| [官网实施与验收计划](implementation.md)     | 原工程、CMS、内容和发布边界；前端方向转向当前优化计划            |
+## 后台与内容
 
-## 历史记录
+- [品牌案例来源记录](content/brand-case-sources.md)
+- [业务与案例后台](content/business-content-migration.md)
+- [业务目录同步记录](content/business-directory-sync.md)
+- [业务框架人工重置](content/business-framework-reset.md)
+- [案例封面补全（2026-09-20）](content/case-cover-sources-2026-09-20.md)
+- [在官网后台新增案例](content/case-upload-guide.md)
+- [内容维护与素材清单](content/content-checklist.md)
+- [公益品牌出海与波克公益案例来源](content/philanthropy-brand-overseas-sources.md)
+- [2026 暑期新加坡营文章来源](content/singapore-camp-2026-sources.md)
+- [杨浦双语课程与进入中国年份更新](content/yangpu-course-sources-2026-09-21.md)
 
-| 文档／资产                                                     | 定位                                           |
-| -------------------------------------------------------------- | ---------------------------------------------- |
-| [前端重构计划(done).md](前端重构计划%28done%29.md)             | 已完成的文字驱动方案；本轮不重复实施           |
-| [旧前端验收](frontend-acceptance.md)                           | 文字驱动版本的历史检查，不作为当前运行状态证明 |
-| [旧三版样张](proof.html)                                       | 早期视觉比较，非当前粒子方案                   |
-| [旧首屏](v3s1.png)、[旧业务屏](v3s2.png)、[旧咨询屏](v3s3.png) | 保留追溯                                       |
+## 页面与功能
 
-## 维护与边界
+- [关于 Empact 页面](features/about-page.md)
+- [咨询与页面体验调整](features/consultation-experience.md)
+- [首页 Logo 汇聚与照片带](features/home-logo-gallery.md)
+- [隐私政策与使用条款](features/legal-pages.md)
+- [加入我们与招聘管理](features/recruitment.md)
+- [国际化人才培养模型：维护与内容说明](features/youth-development-model.md)
 
-动效阶段的内容去向、检查命令和结果保留在对应验收文档。后续业务框架与后台发布流程见[框架调整](../business-framework-reset.md)和[业务后台、迁移与首次发布](../business-content-migration.md)。
+## 部署与维护
 
-历史文档记录了对应版本的本机 Chromium 回归；真实 iOS Safari／Android 工具栏、手感及性能仍需实机验收。内容审批、部署与公网检查另走现有流程。运行状态以实际服务和进程为准，历史截图不能证明当前服务版本。
+- [自动部署](operations/automatic-deployment.md)
+- [依赖检查](operations/dependency-review.md)
+- [运行、发布与恢复](operations/operations.md)
 
-文档检查：
+## 历史依据
+
+保留独有的需求、来源、迁移与恢复依据。旧三/五主题文案和初始建设计划不再指导当前目录或发布；历史验收不等于本次重新运行。
+
+- [Empact China 官网建设计划](history/Empact_China_官网建设计划_v1.1.md)
+- [案例配图核对（2026-09-11）](history/case-images.md)
+- [2026-09-20 首次 ECS 部署](history/deployment-2026-09-20.md)
+- [2026-09-21 版本同步与自动部署](history/deployment-2026-09-21.md)
+- [三屏粒子首页实施与验收](history/frontend-motion-acceptance.md)
+- [安全审查与修复（2026-09-19）](history/security-review-2026-09-19.md)
+- [Empact China 官网 · 企业业务三主题介绍文案（v1 草稿）](history/官网企业业务三主题文案_v1.md)
+- [Empact China 官网 ·「关于 Empact」页面文案（v1 草稿）](history/官网关于Empact页面文案_v1.md)
+- [Empact China 官网 · 青少年业务五主题介绍文案（v1 草稿）](history/官网青少年业务五主题文案_v1.md)
+
+## 维护方式
+
+新增长期文档放到对应分组并更新本索引。一次性截图和日志放在 `artifacts/`；完成且已被替代的计划、Demo、缓存可删除，仍有用的来源或约定先合并。旧文字首页、三版样张、三屏实施计划和截图已在本次整理中移除，原版本仍可从 Git 历史追溯。
+
+任务使用独立 worktree；日常 4321 预览与任务验收的交接遵循[项目协作规则](../../AGENTS.md)。
 
 ```sh
 python3 scripts/audit_planning_docs.py --root .

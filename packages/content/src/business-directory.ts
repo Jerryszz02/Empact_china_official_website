@@ -9,7 +9,7 @@ import {
   singaporeCampMedia,
 } from "./business-directory-singapore.js";
 
-// Content source and unresolved material requests: docs/business-directory-sync.md.
+// Content source and unresolved material requests: docs/planning/content/business-directory-sync.md.
 // Keep stable slugs for existing business pages while adopting the workbook labels.
 const businessRows: Array<[string, string, Segment, string, string]> = [
   [

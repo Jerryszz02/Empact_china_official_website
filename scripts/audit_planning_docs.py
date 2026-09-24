@@ -37,15 +37,21 @@ def audit(root: Path) -> list[str]:
     if not index.is_file():
         return [f"missing planning index: {index}"]
 
-    index_text = index.read_text(encoding="utf-8")
-    markdown_files = sorted(planning.glob("*.md"))
-    for document in markdown_files:
-        if document == index:
-            continue
-        if document.name not in index_text:
+    index_targets = {
+        target.resolve()
+        for raw_target in LINK_RE.findall(index.read_text(encoding="utf-8"))
+        if (target := _local_link_target(index, raw_target)) is not None
+    }
+    for document in sorted(planning.rglob("*.md")):
+        if document != index and document.resolve() not in index_targets:
             errors.append(f"unindexed planning document: {document.relative_to(root)}")
 
-    for document in markdown_files:
+    markdown_files = set((root / "docs").rglob("*.md"))
+    markdown_files.update(root / name for name in ("README.md", "AGENTS.md"))
+    markdown_files.add(root / "assets" / "README.md")
+    for document in sorted(markdown_files):
+        if not document.is_file():
+            continue
         text = document.read_text(encoding="utf-8")
         for raw_target in LINK_RE.findall(text):
             target = _local_link_target(document, raw_target)
