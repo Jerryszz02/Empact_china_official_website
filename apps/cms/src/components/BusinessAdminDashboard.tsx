@@ -37,6 +37,7 @@ export function BusinessAdminDashboard() {
   const [message, setMessage] = useState("");
   const [resultUrl, setResultUrl] = useState("");
   const [error, setError] = useState("");
+  const [segment, setSegment] = useState("");
   const [businessId, setBusinessId] = useState("");
   const [search, setSearch] = useState("");
 
@@ -81,6 +82,10 @@ export function BusinessAdminDashboard() {
         (a.segment ?? "").localeCompare(b.segment ?? "") ||
         (a.order || 0) - (b.order || 0),
     );
+  const filteredBusinesses = businesses.filter(
+    (item) => segment && item.segment === segment,
+  );
+  const segmentBusinessIds = new Set(filteredBusinesses.map((item) => item.id));
   const projects = items
     .filter((item) => item.kind === "case")
     .sort(
@@ -95,16 +100,18 @@ export function BusinessAdminDashboard() {
   const listItems =
     part === "published" ? published : part === "drafts" ? drafts : businesses;
   const query = search.trim().toLocaleLowerCase();
-  const hasFilters = Boolean(businessId || query);
+  const hasFilters = Boolean(segment || businessId || query);
   const visibleItems = isProjectList
     ? listItems.filter(
         (item) =>
+          (!segment || segmentBusinessIds.has(item.parentId ?? "")) &&
           (!businessId || item.parentId === businessId) &&
           (!query || item.title.toLocaleLowerCase().includes(query)),
       )
     : listItems;
 
   function clearFilters() {
+    setSegment("");
     setBusinessId("");
     setSearch("");
   }
@@ -392,18 +399,36 @@ export function BusinessAdminDashboard() {
                 aria-label="筛选项目"
               >
                 <div className="admin-filters__field">
-                  <label htmlFor="project-business-filter">业务类型</label>
+                  <label htmlFor="project-segment-filter">业务范围</label>
+                  <select
+                    id="project-segment-filter"
+                    value={segment}
+                    onChange={(event) => {
+                      setSegment(event.target.value);
+                      setBusinessId("");
+                    }}
+                  >
+                    <option value="">全部业务范围</option>
+                    {Object.entries(segmentLabels).map(([value, label]) => (
+                      <option key={value} value={value}>
+                        {label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="admin-filters__field">
+                  <label htmlFor="project-business-filter">子业务</label>
                   <select
                     id="project-business-filter"
                     value={businessId}
+                    disabled={!segment}
                     onChange={(event) => setBusinessId(event.target.value)}
                   >
-                    <option value="">全部业务类型</option>
-                    {businesses.map((business) => (
+                    <option value="">
+                      {segment ? "全部子业务" : "请先选择业务范围"}
+                    </option>
+                    {filteredBusinesses.map((business) => (
                       <option key={business.id} value={business.id}>
-                        {business.segment
-                          ? `${segmentLabels[business.segment]} · `
-                          : ""}
                         {business.title}
                       </option>
                     ))}
@@ -422,7 +447,7 @@ export function BusinessAdminDashboard() {
                 <button
                   type="button"
                   className="button button--quiet"
-                  disabled={!businessId && !search}
+                  disabled={!segment && !businessId && !search}
                   onClick={clearFilters}
                 >
                   清空筛选
