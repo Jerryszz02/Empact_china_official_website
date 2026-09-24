@@ -94,11 +94,13 @@ export interface Config {
   globals: {
     company: Company;
     'home-gallery': HomeGallery;
+    'office-gallery': OfficeGallery;
     recruitment: Recruitment;
   };
   globalsSelect: {
     company: CompanySelect<false> | CompanySelect<true>;
     'home-gallery': HomeGallerySelect<false> | HomeGallerySelect<true>;
+    'office-gallery': OfficeGallerySelect<false> | OfficeGallerySelect<true>;
     recruitment: RecruitmentSelect<false> | RecruitmentSelect<true>;
   };
   locale: null;
@@ -561,6 +563,26 @@ export interface HomeGallery {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "office-gallery".
+ */
+export interface OfficeGallery {
+  id: number;
+  configured?: boolean | null;
+  /**
+   * 每张照片上传时填写图片说明。保存后可预览、发布；删除全部照片并发布会隐藏该区块。
+   */
+  photos?:
+    | {
+        image: number | Media;
+        caption: string;
+        id?: string | null;
+      }[]
+    | null;
+  updatedAt?: string | null;
+  createdAt?: string | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "recruitment".
  */
 export interface Recruitment {
@@ -618,6 +640,23 @@ export interface HomeGallerySelect<T extends boolean = true> {
     | {
         image?: T;
         alt?: T;
+        id?: T;
+      };
+  updatedAt?: T;
+  createdAt?: T;
+  globalType?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "office-gallery_select".
+ */
+export interface OfficeGallerySelect<T extends boolean = true> {
+  configured?: T;
+  photos?:
+    | T
+    | {
+        image?: T;
+        caption?: T;
         id?: T;
       };
   updatedAt?: T;

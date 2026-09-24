@@ -65,6 +65,9 @@ export type HomeGallery = {
   style: "photos" | "film";
   photos: { imageId: string; alt?: string }[];
 };
+export type OfficeGallery = {
+  photos: { imageId: string; caption: string }[];
+};
 export type RecruitmentJob = {
   id: string;
   title: string;
@@ -86,6 +89,7 @@ export type Snapshot = {
   entries: Entry[];
   media: Media[];
   homeGallery?: HomeGallery;
+  officeGallery?: OfficeGallery;
   recruitment?: Recruitment;
 };
 
@@ -245,6 +249,16 @@ const snapshotSchema = z.object({
       ),
     })
     .optional(),
+  officeGallery: z
+    .object({
+      photos: z.array(
+        z.object({
+          imageId: z.string().min(1),
+          caption: z.string().trim().min(1).max(200),
+        }),
+      ),
+    })
+    .optional(),
   recruitment: recruitmentSchema.optional(),
 });
 
@@ -334,6 +348,10 @@ export function validateSnapshot(
   for (const photo of input.homeGallery?.photos ?? []) {
     if (!mediaIds.has(photo.imageId))
       throw new Error(`unknown home gallery image: ${photo.imageId}`);
+  }
+  for (const photo of input.officeGallery?.photos ?? []) {
+    if (!mediaIds.has(photo.imageId))
+      throw new Error(`unknown office gallery image: ${photo.imageId}`);
   }
   for (const e of input.entries) {
     if (ids.has(e.id)) throw new Error(`duplicate entry id: ${e.id}`);

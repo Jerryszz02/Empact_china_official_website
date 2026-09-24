@@ -170,6 +170,7 @@ export function mergeSelectedLive(
   includeCompany = false,
   includeHomeGallery = false,
   includeRecruitment = false,
+  includeOfficeGallery = false,
 ): Snapshot {
   const entries = new Map(
     (live?.entries || []).map((entry) => [entry.id, entry]),
@@ -192,14 +193,19 @@ export function mergeSelectedLive(
   if (includeHomeGallery)
     for (const photo of draft.homeGallery?.photos ?? [])
       changedMedia.add(photo.imageId);
+  if (includeOfficeGallery)
+    for (const photo of draft.officeGallery?.photos ?? [])
+      changedMedia.add(photo.imageId);
   const media = new Map((live?.media || []).map((item) => [item.id, item]));
   for (const id of changedMedia) {
     const item = draft.media.find((item) => item.id === id);
     if (!item) throw new Error(`所选图片不存在：${id}`);
     media.set(
       id,
-      includeHomeGallery &&
-        draft.homeGallery?.photos.some((photo) => photo.imageId === id)
+      (includeHomeGallery &&
+        draft.homeGallery?.photos.some((photo) => photo.imageId === id)) ||
+      (includeOfficeGallery &&
+        draft.officeGallery?.photos.some((photo) => photo.imageId === id))
         ? { ...item, approved: true }
         : item,
     );
@@ -210,6 +216,9 @@ export function mergeSelectedLive(
   const recruitment = includeRecruitment
     ? draft.recruitment
     : live?.recruitment;
+  const officeGallery = includeOfficeGallery
+    ? draft.officeGallery
+    : live?.officeGallery;
   const used = new Set(
     [...entries.values()].flatMap((entry) =>
       [entry.imageId, ...(entry.bodyMediaIds ?? [])].filter(
@@ -218,6 +227,7 @@ export function mergeSelectedLive(
     ),
   );
   for (const photo of homeGallery?.photos ?? []) used.add(photo.imageId);
+  for (const photo of officeGallery?.photos ?? []) used.add(photo.imageId);
   if (!live && !includeCompany) throw new Error("首次发布须勾选公司公开资料。");
   return {
     version: `v-${randomUUID()}`,
@@ -225,6 +235,7 @@ export function mergeSelectedLive(
     mode: "production",
     company: structuredClone(includeCompany ? draft.company : live!.company),
     ...(homeGallery ? { homeGallery: structuredClone(homeGallery) } : {}),
+    ...(officeGallery ? { officeGallery: structuredClone(officeGallery) } : {}),
     ...(recruitment ? { recruitment: structuredClone(recruitment) } : {}),
     entries: [...entries.values()],
     media: [...media.values()].filter((item) => used.has(item.id)),
@@ -405,6 +416,8 @@ export async function unpublishSnapshot(
     ),
   );
   for (const photo of snapshot.homeGallery?.photos ?? [])
+    used.add(photo.imageId);
+  for (const photo of snapshot.officeGallery?.photos ?? [])
     used.add(photo.imageId);
   return publishSnapshot(
     {

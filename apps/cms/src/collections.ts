@@ -710,6 +710,17 @@ export const Media: CollectionConfig = {
         )
       )
         return false;
+      const officeGallery = await req.payload.findGlobal({
+        slug: "office-gallery",
+        depth: 0,
+        overrideAccess: true,
+      });
+      if (
+        officeGallery.photos?.some(
+          (photo: { image: unknown }) => String(photo.image) === String(id),
+        )
+      )
+        return false;
       for (const receipt of await listReceipts()) {
         if (!receipt.releasePath) continue;
         const snapshot = JSON.parse(
@@ -837,6 +848,51 @@ export const HomeGallery: GlobalConfig = {
           required: true,
         },
         text("alt", "替代文字（选填，默认使用图片素材描述）"),
+      ],
+    },
+  ],
+};
+export const OfficeGallery: GlobalConfig = {
+  slug: "office-gallery",
+  label: "办公空间照片",
+  admin: { group: "加入我们" },
+  access: { read: adminOnly, update: adminOnly },
+  hooks: {
+    beforeChange: [({ data }) => ({ ...data, configured: true })],
+  },
+  fields: [
+    {
+      name: "officeGalleryActions",
+      type: "ui",
+      admin: {
+        components: {
+          Field: "@/components/OfficeGalleryActions#OfficeGalleryActions",
+        },
+      },
+    },
+    {
+      name: "configured",
+      type: "checkbox",
+      defaultValue: false,
+      admin: { hidden: true },
+    },
+    {
+      name: "photos",
+      label: "办公空间照片（拖动调整顺序）",
+      type: "array",
+      admin: {
+        description:
+          "每张照片上传时填写图片说明。保存后可预览、发布；删除全部照片并发布会隐藏该区块。",
+      },
+      fields: [
+        {
+          name: "image",
+          label: "照片",
+          type: "upload",
+          relationTo: "media",
+          required: true,
+        },
+        { ...text("caption", "图片说明", true), maxLength: 200 },
       ],
     },
   ],

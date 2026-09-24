@@ -154,7 +154,8 @@
   gap: 22px;
   margin-top: 22px;
 }
-.home-gallery-entry {
+.home-gallery-entry,
+.office-gallery-entry {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -167,11 +168,13 @@
   background: white;
   text-decoration: none;
 }
-.home-gallery-entry span:first-child {
+.home-gallery-entry span:first-child,
+.office-gallery-entry span:first-child {
   display: grid;
   gap: 4px;
 }
-.home-gallery-entry small {
+.home-gallery-entry small,
+.office-gallery-entry small {
   color: #64798a;
   font-size: 13px;
 }
@@ -181,7 +184,8 @@
   font-size: 13px;
   font-weight: 700;
 }
-.home-gallery-entry:focus-visible {
+.home-gallery-entry:focus-visible,
+.office-gallery-entry:focus-visible {
   outline: 3px solid var(--empact-blue);
   outline-offset: 3px;
 }
@@ -674,7 +678,8 @@
     flex-wrap: wrap;
     gap: 12px;
   }
-  .home-gallery-entry {
+  .home-gallery-entry,
+  .office-gallery-entry {
     align-items: flex-start;
     flex-direction: column;
     gap: 10px;

@@ -196,6 +196,7 @@ export async function businessAdminMutation(
       : {
           ...draft,
           homeGallery: undefined,
+          officeGallery: undefined,
           entries: draft.entries.filter(
             (item) => selected.includes(item.id) || item.kind === "page",
           ),
@@ -402,6 +403,8 @@ export async function businessAdminMutation(
           }));
         const mediaIds = new Set(remaining.flatMap(usedMedia));
         for (const photo of latest.homeGallery?.photos ?? [])
+          mediaIds.add(photo.imageId);
+        for (const photo of latest.officeGallery?.photos ?? [])
           mediaIds.add(photo.imageId);
         return {
           ...latest,

@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "from": "3248778ea57172a9c9c673a3c8808f1bd645071c836160dfd3b23ece1842e8c2",
+  "to": "a286ebec5751bdce8f2a5f9ec7f0170115f750e0980f92f3e4ad186f207c74c1",
+  "description": "Add the optional office gallery global and ordered image-caption rows; preserve existing CMS tables and published snapshots.",
+  "statements": [
+    "CREATE TABLE `office_gallery` (\n    `id` integer PRIMARY KEY NOT NULL,\n    `configured` integer DEFAULT false,\n    `updated_at` text,\n    `created_at` text\n  );",
+    "CREATE TABLE `office_gallery_photos` (\n    `_order` integer NOT NULL,\n    `_parent_id` integer NOT NULL,\n    `id` text PRIMARY KEY NOT NULL,\n    `image_id` integer NOT NULL,\n    `caption` text NOT NULL,\n    FOREIGN KEY (`image_id`) REFERENCES `media`(`id`) ON UPDATE no action ON DELETE set null,\n    FOREIGN KEY (`_parent_id`) REFERENCES `office_gallery`(`id`) ON UPDATE no action ON DELETE cascade\n  );",
+    "CREATE INDEX `office_gallery_photos_order_idx` ON `office_gallery_photos` (`_order`);",
+    "CREATE INDEX `office_gallery_photos_parent_id_idx` ON `office_gallery_photos` (`_parent_id`);",
+    "CREATE INDEX `office_gallery_photos_image_idx` ON `office_gallery_photos` (`image_id`);"
+  ]
+}

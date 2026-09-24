@@ -302,6 +302,15 @@ export function BusinessAdminDashboard() {
           编辑照片 ↗
         </span>
       </a>
+      <a className="office-gallery-entry" href="/admin/globals/office-gallery">
+        <span>
+          <strong>办公空间照片</strong>
+          <small>管理“加入我们”的办公空间照片和图片说明，保存后可预览、发布。</small>
+        </span>
+        <span className="home-gallery-entry__action" aria-hidden="true">
+          编辑照片 ↗
+        </span>
+      </a>
       {message && (
         <p className="admin-notice" role="status">
           {message}

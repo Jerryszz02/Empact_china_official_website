@@ -29,7 +29,7 @@ const headers = {
   "X-Robots-Tag": "noindex, nofollow",
 };
 const galleryMedia = (
-  gallery: Snapshot["homeGallery"],
+  gallery: Snapshot["homeGallery"] | Snapshot["officeGallery"],
   media: Snapshot["media"],
 ) =>
   gallery?.photos.map(({ imageId }) => {
@@ -104,6 +104,15 @@ export async function GET(request: Request) {
             galleryMedia(live?.homeGallery, live?.media ?? []),
           ),
       },
+      officeGallery: {
+        live: Boolean(live?.officeGallery),
+        modified:
+          !isDeepStrictEqual(content.officeGallery, live?.officeGallery) ||
+          !isDeepStrictEqual(
+            galleryMedia(content.officeGallery, content.media),
+            galleryMedia(live?.officeGallery, live?.media ?? []),
+          ),
+      },
       recruitment: {
         live: Boolean(live?.recruitment),
         modified: !isDeepStrictEqual(
@@ -139,6 +148,7 @@ export async function POST(
       ids?: unknown;
       includeCompany?: boolean;
       includeHomeGallery?: boolean;
+      includeOfficeGallery?: boolean;
       includeRecruitment?: boolean;
       confirmed?: boolean;
       version?: string;
@@ -158,6 +168,7 @@ export async function POST(
       !ids.length &&
       !body.includeCompany &&
       !body.includeHomeGallery &&
+      !body.includeOfficeGallery &&
       !body.includeRecruitment
     )
       throw new Error("请选择要预览或发布的内容。");
@@ -174,6 +185,7 @@ export async function POST(
         Boolean(body.includeCompany),
         Boolean(body.includeHomeGallery),
         Boolean(body.includeRecruitment),
+        Boolean(body.includeOfficeGallery),
       );
       const snapshot = validateSnapshot(
         { ...merged, mode: "preview" },
@@ -198,6 +210,7 @@ export async function POST(
           ids,
           includeCompany: Boolean(body.includeCompany),
           includeHomeGallery: Boolean(body.includeHomeGallery),
+          includeOfficeGallery: Boolean(body.includeOfficeGallery),
           includeRecruitment: Boolean(body.includeRecruitment),
           baseVersion,
           digest: snapshotDigest(snapshot),
@@ -266,6 +279,8 @@ export async function POST(
           );
           for (const photo of live.homeGallery?.photos ?? [])
             used.add(photo.imageId);
+          for (const photo of live.officeGallery?.photos ?? [])
+            used.add(photo.imageId);
           return {
             ...live,
             version: `v-${randomUUID()}`,
@@ -289,6 +304,7 @@ export async function POST(
           ids?: unknown;
           includeCompany?: unknown;
           includeHomeGallery?: unknown;
+          includeOfficeGallery?: unknown;
           includeRecruitment?: unknown;
           baseVersion?: unknown;
           digest?: unknown;
@@ -305,6 +321,7 @@ export async function POST(
         JSON.stringify(review.ids) !== JSON.stringify(ids) ||
         review.includeCompany !== Boolean(body.includeCompany) ||
         review.includeHomeGallery !== Boolean(body.includeHomeGallery) ||
+        review.includeOfficeGallery !== Boolean(body.includeOfficeGallery) ||
         review.includeRecruitment !== Boolean(body.includeRecruitment) ||
         review.digest !== snapshotDigest(frozen)
       )
