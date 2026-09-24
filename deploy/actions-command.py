@@ -14,6 +14,7 @@ import re
 import signal
 import subprocess
 import sys
+import time
 from datetime import datetime
 
 ROOT = Path("/srv/empact")
@@ -21,6 +22,8 @@ STAGING = ROOT / "staging"
 MIN_FREE_BYTES = 3 * 1024 ** 3
 MIN_FREE_INODES = 150000
 PRUNE = Path("/usr/local/lib/empact/prune-build-cache.py")
+UPLOAD_BUDGET_SECONDS = 30 * 60
+PROGRESS_INTERVAL_BYTES = 32 * 1024 * 1024
 
 
 def _load(name, alias):
@@ -91,18 +94,30 @@ def stage_artifact(sha, metadata, stream, staging=STAGING):
         if path.exists() or path.is_symlink():
             raise ValueError("artifact staging path already exists")
     digest = hashlib.sha256()
-    remaining = metadata["size"]
+    expected_size = metadata["size"]
+    remaining = expected_size
+    received = 0
+    next_report = PROGRESS_INTERVAL_BYTES
+    started = time.monotonic()
     installed_zip = False
     try:
+        print("Receiving artifact: 0/{} bytes".format(expected_size), file=sys.stderr, flush=True)
         descriptor = os.open(str(temporary), os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
         with os.fdopen(descriptor, "wb") as output:
             while remaining:
                 chunk = stream.read(min(1024 * 1024, remaining))
                 if not chunk:
                     raise ValueError("short artifact upload")
+                output.write(chunk)
+                received += len(chunk)
                 remaining -= len(chunk)
                 digest.update(chunk)
-                output.write(chunk)
+                if received >= next_report:
+                    print("Artifact received: {}/{} bytes in {:.1f}s".format(
+                        received, expected_size, time.monotonic() - started), file=sys.stderr, flush=True)
+                    next_report += PROGRESS_INTERVAL_BYTES
+            print("Artifact received: {}/{} bytes in {:.1f}s; awaiting input EOF".format(
+                received, expected_size, time.monotonic() - started), file=sys.stderr, flush=True)
             if stream.read(1):
                 raise ValueError("artifact upload has trailing bytes")
             output.flush()
@@ -118,6 +133,8 @@ def stage_artifact(sha, metadata, stream, staging=STAGING):
         os.chmod(str(final_metadata), 0o600)
         return final_zip
     except BaseException:
+        print("Artifact reception failed after {}/{} bytes in {:.1f}s".format(
+            received, expected_size, time.monotonic() - started), file=sys.stderr, flush=True)
         if temporary.exists():
             temporary.unlink()
         if installed_zip:
@@ -140,7 +157,7 @@ def prepare_artifact(request, stream, deploy_lock):
 
 
 def upload_timeout(signum, frame):
-    raise TimeoutError("artifact upload timed out")
+    raise TimeoutError("artifact upload timed out after {} seconds".format(UPLOAD_BUDGET_SECONDS))
 
 
 def deploy(sha):
@@ -191,7 +208,7 @@ def main():
         if os.geteuid() != 0:
             raise ValueError("restricted deployment entrypoint must run as root")
         signal.signal(signal.SIGALRM, upload_timeout)
-        signal.alarm(600)
+        signal.alarm(UPLOAD_BUDGET_SECONDS)
         request = read_request(sys.stdin.buffer)
         with open("/run/lock/empact-actions.lock", "w") as lock:
             fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
