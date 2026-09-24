@@ -380,8 +380,8 @@ class PublicVerificationTests(unittest.TestCase):
     def test_checks_version_before_and_after_key_pages(self):
         with patch.object(client, "fetch", side_effect=self.response) as fetch:
             self.assertEqual(client.verify(SHA)["version"], "content-1")
-            self.assertEqual(fetch.call_args_list[0].args, ("/release.json",))
-            self.assertEqual(fetch.call_args_list[-1].args, ("/release.json",))
+            self.assertEqual(fetch.call_args_list[0][0], ("/release.json",))
+            self.assertEqual(fetch.call_args_list[-1][0], ("/release.json",))
             self.assertEqual(fetch.call_count, len(client.PAGES) + 2)
 
     def test_http_success_with_old_revision_fails(self):
@@ -572,7 +572,7 @@ class RestrictedCommandTests(unittest.TestCase):
             ]
         ):
             code = command.deploy(SHA)
-            self.assertEqual(calls.call_args_list[0].args[0], ["/usr/bin/systemctl", "start", "empact-release@" + SHA + ".service"])
+            self.assertEqual(calls.call_args_list[0][0][0], ["/usr/bin/systemctl", "start", "empact-release@" + SHA + ".service"])
             return code
 
     def test_completed_release_and_superseded_release_are_distinct(self):
@@ -603,8 +603,8 @@ class RestrictedCommandTests(unittest.TestCase):
             "ActiveState=active\nSubState=exited\n", "Result=success\nExecMainStatus=0\n",
         ]), patch.object(command.subprocess, "run", return_value=subprocess.CompletedProcess([], 0)) as calls:
             self.assertEqual(command.deploy(SHA), 0)
-            self.assertEqual(calls.call_args_list[0].args[0][1], "stop")
-            self.assertEqual(calls.call_args_list[1].args[0][1], "start")
+            self.assertEqual(calls.call_args_list[0][0][0][1], "stop")
+            self.assertEqual(calls.call_args_list[1][0][0][1], "start")
 
 
 if __name__ == "__main__":

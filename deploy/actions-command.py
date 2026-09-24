@@ -561,14 +561,16 @@ def prepare_artifact(request, stream, deploy_lock):
                    pass_fds=(deploy_lock.fileno(),), check=True,
                    stdout=sys.stderr if request.get("transport") in ("https", "https-layers") else None)
     if layered:
-        check_capacity(ROOT, resume_remaining(sha, metadata, STAGING))
+        # Reserve the received ZIP and the temporary tar copy before taking a
+        # potentially slow network transfer, not only once the bytes arrive.
+        check_capacity(ROOT, resume_remaining(sha, metadata, STAGING) + metadata["size"])
         print("EMPACT_ARTIFACT_READY {} {}".format(sha, request["artifactId"]), flush=True)
         application = stage_https_artifact(sha, metadata, read_download_url(stream, require_eof=False), STAGING)
         descriptor = runtime.application_manifest(sha, STAGING)["dependencies"]
         runtime.prune_dependencies(ROOT, incoming=descriptor)
         if runtime.cached_dependencies(descriptor) is None:
             transfer = dependency_transfer_staging(STAGING)
-            check_capacity(ROOT, resume_remaining(sha, dependency_metadata, transfer))
+            check_capacity(ROOT, resume_remaining(sha, dependency_metadata, transfer) + descriptor["size"])
             print("EMPACT_ARTIFACT_READY {} {}".format(sha, request["dependencyArtifactId"]), flush=True)
             archive = stage_https_artifact(
                 sha, dependency_metadata, read_download_url(stream, require_eof=False), transfer)

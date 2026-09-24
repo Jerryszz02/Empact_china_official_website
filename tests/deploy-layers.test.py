@@ -84,7 +84,7 @@ class LayerTests(unittest.TestCase):
             command, "approved_metadata", side_effect=approved
         ) as metadata, mock.patch.object(command.subprocess, "run"), mock.patch.object(
             command, "resume_remaining", side_effect=lambda sha, item, *args: item["size"]
-        ), mock.patch.object(command, "check_capacity"), mock.patch.object(
+        ), mock.patch.object(command, "check_capacity") as capacity, mock.patch.object(
             command, "stage_https_artifact", side_effect=stage
         ), mock.patch.object(command.runtime, "application_manifest",
                              return_value={"dependencies": self.descriptor}), mock.patch.object(
@@ -102,8 +102,11 @@ class LayerTests(unittest.TestCase):
             gate.assert_called_once()
             run.assert_called_once_with(SHA)
             self.assertEqual(metadata.call_count, 2)
-            self.assertIs(metadata.call_args_list[0].kwargs["run"], approved_run)
-            self.assertEqual(metadata.call_args_list[1].kwargs["kind"], "dependencies")
+            self.assertIs(metadata.call_args_list[0][1]["run"], approved_run)
+            self.assertEqual(metadata.call_args_list[1][1]["kind"], "dependencies")
+            self.assertEqual(capacity.call_args_list[0][0][1], 200)
+            if not cache_hit:
+                self.assertEqual(capacity.call_args_list[1][0][1], 92)
             prune.assert_called_once_with(command.ROOT, incoming=self.descriptor)
             self.assertEqual(install.call_count, 0 if cache_hit else 1)
         return output.getvalue(), staged, result
