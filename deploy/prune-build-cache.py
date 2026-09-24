@@ -222,6 +222,36 @@ def backup_valid(path, cache=None):
     return valid
 
 
+def staging_paths(root, candidate, phase, discard_candidate, only_candidate=False):
+    staging = root / "staging"
+    paths = []
+    if not staging.is_dir() or staging.is_symlink():
+        return paths
+    for path in sorted(staging.iterdir()):
+        if path.is_symlink():
+            continue
+        owned_sha = None
+        if ARCHIVE.fullmatch(path.name):
+            archive_match = re.match(r"(?:artifact-)?([0-9a-f]{40})(?:\.tar\.gz|\.(?:zip|json))$", path.name)
+            owned_sha = archive_match.group(1) if archive_match else None
+        elif UPLOAD_TEMP.fullmatch(path.name):
+            owned_sha = UPLOAD_TEMP.fullmatch(path.name).group(1)
+        else:
+            extract_match = re.match(r"\.?([0-9a-f]{40})\.[0-9]+\.tmp$", path.name)
+            owned_sha = extract_match.group(1) if extract_match else None
+        if only_candidate and owned_sha != candidate:
+            continue
+        if phase == "prepare" and owned_sha == candidate and not discard_candidate:
+            continue
+        if ARCHIVE.fullmatch(path.name) and path.is_file():
+            paths.append(path)
+        elif UPLOAD_TEMP.fullmatch(path.name) and path.is_file():
+            paths.append(path)
+        elif EXTRACT.fullmatch(path.name) and path.is_dir():
+            paths.append(path)
+    return paths
+
+
 def plan(root, candidate, proc, phase="complete", discard_candidate=False, _validation_cache=None):
     root = root.resolve(strict=True)
     code = root / "code"
@@ -233,7 +263,17 @@ def plan(root, candidate, proc, phase="complete", discard_candidate=False, _vali
         raise ValueError("candidate can only be discarded during prepare")
     pointer = code / "current"
     if not pointer.exists() and not pointer.is_symlink():
-        return {candidate}, []  # No successful installation yet.
+        if not discard_candidate:
+            return {candidate}, []  # First deployment: preserve unrelated old paths.
+        active = active_revisions(code, proc)
+        if candidate in active:
+            raise ValueError("candidate is active")
+        paths = []
+        abandoned = code / candidate
+        if abandoned.exists() or abandoned.is_symlink():
+            paths.append(release(code, candidate))
+        paths.extend(staging_paths(root, candidate, phase, discard_candidate, only_candidate=True))
+        return active, paths
     current = pointer.resolve(strict=True)
     if current.parent != code:
         raise ValueError("current release points outside code root")
@@ -250,6 +290,8 @@ def plan(root, candidate, proc, phase="complete", discard_candidate=False, _vali
             marker = retired_marker(root, previous, current.name)
             if marker.is_symlink() or not marker.is_file() or json.loads(marker.read_text()) != {"current": current.name, "retired": previous}:
                 raise ValueError("rollback release missing without retirement record")
+        if candidate == current.name and previous and (code / previous).exists():
+            keep.add(release(code, previous).name)
         if discard_candidate and ((code / candidate).exists() or (code / candidate).is_symlink()):
             if candidate in active and candidate != current.name:
                 raise ValueError("candidate is active")
@@ -280,28 +322,7 @@ def plan(root, candidate, proc, phase="complete", discard_candidate=False, _vali
         except (OSError, ValueError):
             continue  # Unknown and legacy directories are preserved.
         paths.append(path)
-    staging = root / "staging"
-    if staging.is_dir() and not staging.is_symlink():
-        for path in sorted(staging.iterdir()):
-            if path.is_symlink():
-                continue
-            owned_sha = None
-            if ARCHIVE.fullmatch(path.name):
-                archive_match = re.match(r"(?:artifact-)?([0-9a-f]{40})(?:\.tar\.gz|\.(?:zip|json))$", path.name)
-                owned_sha = archive_match.group(1) if archive_match else None
-            elif UPLOAD_TEMP.fullmatch(path.name):
-                owned_sha = UPLOAD_TEMP.fullmatch(path.name).group(1)
-            else:
-                extract_match = re.match(r"\.?([0-9a-f]{40})\.[0-9]+\.tmp$", path.name)
-                owned_sha = extract_match.group(1) if extract_match else None
-            if phase == "prepare" and owned_sha == candidate and not discard_candidate:
-                continue
-            if ARCHIVE.fullmatch(path.name) and path.is_file():
-                paths.append(path)
-            elif UPLOAD_TEMP.fullmatch(path.name) and path.is_file():
-                paths.append(path)
-            elif EXTRACT.fullmatch(path.name) and path.is_dir():
-                paths.append(path)
+    paths.extend(staging_paths(root, candidate, phase, discard_candidate))
     backups = root / "backups"
     if backups.is_dir() and not backups.is_symlink():
         successful = {(data["sha"], data.get("deployedAt")) for _, data in history}
@@ -350,7 +371,9 @@ def prune(root, candidate, proc, apply=False, phase="complete", discard_candidat
     if apply and not shutil.rmtree.avoids_symlink_attacks:
         raise RuntimeError("safe directory removal is unavailable on this platform")
     code = root / "code"
-    receipt = next((data for _, data in receipts(root) if data["sha"] == (code / "current").resolve().name), None)
+    pointer = code / "current"
+    receipt = (next((data for _, data in receipts(root) if data["sha"] == pointer.resolve().name), None)
+               if pointer.exists() or pointer.is_symlink() else None)
     previous = previous_revision(code, receipt) if receipt else None
     for path in paths:
         print(("Removing: " if apply else "Would remove: ") + str(path))

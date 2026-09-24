@@ -132,9 +132,13 @@ class PruneTests(unittest.TestCase):
         self.assertFalse((self.code / self.candidate).exists())
 
     def test_discard_current_candidate_keeps_running_code(self):
+        self.assertNotIn(self.code / self.previous,
+                         prune.plan(self.root, self.current, self.proc, "prepare")[1])
         paths = prune.prune(self.root, self.current, self.proc, True, "prepare", True)
         self.assertNotIn(self.code / self.current, paths)
+        self.assertNotIn(self.code / self.previous, paths)
         self.assertTrue((self.code / self.current / "source.ts").exists())
+        self.assertTrue((self.code / self.previous / "source.ts").exists())
         self.assertEqual((self.code / "current").resolve(), self.code / self.current)
 
     def test_missing_receipt_fails_closed(self):
@@ -145,6 +149,36 @@ class PruneTests(unittest.TestCase):
     def test_first_deployment_preserves_existing_directories(self):
         (self.code / "current").unlink()
         self.assertEqual(prune.plan(self.root, self.candidate, self.proc), ({self.candidate}, []))
+
+    def test_first_deployment_discard_cleans_only_owned_abandoned_paths(self):
+        (self.code / "current").unlink()
+        staging = self.root / "staging"
+        owned = ("artifact-" + self.candidate + ".zip",
+                 "artifact-" + self.candidate + ".json",
+                 ".artifact-" + self.candidate + ".42.tmp",
+                 self.candidate + ".43.tmp")
+        for name in owned:
+            path = staging / name
+            if name == self.candidate + ".43.tmp":
+                path.mkdir()
+            else:
+                path.write_text("abandoned")
+        unrelated = staging / ("artifact-" + self.old + ".zip")
+        unrelated.write_text("other release")
+        paths = prune.prune(self.root, self.candidate, self.proc,
+                            phase="prepare", discard_candidate=True)
+        self.assertEqual(set(paths), {self.code / self.candidate} | {staging / name for name in owned})
+        self.assertTrue(all(path.exists() for path in paths))
+        prune.prune(self.root, self.candidate, self.proc, True, "prepare", True)
+        self.assertTrue(all(not path.exists() for path in paths))
+        self.assertTrue((self.code / self.previous).exists() and (self.code / self.old).exists())
+        self.assertTrue(unrelated.exists())
+
+    def test_first_deployment_discard_rejects_unverified_candidate(self):
+        (self.code / "current").unlink()
+        (self.code / self.candidate / ".code-revision").write_text(self.old)
+        with self.assertRaisesRegex(ValueError, "unverified"):
+            prune.plan(self.root, self.candidate, self.proc, "prepare", True)
 
     def test_unknown_symlink_and_business_data_are_preserved(self):
         (self.code / self.old / ".code-revision").unlink()
