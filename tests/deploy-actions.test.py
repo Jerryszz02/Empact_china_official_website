@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 import importlib.util
 import io
+from contextlib import redirect_stderr
 import hashlib
 import json
 import os
 from pathlib import Path
 import subprocess
-import tempfile
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -154,6 +154,104 @@ class PublicVerificationTests(unittest.TestCase):
 
 
 class RestrictedCommandTests(unittest.TestCase):
+    def test_upload_budget_and_progress_are_bounded_and_visible(self):
+        self.assertEqual(command.UPLOAD_BUDGET_SECONDS, 30 * 60)
+        content = b"123456789"
+        metadata = {"size": len(content), "expectedDigest": "sha256:" + hashlib.sha256(content).hexdigest(), "sha": SHA}
+        class ChunkStream(io.BytesIO):
+            def read(self, size=-1):
+                return super().read(min(size, 3))
+        with tempfile.TemporaryDirectory() as folder:
+            staging = Path(folder)
+            real_stat = os.stat
+            def owned(path, *args, **kwargs):
+                result = real_stat(path, *args, **kwargs)
+                if str(path) == str(staging):
+                    fields = list(result)
+                    fields[4] = 0
+                    return os.stat_result(fields)
+                return result
+            diagnostics = io.StringIO()
+            with patch.object(command.os, "stat", side_effect=owned), patch.object(
+                command, "PROGRESS_INTERVAL_BYTES", 4
+            ), redirect_stderr(diagnostics):
+                command.stage_artifact(SHA, metadata, ChunkStream(content), staging)
+            message = diagnostics.getvalue()
+            self.assertIn("0/9 bytes", message)
+            self.assertIn("6/9 bytes", message)
+            self.assertIn("9/9 bytes", message)
+            self.assertIn("awaiting input EOF", message)
+            self.assertEqual((staging / ("artifact-" + SHA + ".zip")).read_bytes(), content)
+
+    def test_timeout_reports_exact_partial_bytes_and_cleans_only_own_temp(self):
+        content = b"123456789"
+        metadata = {"size": len(content), "expectedDigest": "sha256:" + hashlib.sha256(content).hexdigest(), "sha": SHA}
+        class InterruptedStream:
+            def __init__(self):
+                self.calls = 0
+            def read(self, size):
+                self.calls += 1
+                if self.calls == 1:
+                    return content[:4]
+                raise TimeoutError("artifact upload timed out")
+        with tempfile.TemporaryDirectory() as folder:
+            staging = Path(folder)
+            unrelated = staging / "current-service-marker"
+            unrelated.write_text("running")
+            real_stat = os.stat
+            def owned(path, *args, **kwargs):
+                result = real_stat(path, *args, **kwargs)
+                if str(path) == str(staging):
+                    fields = list(result)
+                    fields[4] = 0
+                    return os.stat_result(fields)
+                return result
+            diagnostics = io.StringIO()
+            with patch.object(command.os, "stat", side_effect=owned), patch.object(
+                command, "deploy"
+            ) as deployment, redirect_stderr(diagnostics):
+                with self.assertRaises(TimeoutError):
+                    command.stage_artifact(SHA, metadata, InterruptedStream(), staging)
+                deployment.assert_not_called()
+            self.assertIn("failed after 4/9 bytes", diagnostics.getvalue())
+            self.assertEqual(unrelated.read_text(), "running")
+            self.assertEqual(list(staging.iterdir()), [unrelated])
+
+    def test_broken_stderr_preserves_upload_error_and_partial_cleanup(self):
+        metadata = {"size": 9, "expectedDigest": "sha256:" + "0" * 64, "sha": SHA}
+        class InterruptedStream:
+            def __init__(self):
+                self.calls = 0
+            def read(self, size):
+                self.calls += 1
+                if self.calls == 1:
+                    return b"1234"
+                raise TimeoutError("original upload timeout")
+        class BrokenStderr:
+            def write(self, value):
+                raise BrokenPipeError("SSH disconnected")
+            def flush(self):
+                raise BrokenPipeError("SSH disconnected")
+        with tempfile.TemporaryDirectory() as folder:
+            staging = Path(folder)
+            unrelated = staging / "current-service-marker"
+            unrelated.write_text("running")
+            real_stat = os.stat
+            def owned(path, *args, **kwargs):
+                result = real_stat(path, *args, **kwargs)
+                if str(path) == str(staging):
+                    fields = list(result)
+                    fields[4] = 0
+                    return os.stat_result(fields)
+                return result
+            with patch.object(command.os, "stat", side_effect=owned), patch.object(
+                command.sys, "stderr", BrokenStderr()
+            ):
+                with self.assertRaisesRegex(TimeoutError, "original upload timeout"):
+                    command.stage_artifact(SHA, metadata, InterruptedStream(), staging)
+            self.assertEqual(unrelated.read_text(), "running")
+            self.assertEqual(list(staging.iterdir()), [unrelated])
+
     def test_protocol_rejects_commands_and_duplicate_fields(self):
         self.assertEqual(command.read_request(io.BytesIO(json.dumps({"sha": SHA, "artifactId": 7}).encode() + b"\n")),
                          {"sha": SHA, "artifactId": 7})

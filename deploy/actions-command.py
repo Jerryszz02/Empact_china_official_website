@@ -14,6 +14,7 @@ import re
 import signal
 import subprocess
 import sys
+import time
 from datetime import datetime
 
 ROOT = Path("/srv/empact")
@@ -21,6 +22,8 @@ STAGING = ROOT / "staging"
 MIN_FREE_BYTES = 3 * 1024 ** 3
 MIN_FREE_INODES = 150000
 PRUNE = Path("/usr/local/lib/empact/prune-build-cache.py")
+UPLOAD_BUDGET_SECONDS = 30 * 60
+PROGRESS_INTERVAL_BYTES = 32 * 1024 * 1024
 
 
 def _load(name, alias):
@@ -80,6 +83,15 @@ def check_capacity(root, incoming_size):
         raise ValueError("insufficient disk headroom for artifact reception and deployment")
 
 
+def upload_log(message):
+    # SSH may disconnect while the trusted receiver still needs to remove its
+    # partial archive. Diagnostics must never interrupt that cleanup.
+    try:
+        print(message, file=sys.stderr, flush=True)
+    except (OSError, ValueError):
+        pass
+
+
 def stage_artifact(sha, metadata, stream, staging=STAGING):
     staging = Path(staging)
     if staging.is_symlink() or not staging.is_dir() or os.stat(str(staging)).st_uid != 0:
@@ -91,18 +103,30 @@ def stage_artifact(sha, metadata, stream, staging=STAGING):
         if path.exists() or path.is_symlink():
             raise ValueError("artifact staging path already exists")
     digest = hashlib.sha256()
-    remaining = metadata["size"]
+    expected_size = metadata["size"]
+    remaining = expected_size
+    received = 0
+    next_report = PROGRESS_INTERVAL_BYTES
+    started = time.monotonic()
     installed_zip = False
     try:
+        upload_log("Receiving artifact: 0/{} bytes".format(expected_size))
         descriptor = os.open(str(temporary), os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
         with os.fdopen(descriptor, "wb") as output:
             while remaining:
                 chunk = stream.read(min(1024 * 1024, remaining))
                 if not chunk:
                     raise ValueError("short artifact upload")
+                output.write(chunk)
+                received += len(chunk)
                 remaining -= len(chunk)
                 digest.update(chunk)
-                output.write(chunk)
+                if received >= next_report:
+                    upload_log("Artifact received: {}/{} bytes in {:.1f}s".format(
+                        received, expected_size, time.monotonic() - started))
+                    next_report += PROGRESS_INTERVAL_BYTES
+            upload_log("Artifact received: {}/{} bytes in {:.1f}s; awaiting input EOF".format(
+                received, expected_size, time.monotonic() - started))
             if stream.read(1):
                 raise ValueError("artifact upload has trailing bytes")
             output.flush()
@@ -118,6 +142,8 @@ def stage_artifact(sha, metadata, stream, staging=STAGING):
         os.chmod(str(final_metadata), 0o600)
         return final_zip
     except BaseException:
+        upload_log("Artifact reception failed after {}/{} bytes in {:.1f}s".format(
+            received, expected_size, time.monotonic() - started))
         if temporary.exists():
             temporary.unlink()
         if installed_zip:
@@ -140,7 +166,7 @@ def prepare_artifact(request, stream, deploy_lock):
 
 
 def upload_timeout(signum, frame):
-    raise TimeoutError("artifact upload timed out")
+    raise TimeoutError("artifact upload timed out after {} seconds".format(UPLOAD_BUDGET_SECONDS))
 
 
 def deploy(sha):
@@ -191,7 +217,7 @@ def main():
         if os.geteuid() != 0:
             raise ValueError("restricted deployment entrypoint must run as root")
         signal.signal(signal.SIGALRM, upload_timeout)
-        signal.alarm(600)
+        signal.alarm(UPLOAD_BUDGET_SECONDS)
         request = read_request(sys.stdin.buffer)
         with open("/run/lock/empact-actions.lock", "w") as lock:
             fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
@@ -201,10 +227,10 @@ def main():
             signal.alarm(0)
             return deploy(request["sha"])
     except gate.SupersededError as error:
-        print(str(error), file=sys.stderr)
+        upload_log(str(error))
         return 3
     except (ValueError, OSError, gate.GateError, subprocess.CalledProcessError) as error:
-        print(str(error), file=sys.stderr)
+        upload_log(str(error))
         return 1
     finally:
         signal.alarm(0)
