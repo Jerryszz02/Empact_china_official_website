@@ -186,11 +186,11 @@ def stage_artifact(sha, metadata, stream, staging=STAGING):
             raise ValueError("artifact upload digest mismatch")
         os.replace(str(temporary), str(final_zip))
         installed_zip = True
-        with open(str(final_metadata), "x") as output:
+        metadata_fd = os.open(str(final_metadata), os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
+        with os.fdopen(metadata_fd, "w") as output:
             json.dump(metadata, output, sort_keys=True)
             output.flush()
             os.fsync(output.fileno())
-        os.chmod(str(final_metadata), 0o600)
         return final_zip
     except BaseException:
         upload_log("Artifact reception failed after {}/{} bytes in {:.1f}s".format(
