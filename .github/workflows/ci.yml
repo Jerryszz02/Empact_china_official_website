@@ -52,7 +52,24 @@ jobs:
           python3 tests/deploy-preflight.test.py
           python3 tests/deploy-prune.test.py
           python3 tests/deploy-schema.test.py
+          python3 tests/deploy-artifact.test.py
+          python3 tests/deploy-flow.test.py
           bash -n deploy/deploy.sh
+          bash -n deploy/install-tools.sh
+          bash -n deploy/smoke-runtime.sh
+      - name: Package the checked runtime
+        run: python3 deploy/runtime-artifact.py pack "$GITHUB_SHA" "$RUNNER_TEMP/empact-runtime.tar.gz"
+      - name: Verify relocated runtime without installing or rebuilding CMS
+        run: bash deploy/smoke-runtime.sh "$RUNNER_TEMP/empact-runtime.tar.gz"
+      - name: Store approved main runtime
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: actions/upload-artifact@v4
+        with:
+          name: empact-runtime-${{ github.sha }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/empact-runtime.tar.gz
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 3
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
