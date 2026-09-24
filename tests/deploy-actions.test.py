@@ -217,6 +217,41 @@ class RestrictedCommandTests(unittest.TestCase):
             self.assertEqual(unrelated.read_text(), "running")
             self.assertEqual(list(staging.iterdir()), [unrelated])
 
+    def test_broken_stderr_preserves_upload_error_and_partial_cleanup(self):
+        metadata = {"size": 9, "expectedDigest": "sha256:" + "0" * 64, "sha": SHA}
+        class InterruptedStream:
+            def __init__(self):
+                self.calls = 0
+            def read(self, size):
+                self.calls += 1
+                if self.calls == 1:
+                    return b"1234"
+                raise TimeoutError("original upload timeout")
+        class BrokenStderr:
+            def write(self, value):
+                raise BrokenPipeError("SSH disconnected")
+            def flush(self):
+                raise BrokenPipeError("SSH disconnected")
+        with tempfile.TemporaryDirectory() as folder:
+            staging = Path(folder)
+            unrelated = staging / "current-service-marker"
+            unrelated.write_text("running")
+            real_stat = os.stat
+            def owned(path, *args, **kwargs):
+                result = real_stat(path, *args, **kwargs)
+                if str(path) == str(staging):
+                    fields = list(result)
+                    fields[4] = 0
+                    return os.stat_result(fields)
+                return result
+            with patch.object(command.os, "stat", side_effect=owned), patch.object(
+                command.sys, "stderr", BrokenStderr()
+            ):
+                with self.assertRaisesRegex(TimeoutError, "original upload timeout"):
+                    command.stage_artifact(SHA, metadata, InterruptedStream(), staging)
+            self.assertEqual(unrelated.read_text(), "running")
+            self.assertEqual(list(staging.iterdir()), [unrelated])
+
     def test_protocol_rejects_commands_and_duplicate_fields(self):
         self.assertEqual(command.read_request(io.BytesIO(json.dumps({"sha": SHA, "artifactId": 7}).encode() + b"\n")),
                          {"sha": SHA, "artifactId": 7})

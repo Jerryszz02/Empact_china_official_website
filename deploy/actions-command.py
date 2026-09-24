@@ -83,6 +83,15 @@ def check_capacity(root, incoming_size):
         raise ValueError("insufficient disk headroom for artifact reception and deployment")
 
 
+def upload_log(message):
+    # SSH may disconnect while the trusted receiver still needs to remove its
+    # partial archive. Diagnostics must never interrupt that cleanup.
+    try:
+        print(message, file=sys.stderr, flush=True)
+    except (OSError, ValueError):
+        pass
+
+
 def stage_artifact(sha, metadata, stream, staging=STAGING):
     staging = Path(staging)
     if staging.is_symlink() or not staging.is_dir() or os.stat(str(staging)).st_uid != 0:
@@ -101,7 +110,7 @@ def stage_artifact(sha, metadata, stream, staging=STAGING):
     started = time.monotonic()
     installed_zip = False
     try:
-        print("Receiving artifact: 0/{} bytes".format(expected_size), file=sys.stderr, flush=True)
+        upload_log("Receiving artifact: 0/{} bytes".format(expected_size))
         descriptor = os.open(str(temporary), os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
         with os.fdopen(descriptor, "wb") as output:
             while remaining:
@@ -113,11 +122,11 @@ def stage_artifact(sha, metadata, stream, staging=STAGING):
                 remaining -= len(chunk)
                 digest.update(chunk)
                 if received >= next_report:
-                    print("Artifact received: {}/{} bytes in {:.1f}s".format(
-                        received, expected_size, time.monotonic() - started), file=sys.stderr, flush=True)
+                    upload_log("Artifact received: {}/{} bytes in {:.1f}s".format(
+                        received, expected_size, time.monotonic() - started))
                     next_report += PROGRESS_INTERVAL_BYTES
-            print("Artifact received: {}/{} bytes in {:.1f}s; awaiting input EOF".format(
-                received, expected_size, time.monotonic() - started), file=sys.stderr, flush=True)
+            upload_log("Artifact received: {}/{} bytes in {:.1f}s; awaiting input EOF".format(
+                received, expected_size, time.monotonic() - started))
             if stream.read(1):
                 raise ValueError("artifact upload has trailing bytes")
             output.flush()
@@ -133,8 +142,8 @@ def stage_artifact(sha, metadata, stream, staging=STAGING):
         os.chmod(str(final_metadata), 0o600)
         return final_zip
     except BaseException:
-        print("Artifact reception failed after {}/{} bytes in {:.1f}s".format(
-            received, expected_size, time.monotonic() - started), file=sys.stderr, flush=True)
+        upload_log("Artifact reception failed after {}/{} bytes in {:.1f}s".format(
+            received, expected_size, time.monotonic() - started))
         if temporary.exists():
             temporary.unlink()
         if installed_zip:
@@ -218,10 +227,10 @@ def main():
             signal.alarm(0)
             return deploy(request["sha"])
     except gate.SupersededError as error:
-        print(str(error), file=sys.stderr)
+        upload_log(str(error))
         return 3
     except (ValueError, OSError, gate.GateError, subprocess.CalledProcessError) as error:
-        print(str(error), file=sys.stderr)
+        upload_log(str(error))
         return 1
     finally:
         signal.alarm(0)
