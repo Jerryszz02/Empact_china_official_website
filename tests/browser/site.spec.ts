@@ -427,6 +427,9 @@ test("footer is compact and uses the transparent white logo", async ({
   await expect(
     footer.getByRole("link", { name: "沪ICP备2026002363号-2" }),
   ).toHaveAttribute("href", "https://beian.miit.gov.cn/");
+  await expect(
+    footer.getByRole("link", { name: "沪公网安备31010402337130号" }),
+  ).toHaveAttribute("href", "https://beian.mps.gov.cn/");
 
   // China and Singapore social links open the official accounts in a safe new tab.
   for (const [name, href] of [
@@ -480,9 +483,10 @@ test("footer is compact and uses the transparent white logo", async ({
   ).toBe(true);
 
   const bounds = await footer.boundingBox();
-  // Social accounts use their own two-column row on narrow screens.
+  // Social accounts use their own two-column row on narrow screens; the legal
+  // row wraps to a second line for the public security record link.
   expect(bounds!.height).toBeLessThan(
-    testInfo.project.name === "mobile" ? 380 : 220,
+    testInfo.project.name === "mobile" ? 420 : 220,
   );
 
   expect(
