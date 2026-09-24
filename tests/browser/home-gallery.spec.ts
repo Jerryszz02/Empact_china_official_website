@@ -140,6 +140,7 @@ test("film gallery preserves motion and wheel paging at a 700px desktop height",
   await expect(page.locator("html")).toHaveAttribute(
     "data-home-intro",
     "ready",
+    { timeout: 8_000 },
   );
   expect(
     await page.locator("#brand").evaluate((node) => node.scrollHeight),
@@ -218,6 +219,8 @@ for (const style of ["photos", "film"]) {
       await expect(page.locator("html")).toHaveAttribute(
         "data-home-intro",
         "ready",
+        // The intro lasts 4.6s after assets load; match the motion suite budget.
+        { timeout: 8_000 },
       );
       await expect(page.locator("html")).not.toHaveClass(/motion-overflow/);
       await expect(page.locator("#brand")).not.toContainText(
