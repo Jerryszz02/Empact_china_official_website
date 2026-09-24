@@ -248,7 +248,7 @@ test("redesign remains readable at narrow and large widths with reduced motion",
   for (const width of [320, 768, 820, 1024, 1920]) {
     await page.setViewportSize({ width, height: 900 });
     await page.goto("/");
-    await expect(page.locator("h1")).toContainText(/赋能更大的\s*影响力/);
+    await expect(page.locator("h1")).toContainText("empowering greater impact");
     const title = page.locator("h1");
     const bounds = await title.boundingBox();
     expect(bounds!.x).toBeGreaterThanOrEqual(0);
