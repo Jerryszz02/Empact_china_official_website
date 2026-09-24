@@ -205,14 +205,17 @@ class DownloadTests(unittest.TestCase):
                          {"artifact-" + SHA + ".zip", "artifact-" + SHA + ".json"})
 
     def test_expired_url_preserves_prior_verified_ranges(self):
-        with self.assertRaises(ValueError):
-            self.staged(fault="short")
-        checkpoint = json.loads((self.staging / command.RESUME_STATE).read_text())
-        self.assertGreater(sum(checkpoint["offsets"]), 0)
-        with self.assertRaisesRegex(ValueError, "HTTP status 403"):
-            self.staged(fault="403")
-        self.assertEqual(json.loads((self.staging / command.RESUME_STATE).read_text()), checkpoint)
-        self.assertEqual(self.staged().read_bytes(), self.content)
+        # A single unfinished range makes the reported failure deterministic:
+        # with eight workers, a peer cancelled by the 403 can finish first.
+        with mock.patch.object(command, "DOWNLOAD_WORKERS", 1):
+            with self.assertRaises(ValueError):
+                self.staged(fault="short")
+            checkpoint = json.loads((self.staging / command.RESUME_STATE).read_text())
+            self.assertGreater(sum(checkpoint["offsets"]), 0)
+            with self.assertRaisesRegex(ValueError, "HTTP status 403"):
+                self.staged(fault="403")
+            self.assertEqual(json.loads((self.staging / command.RESUME_STATE).read_text()), checkpoint)
+            self.assertEqual(self.staged().read_bytes(), self.content)
 
     def test_corrupt_checkpoint_discards_only_fixed_cache_then_redownloads(self):
         with self.assertRaises(ValueError):

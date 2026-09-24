@@ -702,9 +702,11 @@ def _excluded_dependency_roots(root):
         index = len(parts) - 1 - parts[::-1].index("node_modules")
         name = "/".join(parts[index + 1:])
         libc = package.get("libc", [])
+        # Some optional native packages omit libc from package-lock metadata.
+        musl_variant = name.endswith(("-linux-x64-musl", "-linuxmusl-x64"))
         # Next's PHASE_PRODUCTION_SERVER skips loadBindings. SWC belongs to
         # the CI build; Astro's compiler, esbuild, and GNU bindings stay here.
-        if (name in tools or name.startswith("@next/swc-") or package.get("dev") is True or
+        if (name in tools or name.startswith("@next/swc-") or package.get("dev") is True or musl_variant or
                 (libc and "glibc" not in libc)):
             excluded.add(relative)
     return excluded

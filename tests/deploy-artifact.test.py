@@ -383,7 +383,8 @@ class LayeredRuntimeTests(unittest.TestCase):
             command = self.fixture(root)
             packages = {
                 "node_modules/@playwright/test": {"devOptional": True},
-                "node_modules/@rolldown/binding-linux-x64-musl": {"libc": ["musl"]},
+                "node_modules/@rolldown/binding-linux-x64-musl": {"optional": True},
+                "node_modules/@img/sharp-linuxmusl-x64": {"optional": True},
                 "node_modules/@rolldown/binding-linux-x64-gnu": {"libc": ["glibc"]},
                 "node_modules/@next/swc-linux-x64-gnu": {"libc": ["glibc"]},
                 "node_modules/prettier": {},
@@ -404,6 +405,7 @@ class LayeredRuntimeTests(unittest.TestCase):
             self.assertNotIn("node_modules/.bin/playwright", deps)
             self.assertNotIn("node_modules/@playwright/test/cli.js", deps)
             self.assertNotIn("node_modules/@rolldown/binding-linux-x64-musl/cli.js", deps)
+            self.assertNotIn("node_modules/@img/sharp-linuxmusl-x64/cli.js", deps)
             self.assertIn("node_modules/@rolldown/binding-linux-x64-gnu/cli.js", deps)
             self.assertNotIn("node_modules/@next/swc-linux-x64-gnu/cli.js", deps)
             self.assertIn("node_modules/prettier/cli.js", deps)
