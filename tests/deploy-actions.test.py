@@ -155,7 +155,7 @@ class PublicVerificationTests(unittest.TestCase):
 
 class RestrictedCommandTests(unittest.TestCase):
     def test_upload_budget_and_progress_are_bounded_and_visible(self):
-        self.assertEqual(command.UPLOAD_BUDGET_SECONDS, 30 * 60)
+        self.assertEqual(command.UPLOAD_BUDGET_SECONDS, 60 * 60)
         content = b"123456789"
         metadata = {"size": len(content), "expectedDigest": "sha256:" + hashlib.sha256(content).hexdigest(), "sha": SHA}
         class ChunkStream(io.BytesIO):

@@ -22,7 +22,7 @@ STAGING = ROOT / "staging"
 MIN_FREE_BYTES = 3 * 1024 ** 3
 MIN_FREE_INODES = 150000
 PRUNE = Path("/usr/local/lib/empact/prune-build-cache.py")
-UPLOAD_BUDGET_SECONDS = 30 * 60
+UPLOAD_BUDGET_SECONDS = 60 * 60
 PROGRESS_INTERVAL_BYTES = 32 * 1024 * 1024
 
 
