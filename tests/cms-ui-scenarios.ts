@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { chromium, expect } from "@playwright/test";
+import { verifyBusinessOrderBoard } from "./business-order-ui-scenarios.js";
 import { serializeLexicalBody } from "../apps/cms/src/cms-data.js";
 
 export async function verifyCmsUI({
@@ -265,24 +266,15 @@ export async function verifyCmsUI({
     assert.ok(youthFirst?.live && youthSecond?.live);
     await page.goto(base + "/admin#business-types");
     const businessRow = (title: string) =>
-      page.locator(".case-row").filter({
+      page.locator(".business-card").filter({
         has: page.getByRole("heading", { name: title, exact: true }),
       });
-    await expect(businessRow(model.title)).toHaveCount(0);
-    for (const [business, order] of [
-      [youthFirst, 1000],
-      [youthSecond, -1000],
-    ] as const) {
-      const row = businessRow(business.title);
-      await row.getByLabel("展示顺序").fill(String(order));
-      await row.getByRole("button", { name: "保存排序" }).click();
-      await expect
-        .poll(async () => (await request(`/api/content/${business.id}`)).order)
-        .toBe(order);
-      await expect(page.locator(".admin-notice")).toContainText(
-        "排序已保存到草稿",
-      );
-    }
+    await verifyBusinessOrderBoard({
+      page,
+      request,
+      firstId: youthFirst.id,
+      secondId: youthSecond.id,
+    });
     await page.goto(base + "/youth/");
     await expect(page.locator("#nav-youth a").first()).toHaveAttribute(
       "href",
@@ -546,27 +538,60 @@ export async function verifyCmsUI({
       fullPage: true,
     });
     await page.goto(base + "/admin#business-types");
-    const mobileOrder = page.locator(".case-row").filter({
-      has: page.getByRole("heading", { name: youthFirst.title, exact: true }),
-    });
-    await mobileOrder.getByLabel("展示顺序").fill("999");
-    await mobileOrder.getByRole("button", { name: "保存排序" }).click();
+    const mobileOrder = businessRow(youthFirst.title);
+    const youthRows = page
+      .getByRole("region", { name: "青少年与青年", exact: true })
+      .locator("[data-business-id]");
+    const beforeMobileMove = await youthRows.evaluateAll((rows) =>
+      rows.map((row) => row.getAttribute("data-business-id")),
+    );
+    await mobileOrder.getByRole("button", { name: /^上移 / }).click();
+    const expectedMobileOrder = [...beforeMobileMove];
+    const position = expectedMobileOrder.indexOf(youthFirst.id);
+    [expectedMobileOrder[position - 1], expectedMobileOrder[position]] = [
+      expectedMobileOrder[position],
+      expectedMobileOrder[position - 1],
+    ];
     await expect
-      .poll(async () => (await request(`/api/content/${youthFirst.id}`)).order)
-      .toBe(999);
+      .poll(() =>
+        youthRows.evaluateAll((rows) =>
+          rows.map((row) => row.getAttribute("data-business-id")),
+        ),
+      )
+      .toEqual(expectedMobileOrder);
     await expect(page.locator(".admin-notice")).toContainText(
       "排序已保存到草稿",
     );
+    const mobileColumns = await page
+      .locator(".business-column")
+      .evaluateAll((columns) =>
+        columns.map((column) => ({
+          x: column.getBoundingClientRect().x,
+          y: column.getBoundingClientRect().y,
+        })),
+      );
+    assert.ok(
+      mobileColumns.every(
+        (column, index) =>
+          column.x === mobileColumns[0].x &&
+          (index === 0 || column.y > mobileColumns[index - 1].y),
+      ),
+      "mobile categories stack in one column",
+    );
+    await page.screenshot({
+      path: "test-results/cms-business-order-mobile.png",
+      fullPage: true,
+    });
     assert.equal(
       await page.evaluate(
         () => document.documentElement.scrollWidth <= window.innerWidth,
       ),
       true,
-      "mobile business order form overflows",
+      "mobile business order board overflows",
     );
     assert.deepEqual(errors, []);
     console.log(
-      "PASS: four admin workflows, project business/name filters and reset on desktop/mobile, school/community business creation, required/optional fields, selected business, drafts/published transitions, external details, editor and mobile admin.",
+      "PASS: four-column sorting, arrow and native drag moves, fixed/edge guards, save failure, persistence and publication isolation; four admin workflows, project business/name filters and reset on desktop/mobile, school/community business creation, required/optional fields, selected business, drafts/published transitions, external details, editor and mobile admin.",
     );
   } catch (error) {
     await page.screenshot({

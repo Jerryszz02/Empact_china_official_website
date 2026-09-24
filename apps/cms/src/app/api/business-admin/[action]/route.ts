@@ -5,6 +5,7 @@ import {
   businessAdminState,
   type BusinessAdminAction,
 } from "../../../../business-admin.js";
+import { reorderBusiness } from "../../../../business-order.js";
 
 export const dynamic = "force-dynamic";
 const headers = {
@@ -39,15 +40,21 @@ export async function POST(
   if (origin !== new URL(process.env.CMS_URL || "http://127.0.0.1:3000").origin)
     return Response.json({ error: "请求来源无效。" }, { status: 403, headers });
   const { action } = await context.params;
-  if (!["preview", "publish", "unpublish", "delete"].includes(action))
+  if (
+    !["preview", "publish", "unpublish", "delete", "reorder"].includes(action)
+  )
     return Response.json({ error: "操作不存在。" }, { status: 404, headers });
   try {
     const body = (await request.json()) as {
       id?: unknown;
       confirmed?: unknown;
+      targetIndex?: unknown;
+      expected?: unknown;
     };
     if (typeof body.id !== "string" || !body.id)
       throw new Error("缺少内容 ID。");
+    if (action === "reorder")
+      return Response.json(await reorderBusiness(payload, body), { headers });
     if (action !== "preview" && body.confirmed !== true)
       throw new Error("请先勾选确认本次操作。");
     return Response.json(
