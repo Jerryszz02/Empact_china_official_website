@@ -1,19 +1,16 @@
+import {
+  config,
+  getPayload,
+  directory,
+  env,
+  Media,
+} from "./helpers/cms-runtime.js";
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
-import {
-  mkdtemp,
-  mkdir,
-  readFile,
-  rm,
-  writeFile,
-  access,
-  readdir,
-} from "node:fs/promises";
-import { tmpdir } from "node:os";
+import { readFile, writeFile, access, readdir } from "node:fs/promises";
 import { join, resolve } from "node:path";
-import { randomBytes } from "node:crypto";
 import sharp from "sharp";
 import { frameworkSnapshot } from "./helpers/content-fixture.js";
 import { validateSnapshot, type Snapshot } from "@empact/content/schema";
@@ -53,39 +50,14 @@ function liveFixture(): Snapshot {
 }
 
 test("saved homepage photos flow through draft, preview selection, publication and media copy", async () => {
-  const directory = await mkdtemp(join(tmpdir(), "empact-gallery-"));
   const cms = resolve("apps/cms");
-  const previous = Object.fromEntries(
-    [
-      "NODE_ENV",
-      "PAYLOAD_SECRET",
-      "DATABASE_URL",
-      "MEDIA_DIR",
-      "CMS_DEV_SCHEMA_PUSH",
-    ].map((key) => [key, process.env[key]]),
-  );
-  const env = {
-    ...process.env,
-    NODE_ENV: "production" as const,
-    PAYLOAD_SECRET: randomBytes(48).toString("hex"),
-    DATABASE_URL: `file:${join(directory, "cms.sqlite")}`,
-    MEDIA_DIR: join(directory, "media"),
-    CMS_DEV_SCHEMA_PUSH: "false",
-  };
   let payload: { destroy?: () => Promise<void> } | undefined;
   try {
-    await mkdir(env.MEDIA_DIR, { recursive: true });
     await execute(
       process.execPath,
       ["--import", "tsx", "payload.mjs", "migrate"],
       { cwd: cms, env, timeout: 60_000 },
     );
-    Object.assign(process.env, env);
-    const [{ getPayload }, { default: config }, { Media }] = await Promise.all([
-      import("../apps/cms/node_modules/payload/dist/index.js"),
-      import("../apps/cms/payload.config.js"),
-      import("../apps/cms/src/collections.js"),
-    ]);
     payload = await getPayload({ config });
     const png = await sharp({
       create: { width: 40, height: 30, channels: 3, background: "#087e80" },
@@ -202,10 +174,5 @@ test("saved homepage photos flow through draft, preview selection, publication a
     );
   } finally {
     await payload?.destroy?.();
-    for (const [key, value] of Object.entries(previous)) {
-      if (value === undefined) delete process.env[key];
-      else process.env[key] = value;
-    }
-    await rm(directory, { recursive: true, force: true });
   }
 });

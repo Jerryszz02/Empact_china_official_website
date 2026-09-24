@@ -1,10 +1,8 @@
+import { config, getPayload, env } from "./helpers/cms-runtime.js";
 import test from "node:test";
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
-import { randomBytes } from "node:crypto";
-import { mkdtemp, rm } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { resolve } from "node:path";
 import { promisify } from "node:util";
 import { reorderBusiness } from "../apps/cms/src/business-order.js";
 import { htmlToLexical } from "../apps/cms/src/content-migration.js";
@@ -346,23 +344,6 @@ test("a failed multi-row normalization rolls back all updates", async () => {
 });
 
 test("SQLite commits a normalized group and rolls back a failed batch", async () => {
-  const directory = await mkdtemp(join(tmpdir(), "empact-reorder-"));
-  const keys = [
-    "NODE_ENV",
-    "PAYLOAD_SECRET",
-    "DATABASE_URL",
-    "CMS_DEV_SCHEMA_PUSH",
-  ] as const;
-  const previous = Object.fromEntries(
-    keys.map((key) => [key, process.env[key]]),
-  );
-  const env = {
-    ...process.env,
-    NODE_ENV: "production" as const,
-    PAYLOAD_SECRET: randomBytes(48).toString("hex"),
-    DATABASE_URL: `file:${join(directory, "cms.sqlite")}`,
-    CMS_DEV_SCHEMA_PUSH: "false",
-  };
   let payload: any;
   try {
     await promisify(execFile)(
@@ -374,11 +355,6 @@ test("SQLite commits a normalized group and rolls back a failed batch", async ()
         timeout: 60_000,
       },
     );
-    Object.assign(process.env, env);
-    const [{ getPayload }, { default: config }] = await Promise.all([
-      import("../apps/cms/node_modules/payload/dist/index.js"),
-      import("../apps/cms/payload.config.js"),
-    ]);
     payload = await getPayload({ config });
     const create = async (slug: string, order: number, segment = "youth") =>
       payload.create({
@@ -463,10 +439,5 @@ test("SQLite commits a normalized group and rolls back a failed batch", async ()
     );
   } finally {
     await payload?.destroy?.();
-    for (const [key, value] of Object.entries(previous)) {
-      if (value === undefined) delete process.env[key];
-      else process.env[key] = value;
-    }
-    await rm(directory, { recursive: true, force: true });
   }
 });

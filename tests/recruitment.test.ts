@@ -1,11 +1,9 @@
+import { config, getPayload, env } from "./helpers/cms-runtime.js";
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
-import { mkdtemp, rm } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
-import { randomBytes } from "node:crypto";
+import { resolve } from "node:path";
 import { frameworkSnapshot } from "./helpers/content-fixture.js";
 import { exampleRecruitment } from "@empact/content/recruitment";
 import { validateSnapshot, type Snapshot } from "@empact/content/schema";
@@ -104,20 +102,7 @@ test("selective recruitment publication preserves other live content and removes
 });
 
 test("recruitment migration and CMS draft preserve editable examples", async () => {
-  const directory = await mkdtemp(join(tmpdir(), "empact-recruitment-"));
   const cms = resolve("apps/cms");
-  const previous = Object.fromEntries(
-    ["NODE_ENV", "PAYLOAD_SECRET", "DATABASE_URL", "CMS_DEV_SCHEMA_PUSH"].map(
-      (key) => [key, process.env[key]],
-    ),
-  );
-  const env = {
-    ...process.env,
-    NODE_ENV: "production" as const,
-    PAYLOAD_SECRET: randomBytes(48).toString("hex"),
-    DATABASE_URL: `file:${join(directory, "cms.sqlite")}`,
-    CMS_DEV_SCHEMA_PUSH: "false",
-  };
   let payload: { destroy?: () => Promise<void> } | undefined;
   try {
     await execute(
@@ -129,11 +114,6 @@ test("recruitment migration and CMS draft preserve editable examples", async () 
         timeout: 60_000,
       },
     );
-    Object.assign(process.env, env);
-    const [{ getPayload }, { default: config }] = await Promise.all([
-      import("../apps/cms/node_modules/payload/dist/index.js"),
-      import("../apps/cms/payload.config.js"),
-    ]);
     payload = await getPayload({ config });
     assert.deepEqual(
       (await readDraftSnapshot(payload as any)).recruitment,
@@ -185,10 +165,5 @@ test("recruitment migration and CMS draft preserve editable examples", async () 
     assert.equal(edited.recruitment?.jobs[0].isExample, false);
   } finally {
     await payload?.destroy?.();
-    for (const [key, value] of Object.entries(previous)) {
-      if (value === undefined) delete process.env[key];
-      else process.env[key] = value;
-    }
-    await rm(directory, { recursive: true, force: true });
   }
 });

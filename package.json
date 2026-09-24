@@ -18,7 +18,7 @@
     "build": "npm run build -w @empact/site",
     "build:cms": "npm run build -w @empact/cms",
     "check": "tsc --noEmit && npm run check -w @empact/site && npm run check -w @empact/cms",
-    "test": "tsx --test tests/*.test.ts",
+    "test": "tsx --test --test-concurrency=1 tests/*.test.ts",
     "verify": "npm run check && npm test && npm run build:preview && SITE_MODE=preview npm run check:output && npm run build:cms && npm run test:cms && npm run test:dev && npm run test:browser",
     "build:preview": "SITE_MODE=preview npm run build -w @empact/site",
     "serve": "tsx --env-file=.env scripts/public-server.ts",
