@@ -689,7 +689,9 @@ def _pack_layer(paths, root, output, manifest, manifest_name):
 
 def _excluded_dependency_roots(root):
     """npm retains installed optional peers and other libc variants on prune."""
-    tools = {"@playwright/test", "playwright", "playwright-core", "prettier",
+    # Payload's migration CLI imports json-schema-to-typescript, which loads
+    # Prettier at runtime. Keep production transitive dependencies intact.
+    tools = {"@playwright/test", "playwright", "playwright-core",
              "prettier-plugin-astro", "@astrojs/check"}
     lock = json.loads((root / "package-lock.json").read_text())
     excluded = set()

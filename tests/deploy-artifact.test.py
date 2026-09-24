@@ -386,6 +386,8 @@ class LayeredRuntimeTests(unittest.TestCase):
                 "node_modules/@rolldown/binding-linux-x64-musl": {"libc": ["musl"]},
                 "node_modules/@rolldown/binding-linux-x64-gnu": {"libc": ["glibc"]},
                 "node_modules/@next/swc-linux-x64-gnu": {"libc": ["glibc"]},
+                "node_modules/prettier": {},
+                "node_modules/prettier-plugin-astro": {"dev": True},
                 "node_modules/pkg": {},
             }
             (root / "package-lock.json").write_text(json.dumps({"packages": packages}))
@@ -404,6 +406,8 @@ class LayeredRuntimeTests(unittest.TestCase):
             self.assertNotIn("node_modules/@rolldown/binding-linux-x64-musl/cli.js", deps)
             self.assertIn("node_modules/@rolldown/binding-linux-x64-gnu/cli.js", deps)
             self.assertNotIn("node_modules/@next/swc-linux-x64-gnu/cli.js", deps)
+            self.assertIn("node_modules/prettier/cli.js", deps)
+            self.assertNotIn("node_modules/prettier-plugin-astro/cli.js", deps)
             self.assertIn("node_modules/.bin/app-command", deps)
             self.assertIn("node_modules/@empact/content", deps)
 
