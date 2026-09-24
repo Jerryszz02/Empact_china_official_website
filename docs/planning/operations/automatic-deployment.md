@@ -4,7 +4,7 @@
 
 目标入口为 GitHub Actions 的 **Deploy production**（`.github/workflows/deploy.yml`）。`main` 的 **Website checks** 成功后触发，也可从 Actions 的 Run workflow 手动重试；手动运行只允许选择 `main`。PR 检查、其他分支以及其他仓库的事件不能触发生产部署。
 
-工作流新增后，维护人须完成下文的受限 SSH 配置和服务安装，再关闭原来的 `empact-deploy.timer`。仅合并工作流不表示服务器已切换。迁移前的旧入口是服务器每轮结束后约 5 分钟、另加最多 20 秒随机延迟轮询 GitHub。
+生产只有 GitHub Actions 一个主动部署入口。旧 `empact-deploy.timer` 必须保持 disabled/inactive；受信安装器升级时再次停用它。ECS 的 `empact-release@<SHA>.service` 是 Actions 调用的执行器，不独立轮询或重复部署。仅合并代码不表示服务器上的受信安装器已升级。
 
 Actions 展示目标提交、对应 CI、服务器部署日志、公网验收和最终结果。工作流通过 GitHub Deployments API 显式记录实际目标 SHA，避免把 `workflow_run` 事件的默认分支 SHA 误当成已部署版本。部署成功需要服务器健康检查及 Actions 独立公网验收均通过；主分支检查成功不等于已上线。
 
@@ -30,17 +30,27 @@ Actions 展示目标提交、对应 CI、服务器部署日志、公网验收和
 
 ## 服务器发布与回退
 
-受限入口启动 `empact-release@<完整 SHA>.service`，调用固定安装路径 `/usr/local/lib/empact/deploy.sh`。部署进程由 systemd 管理，SSH 断线不会把版本切换截断。服务限时 15 分钟、`MemoryMax=1400M`；构建以 `empact` 用户运行，默认 Node 堆 768 MB，服务器保留约 2 GB 持久化 swap。
+`Website checks` 在同一次安装依赖、CMS 构建和完整测试之后，用 `runtime-artifact.py pack` 打包已验证的源码、工作区依赖、内容发布器和 CMS `.next`。包不包含 `.env`、业务数据库、媒体数据或预览站点输出。CI 将包解到另一个目录，以新建测试库启动 CMS 并运行内容构建，验证程序可迁移且采用运行时配置。Linux x64/Node 22 和原生依赖的 GLIBC 2.32 上限检查用于匹配当前 ECS；服务器还会在维护前实际加载 sharp、SQLite 和 esbuild。
 
-发布安装不可变代码目录 `/srv/empact/code/<SHA>`。候选版本的 CMS 变化必须匹配仓库中的精确迁移计划；不执行 schema push、全量 Payload migration、reset 或 seed。生产库继承的 `dev / -1` 迁移记录保持不变，自动增量不伪造旧迁移已完成记录。该库的升级依据是受保护代码指纹、精确 SQL 对象定义和部署回执；不要对它直接执行原生 Payload `migrate`、`migrate:rollback`，也不要用原生迁移状态判断增量是否已执行。
+仅成功的 `main` push 上传 `empact-runtime-<SHA>-<CI attempt>`，保存 3 天。Deploy production 重新选择最新合格的 main，从该次 CI 下载唯一产物，核对 GitHub 提供的 SHA-256 和大小，再通过受限 SSH 发送短 JSON 请求头及原始 ZIP。GitHub token 留在 runner。ECS 独立读取 GitHub 元数据，核对提交、CI run/attempt、来源仓库、main/push、产物名、摘要和失效状态，不信任客户端自报摘要。过期或缺包须重新运行 Website checks；不会降级到服务器重装依赖或重新构建 CMS。GitHub 的产物字段与校验约定见[官方 REST 文档](https://docs.github.com/en/rest/actions/artifacts)。
 
-安装器持有部署锁后、下载前，由 root 安装的 `prune-build-cache.py` 清理旧代码目录的 `node_modules` 和 `apps/cms/.next`。它保留当前线上版本、当前发布回执指定的上一回滚版本、本次候选版本及被运行中进程引用的版本；没有有效 `.code-revision` 的旧目录、符号链接和无法确认的状态不清理。缺失当前回执时停止，不能猜测回滚版本。所有源码、CMS 数据、媒体、公开快照及备份均保留。
+接收端持有 Actions 锁和部署锁，在上传前运行 `prune-build-cache.py --phase prepare --discard-candidate`：
 
-下载前和安装依赖前各检查一次空间，默认要求至少 3 GiB 可用容量和 150,000 个 inode；root 配置 `EMPACT_MIN_FREE_KB`、`EMPACT_MIN_FREE_INODES` 可调整阈值。空间不足时在维护切换前退出，避免安装到一半才报 ENOSPC。缓存清理不能解决源码归档和业务备份的无限增长，后续需要单独评估归档/备份保留策略，不能据此自动删除它们。
+- 当前代码始终保留；上次回滚代码与更旧的已验证版本在接收新包前退休。原当前代码只有在新版本发布成功后才成为新的回滚版本。
+- 正常成功状态保留当前和回滚两份完整代码。准备失败时仍保留当前代码；已淘汰的旧回滚通过精确退休回执记录，重试不会因旧回执指向已清理目录而卡死。
+- 活动进程引用、未知/标记无效目录、符号链接、包含业务数据或挂载点的目录保留，输出诊断供维护人处理。保护对象优先于数量上限。
+- 已知源码压缩包、上传半包和失败解包目录按尝试归属回收；迁移计划和审计回执保留。普通 prepare 保留本次正在准备的包，只有接收前的 discard 模式或成功收尾才清理它。
+- 自动备份使用明确回执识别；保留最近两个完整成功恢复点和当前/回滚所需恢复点。比成功点更新的失败恢复点最多额外保留一个。删除前验证保留点的 SHA-256、完整 gzip 和 tar；明确失败且不完整的本次备份只在已有两份有效成功恢复点时回收。手工或无法确认的备份保留，坏备份不会被当作有效恢复点。
 
-本次下载的暂存包在解压后删除，重试前也清除该候选的残留下载包。若解压后的容量复检失败，仅删除该次尝试刚创建、标记匹配且非当前版本的候选源码副本，避免失败占用阻塞下一次重试；此前已存在的候选目录不会删除。
+接收端先检查 3 GiB 运行余量、上传包大小和 150,000 个 inode；ZIP 不超过 2 GiB、解压总量不超过 4 GiB。安装器在解包临时副本、展开文件、维护前备份等阶段检查实际新增占用预算。维护前还预留数据目录两倍大小给备份和迁移演练。检查失败保留健康旧站，不能通过调低阈值强行放行。
 
-人工检查同一清理计划可运行 `sudo /usr/local/lib/empact/prune-build-cache.py <候选完整SHA>`，默认只列出计划；经批准后添加 `--apply` 才清理。该命令与正常部署使用同一把锁，不能并行清理。
+上传成功后受限入口启动 `empact-release@<完整 SHA>.service`，调用固定安装路径 `/usr/local/lib/empact/deploy.sh`。systemd 管理已开始的部署，SSH 断线后服务可继续；上传中断则清理本次半包，下次准备可回收崩溃残留。服务限时 15 分钟、`MemoryMax=1400M`。ECS 校验并解包现成运行包到 `/srv/empact/code/<SHA>`，不执行 `npm ci` 或 `build:cms`。解包拒绝路径穿越、危险链接和特殊文件，只接受目录内部的工作区链接。
+
+安装器在准备前注册失败处理，记录阶段、提交和实际安装器摘要。解包、结构门禁、容量或原生依赖检查失败时清理本次候选；维护后失败先恢复指针/服务再清理，仍有活动引用的候选保留。成功回执写入后才执行 complete 清理；清理失败输出告警，不把已提交的健康站点回退。
+
+候选 CMS 变化仍必须匹配仓库中的精确增量迁移计划；不执行 schema push、全量 Payload migration、reset 或 seed。生产库的历史 `dev / -1` 记录保持不变；升级依据是受保护文件指纹、精确 SQL 对象定义和部署回执。网站代码和 CMS 内容版本保持独立。
+
+人工预览清理清单可运行 `sudo /usr/local/lib/empact/prune-build-cache.py <候选完整SHA> --phase complete`（默认只读）；正常部署前策略用 `--phase prepare`。确认计划中的路径与保护集合后才使用 `--apply`。清理使用同一部署锁，不能并行执行。
 
 维护阶段先等待 CMS 共用的 `publish.lock`，再停止 CMS 和截止任务并自动备份。若有清单变化，另用 SQLite `.backup` 创建约为数据库大小的 `schema-before.db`，在临时副本试跑选中的 SQL，并检查数据库完整性、既有表结构和数据不变、外键问题没有增加，全部通过后才在正式数据库的一个事务中执行。这里的备份、试跑和迁移均由部署执行，不需要日常手动操作。服务器需要 `/usr/bin/sqlite3`；备份与试跑副本不输出业务数据。
 
@@ -59,20 +69,14 @@ Actions 随后独立核对公网精确 SHA、生产模式、首页、青少年�
 
 ## 首次安装与切换（维护人）
 
-必须从已审查且检查通过的代码安装固定脚本；网站代码部署不会自行升级这些 root 管理的部署脚本。以下命令在服务器执行：
+必须从已审查且检查通过的代码显式安装固定脚本；网站部署不会自行升级 root 管理的脚本。`install-tools.sh` 持有两把部署锁，备份旧工具，检查 Python/Shell 语法，安装兼容的一组脚本和服务，记录校验和并停用旧 timer。新受限请求协议与旧协议不兼容，须在启用新工作流前一并安装。以下命令在服务器执行：
 
 ```sh
-sudo install -d -o root -g root -m 0755 /usr/local/lib/empact
-sudo install -o root -g root -m 0755 deploy/backup.sh /usr/local/lib/empact/backup.sh
-sudo install -o root -g root -m 0755 deploy/auto-update.py /usr/local/lib/empact/auto-update.py
-sudo install -o root -g root -m 0755 deploy/publication-lock.py /usr/local/lib/empact/publication-lock.py
-sudo install -o root -g root -m 0755 deploy/prune-build-cache.py /usr/local/lib/empact/prune-build-cache.py
-sudo install -o root -g root -m 0755 deploy/schema-plan.py /usr/local/lib/empact/schema-plan.py
-sudo install -o root -g root -m 0755 deploy/deploy.sh /usr/local/lib/empact/deploy.sh
-sudo install -o root -g root -m 0755 deploy/actions-command.py /usr/local/lib/empact/actions-command.py
-sudo install -o root -g root -m 0644 deploy/empact-release@.service /etc/systemd/system/empact-release@.service
-sudo systemctl daemon-reload
-sudo systemd-analyze verify /etc/systemd/system/empact-release@.service
+# 在检查通过、经审查的部署工具目录执行；先等运行中的部署结束。
+sudo bash deploy/install-tools.sh
+(cd /usr/local/lib/empact && sudo sha256sum -c installed.sha256)
+sudo systemctl is-enabled empact-deploy.timer   # 应为 disabled
+sudo systemctl is-active empact-deploy.timer    # 应为 inactive
 ```
 
 配置专用 `empact-deploy` 系统账号，home 为 `/var/lib/empact-deploy`，shell 为 `/bin/sh`。home、`.ssh` 和 `authorized_keys` 由 root 管理且账号不可写，避免更改固定命令。只安装专用 Actions 公钥，不复用维护人的 root 私钥。公钥条目为：
@@ -81,7 +85,7 @@ sudo systemd-analyze verify /etc/systemd/system/empact-release@.service
 restrict,command="/usr/bin/sudo -n /usr/local/lib/empact/actions-command.py" ssh-ed25519 <专用公钥> empact-github-actions
 ```
 
-`restrict` 禁止端口/代理/X11 转发、PTY 和用户 rc；固定命令忽略客户端请求的 shell 命令，仅从 stdin 接收一行 40 位小写 SHA。`actions-command.py` 使用隔离的系统 Python、校验输入并只启动固定模板服务。通过 `visudo -cf` 校验以下 root 所有、权限 0440 的 `/etc/sudoers.d/empact-deploy`：
+`restrict` 禁止端口/代理/X11 转发、PTY 和用户 rc；固定命令忽略客户端请求的 shell 命令，仅从 stdin 接收一行只含 `sha` 和 `artifactId` 的 JSON，再接已认证元数据指定长度的 ZIP。不接受路径、URL 或任意命令。`actions-command.py` 使用隔离的系统 Python，校验输入、上传长度和摘要，只启动固定模板服务。通过 `visudo -cf` 校验以下 root 所有、权限 0440 的 `/etc/sudoers.d/empact-deploy`：
 
 ```text
 empact-deploy ALL=(root) NOPASSWD: /usr/local/lib/empact/actions-command.py ""
@@ -100,7 +104,7 @@ GitHub 仓库配置：
 切换顺序：
 
 1. 记录当前线上 SHA、timer 状态并备份固定部署脚本；等待当前部署结束。
-2. 安装并验证受限账号、脚本、模板服务及 GitHub 配置。先验证非法输入无法执行命令，再以当前已上线的完整 SHA 验证连接和门禁。
+2. 安装并验证受限账号、脚本、模板服务及 GitHub 配置。先验证非法输入无法执行命令，再使用工作流生成并检查过的产物验证完整接收与发布。不得用旧的一行 SHA 协议调用新入口。
 3. 工作流进入 `main` 且对应 CI 成功后，停用原轮询入口：`sudo systemctl disable --now empact-deploy.timer`。不要停止正在执行的部署服务；必要时等其结束再手动运行 Actions。
 4. 观察首个 **Deploy production**，核对 Actions 成功、服务器回执、公开 SHA 和关键页面，确认 GitHub 部署记录的 SHA 与公网一致。
 
@@ -117,4 +121,4 @@ sudo systemctl status 'empact-release@*.service' --no-pager
 
 连接配置步骤会逐项报告缺少的 Actions secret/variable 名称，不输出其值。缺少配置时先修复所列设置，重跑同样的任务不会使配置自动出现。CMS 清单拦截则核对实际差异与仓库迁移计划；网络/SSH 中断须先确认 systemd 是否仍在发布，再决定重试，不能对所有失败统一自动重跑。
 
-需要回到轮询模式时，先防止新的 Actions 部署进入、等待已有模板服务结束，再启用原 `empact-deploy.timer`。保留的 `auto-update.py` 默认模式和旧 service/timer 仍可使用；新门禁仍允许已开始的合格版本在主分支正常前进时完成。不要同时长期保留两个主动部署入口。
+不要重新启用旧轮询 timer。`auto-update.py` 保留提交/CI 门禁供受信工具调用，产物准备和部署调度只由 Actions 发起。恢复旧安装器需要维护人核对成套工具备份及协议，不能仅替换 deploy.sh 或单独开启旧 timer。

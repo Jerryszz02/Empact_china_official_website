@@ -6,12 +6,16 @@ import json
 import os
 import re
 from pathlib import Path
+import subprocess
 import sys
 import urllib.request
 
 spec = importlib.util.spec_from_file_location("auto_update", Path(__file__).with_name("auto-update.py"))
 gate = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(gate)
+spec = importlib.util.spec_from_file_location("runtime_artifact", Path(__file__).with_name("runtime-artifact.py"))
+runtime = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(runtime)
 
 PUBLIC_ORIGIN = "https://empact.cn"
 PAGES = {
@@ -75,6 +79,9 @@ def select():
     run = select_target(sha, data.get("workflow_runs", []))
     output("sha", sha)
     output("ready", "true" if run else "false")
+    if run:
+        output("run_id", str(run["id"]))
+        output("run_attempt", str(run["run_attempt"]))
     with open(os.environ["GITHUB_STEP_SUMMARY"], "a") as handle:
         handle.write("Target main revision: `{}`\n\n".format(sha))
         if run:
@@ -83,6 +90,37 @@ def select():
             ))
         else:
             handle.write("Skipped: current main has no successful latest push CI run. Its successful completion will trigger another deployment.\n")
+
+
+def download_runtime(sha, destination):
+    run = gate.approved_run(sha)
+    name = runtime.artifact_name(sha, run["run_attempt"])
+    data = gate.github_json("/repos/{}/actions/runs/{}/artifacts?name={}&per_page=100".format(
+        gate.REPOSITORY, run["id"], name))
+    artifacts = data.get("artifacts", [])
+    if data.get("total_count") != 1 or len(artifacts) != 1:
+        raise ValueError("Exactly one approved runtime artifact is required; rerun Website checks if it expired.")
+    artifact = artifacts[0]
+    metadata = runtime.validate_artifact(sha, artifact.get("id"), artifact, run, gate.REPOSITORY)
+    # gh handles GitHub authentication and the short-lived download redirect.
+    # The token stays on the runner; ECS receives only these verified ZIP bytes.
+    destination = Path(destination)
+    created = False
+    try:
+        with destination.open("xb") as output_file:
+            created = True
+            subprocess.run(["gh", "api", "/repos/{}/actions/artifacts/{}/zip".format(
+                gate.REPOSITORY, metadata["artifactId"])], stdout=output_file, check=True)
+        if destination.stat().st_size != metadata["size"] or runtime._sha256(destination) != metadata["expectedDigest"]:
+            raise ValueError("Downloaded runtime artifact size or digest mismatch")
+    except BaseException:
+        if created and destination.is_file():
+            destination.unlink()
+        raise
+    output("artifact_id", str(metadata["artifactId"]))
+    print("Verified runtime artifact {} from CI run {} attempt {}".format(
+        metadata["artifactId"], metadata["runId"], metadata["runAttempt"]))
+    return metadata
 
 
 def fetch(path):
@@ -117,6 +155,9 @@ def main():
     commands = parser.add_subparsers(dest="command")
     commands.add_parser("select")
     commands.add_parser("check-connection")
+    artifact = commands.add_parser("download-runtime")
+    artifact.add_argument("sha")
+    artifact.add_argument("destination")
     verification = commands.add_parser("verify")
     verification.add_argument("sha")
     args = parser.parse_args()
@@ -124,6 +165,8 @@ def main():
         check_connection()
     elif args.command == "select":
         select()
+    elif args.command == "download-runtime":
+        download_runtime(args.sha, args.destination)
     elif args.command == "verify":
         release = verify(args.sha)
         with open(os.environ["GITHUB_STEP_SUMMARY"], "a") as handle:

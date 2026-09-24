@@ -1,10 +1,13 @@
 #!/usr/bin/env python3
 import importlib.util
 import io
+import hashlib
 import json
 import os
 from pathlib import Path
 import subprocess
+import tempfile
+import tempfile
 import unittest
 from unittest.mock import patch
 
@@ -78,6 +81,44 @@ class TargetSelectionTests(unittest.TestCase):
                 client.select_target(sha, [])
 
 
+class RuntimeDownloadTests(unittest.TestCase):
+    def fixture(self):
+        data = b"verified GitHub archive bytes"
+        ci = run(repository={"full_name": client.gate.REPOSITORY})
+        artifact = dict(id=7, name=client.runtime.artifact_name(SHA, 1), expired=False,
+                        size_in_bytes=len(data), digest="sha256:" + hashlib.sha256(data).hexdigest(),
+                        workflow_run=dict(id=1, head_sha=SHA, head_branch="main"))
+        return data, ci, artifact
+
+    def test_download_is_bound_to_approved_run_and_actual_digest(self):
+        data, ci, artifact = self.fixture()
+        for bad_digest in (False, True):
+            with self.subTest(bad_digest=bad_digest), tempfile.TemporaryDirectory() as folder:
+                target = Path(folder) / "runtime.zip"
+                def download(args, stdout, check):
+                    self.assertEqual(args[-1], "/repos/" + client.gate.REPOSITORY + "/actions/artifacts/7/zip")
+                    stdout.write(b"x" * len(data) if bad_digest else data)
+                with patch.object(client.gate, "approved_run", return_value=ci), patch.object(
+                    client.gate, "github_json", return_value=dict(total_count=1, artifacts=[artifact])
+                ), patch.object(client.subprocess, "run", side_effect=download), patch.object(client, "output"):
+                    if bad_digest:
+                        with self.assertRaisesRegex(ValueError, "digest mismatch"):
+                            client.download_runtime(SHA, target)
+                        self.assertFalse(target.exists())
+                    else:
+                        self.assertEqual(client.download_runtime(SHA, target)["artifactId"], 7)
+                        self.assertEqual(target.read_bytes(), data)
+
+    def test_missing_artifact_never_downloads(self):
+        _, ci, _ = self.fixture()
+        with patch.object(client.gate, "approved_run", return_value=ci), patch.object(
+            client.gate, "github_json", return_value=dict(total_count=0, artifacts=[])
+        ), patch.object(client.subprocess, "run") as download:
+            with self.assertRaisesRegex(ValueError, "rerun Website checks"):
+                client.download_runtime(SHA, "/unused")
+            download.assert_not_called()
+
+
 class PublicVerificationTests(unittest.TestCase):
     def response(self, path):
         if path == "/release.json":
@@ -113,6 +154,60 @@ class PublicVerificationTests(unittest.TestCase):
 
 
 class RestrictedCommandTests(unittest.TestCase):
+    def test_protocol_rejects_commands_and_duplicate_fields(self):
+        self.assertEqual(command.read_request(io.BytesIO(json.dumps({"sha": SHA, "artifactId": 7}).encode() + b"\n")),
+                         {"sha": SHA, "artifactId": 7})
+        for value in (b"main\n", b'{"sha":"' + SHA.encode() + b'","artifactId":7,"path":"/tmp"}\n',
+                      b'{"sha":"' + SHA.encode() + b'","artifactId":7,"artifactId":8}\n',
+                      b'{"sha":"' + SHA.encode() + b'","artifactId":true}\n'):
+            with self.subTest(value=value), self.assertRaises(ValueError):
+                command.read_request(io.BytesIO(value))
+
+    def test_short_or_corrupt_upload_leaves_no_staging_files_or_service_change(self):
+        content = b"test-zip-payload"
+        metadata = {"size": len(content), "expectedDigest": "sha256:" + "0" * 64, "sha": SHA}
+        with tempfile.TemporaryDirectory() as folder:
+            staging = Path(folder)
+            real_stat = os.stat
+            def owned(path, *args, **kwargs):
+                result = real_stat(path, *args, **kwargs)
+                if str(path) == str(staging):
+                    fields = list(result)
+                    fields[4] = 0
+                    return os.stat_result(fields)
+                return result
+            with patch.object(command.os, "stat", side_effect=owned), patch.object(command, "deploy") as deployment:
+                with self.assertRaisesRegex(ValueError, "short"):
+                    command.stage_artifact(SHA, metadata, io.BytesIO(content[:3]), staging)
+                self.assertEqual(list(staging.iterdir()), [])
+                with self.assertRaisesRegex(ValueError, "digest"):
+                    command.stage_artifact(SHA, metadata, io.BytesIO(content), staging)
+                self.assertEqual(list(staging.iterdir()), [])
+                deployment.assert_not_called()
+
+    def test_receiver_checks_gate_prunes_and_capacity_before_reading_zip(self):
+        events = []
+        metadata = {"size": 12, "expectedDigest": "sha256:" + "f" * 64}
+        class Lock:
+            def fileno(self):
+                return 9
+        def prune(*args, **kwargs):
+            events.append("prune")
+            self.assertEqual(args[0][1:7], [SHA, "--phase", "prepare", "--discard-candidate", "--apply", "--lock-fd"])
+        def capacity(*args):
+            events.append("capacity")
+            self.assertEqual(args[1], 12)
+        def stage(*args):
+            events.append("stage")
+        with patch.object(command, "approved_metadata", return_value=metadata) as approved, patch.object(
+            command.subprocess, "run", side_effect=prune
+        ), patch.object(command, "check_capacity", side_effect=capacity), patch.object(
+            command, "stage_artifact", side_effect=stage
+        ):
+            command.prepare_artifact({"sha": SHA, "artifactId": 7}, io.BytesIO(), Lock())
+        approved.assert_called_once_with(SHA, 7)
+        self.assertEqual(events, ["prune", "capacity", "stage"])
+
     def test_only_full_sha_line_accepted(self):
         self.assertEqual(command.read_sha(io.StringIO(SHA + "\n")), SHA)
         for value in (SHA, "main\n", SHA + ";id\n", SHA.upper() + "\n", "../" + SHA + "\n"):
