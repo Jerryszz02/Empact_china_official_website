@@ -1,6 +1,6 @@
 # 首页与品牌设计约定
 
-2026-09-24 按 `c32b899` 同步。现行首页为四屏；早期三屏计划、比较 Demo 和已废弃的文字首页不再作为实现入口。[动效阶段验收](../history/frontend-motion-acceptance.md)保留原日期与测试证据，[首页图库](../features/home-logo-gallery.md)说明后续首屏调整。
+2026-09-24 按 `f8529cf` 同步。现行首页为四屏；早期三屏计划、比较 Demo 和已废弃的文字首页不再作为实现入口。[动效阶段验收](../history/frontend-motion-acceptance.md)保留原日期与测试证据，[首页图库](../features/home-logo-gallery.md)说明后续首屏调整。
 
 ## 视觉来源
 
