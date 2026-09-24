@@ -8,9 +8,11 @@
     "build:preview": "ASTRO_TELEMETRY_DISABLED=1 SITE_MODE=preview astro build",
     "check": "ASTRO_TELEMETRY_DISABLED=1 astro check"
   },
+  "devDependencies": {
+    "@astrojs/check": "0.9.4"
+  },
   "dependencies": {
     "astro": "7.3.2",
-    "@astrojs/check": "0.9.4",
     "@empact/content": "*",
     "typescript": "5.9.3"
   }
