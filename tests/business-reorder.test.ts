@@ -8,6 +8,10 @@ import { join, resolve } from "node:path";
 import { promisify } from "node:util";
 import { reorderBusiness } from "../apps/cms/src/business-order.js";
 import { htmlToLexical } from "../apps/cms/src/content-migration.js";
+import { mergeSelectedLive } from "../apps/cms/src/publisher.js";
+import { businessesForSegment } from "@empact/content/business";
+import { frameworkSnapshot } from "./helpers/content-fixture.js";
+import type { Snapshot } from "@empact/content/schema";
 
 type Payload = Parameters<typeof reorderBusiness>[0];
 
@@ -180,25 +184,52 @@ test("ties and exhausted floating-point gaps normalize only the current group", 
   }
 });
 
-test("ties away from the insertion gap do not rewrite other businesses", async () => {
+test("ties outside the insertion gap publish in the board order", async () => {
   const initial = [
     business("a"),
     business("b", 0),
     business("c", 10),
     business("d", 20),
+    business("other", 77, "school"),
   ];
+  const snapshot = (docs: Doc[]): Snapshot => ({
+    ...structuredClone(frameworkSnapshot),
+    entries: docs
+      .filter((doc) => doc.segment === "youth")
+      .map((doc) => ({
+        ...doc,
+        kind: "business",
+        segment: "youth",
+        title: doc.id,
+        summary: doc.id,
+        bodyHtml: "",
+        approved: true,
+      })),
+    media: [],
+  });
+  const visibleIds = (value: Snapshot) =>
+    businessesForSegment(value.entries, "youth")
+      .slice(1)
+      .map((entry) => entry.id);
+  // Existing publications retain their insertion order, which can differ from
+  // the draft query's order for the two default-zero businesses.
+  let live = snapshot([initial[1], initial[0], initial[2], initial[3]]);
+  assert.deepEqual(visibleIds(live), ["b", "a", "c", "d"]);
   const f = fixture(initial);
   const result = await reorderBusiness(f.payload, {
     id: "d",
     targetIndex: 2,
     expected: expected(initial),
   });
-  assert.deepEqual(result.changes, [{ id: "d", order: 5 }]);
-  assert.deepEqual(f.updates, result.changes);
-  assert.deepEqual(
-    expected(f.docs).map((item) => item.id),
-    ["a", "b", "d", "c"],
-  );
+  const draft = snapshot(f.docs);
+  assert.deepEqual(visibleIds(draft), ["a", "b", "d", "c"]);
+  // Exercise the real selective publisher: only rows whose orders changed
+  // receive a publish action, preserving the established per-business flow.
+  for (const change of result.changes)
+    live = mergeSelectedLive(live, draft, [change.id]);
+  assert.deepEqual(visibleIds(live), visibleIds(draft));
+  assert.equal(new Set(expected(f.docs).map((item) => item.order)).size, 4);
+  assert.equal(f.docs.find((doc) => doc.id === "other")?.order, 77);
 });
 
 test("unchanged position makes no write", async () => {

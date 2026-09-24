@@ -127,8 +127,13 @@ export async function reorderBusiness(payload: Payload, value: unknown) {
     const left = ordered[targetIndex - 1]?.order;
     const right = ordered[targetIndex + 1]?.order;
     const candidate = between(left, right);
+    // Draft queries and live snapshots can preserve different orders for ties.
+    // Give the entire displayed group unique ranks before publishing its changes.
+    const hasTies = current.some(
+      (item, index) => index > 0 && item.order === current[index - 1].order,
+    );
     const changes: ExpectedItem[] =
-      candidate === undefined
+      candidate === undefined || hasTies
         ? ordered
             .map((item, index) => ({ id: item.id, order: index }))
             .filter(
