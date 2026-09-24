@@ -10,6 +10,7 @@ import { previewSnapshot as directorySnapshot } from "@empact/content/fixtures";
 import { frameworkSnapshot as previewSnapshot } from "./helpers/content-fixture.js";
 import { verifyCmsUI } from "./cms-ui-scenarios.js";
 import { verifyBusinessWorkflow } from "./business-cms-scenarios.js";
+import { verifyOfficeGalleryWorkflow } from "./office-gallery-cms-scenarios.js";
 import { verifyRecruitmentWorkflow } from "./recruitment-cms-scenarios.js";
 import { load } from "cheerio";
 import { serializeLexicalBody } from "../apps/cms/src/cms-data.js";
@@ -822,6 +823,13 @@ try {
     runtime,
     request,
     lexical,
+  });
+  await verifyOfficeGalleryWorkflow({
+    base,
+    cookies,
+    runtime,
+    imageId: uploaded.doc.id,
+    request,
   });
   console.log(
     "PASS: migrated fresh SQLite, login, private drafts/media, image upload, protected preview, publish, edit isolation, project association, unpublish, and exact rollback.",

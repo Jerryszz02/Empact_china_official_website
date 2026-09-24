@@ -173,6 +173,34 @@ fi
                 self.assertEqual(connection.execute("SELECT * FROM media").fetchall(), [(7, "original-photo")])
             with self.assertRaises(FileExistsError):
                 schema_plan.apply(selected, db, backup)
+
+    def test_office_gallery_plan_adds_only_new_tables_and_preserves_existing_rows(self):
+        plan = json.loads((ROOT / "deploy/schema-plans/20260924-office-gallery.json").read_text())
+        migration = (ROOT / "apps/cms/src/migrations/20260924_041925.ts").read_text()
+        up = migration.split("export async function up", 1)[1].split("export async function down", 1)[0]
+        migration_sql = [sql.replace("\\`", "`") for sql in re.findall(r"db\.run\(sql`((?:\\.|[^`])*)`\);", up, re.S)]
+        self.assertEqual(plan["statements"], migration_sql)
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            db, backup = root / "cms.db", root / "before.db"
+            with sqlite3.connect(str(db)) as connection:
+                connection.execute("PRAGMA foreign_keys=ON")
+                connection.execute("CREATE TABLE media (id integer primary key, filename text)")
+                connection.execute("INSERT INTO media VALUES (7, 'original-photo')")
+                connection.execute("CREATE TABLE content (id integer primary key, title text)")
+                connection.execute("INSERT INTO content VALUES (3, 'existing-content')")
+            selected = root / "selected.json"
+            selected.write_text(json.dumps({"version": 1, "from": plan["from"],
+                                            "to": plan["to"], "steps": [plan]}))
+            schema_plan.apply(selected, db, backup)
+            with sqlite3.connect(str(db)) as connection:
+                self.assertEqual(connection.execute("SELECT * FROM content").fetchall(), [(3, "existing-content")])
+                self.assertEqual(connection.execute("SELECT * FROM media").fetchall(), [(7, "original-photo")])
+                self.assertEqual(connection.execute("SELECT * FROM office_gallery").fetchall(), [])
+                self.assertEqual(connection.execute("SELECT * FROM office_gallery_photos").fetchall(), [])
+                self.assertEqual(connection.execute("PRAGMA integrity_check").fetchone(), ("ok",))
+            with sqlite3.connect(str(backup)) as connection:
+                self.assertIsNone(connection.execute("SELECT name FROM sqlite_master WHERE name='office_gallery'").fetchone())
             schema_plan.apply(selected, db, root / "second-backup.db")
 
     def test_rejects_destructive_sql_and_incompatible_partial_schema(self):

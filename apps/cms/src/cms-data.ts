@@ -102,7 +102,7 @@ export async function serializeLexicalBody(
 }
 /** Call only after request authentication, or from a trusted local administration command. */
 export async function readDraftSnapshot(payload: Payload): Promise<Snapshot> {
-  const [content, company, images, homeGallery, recruitment] =
+  const [content, company, images, homeGallery, officeGallery, recruitment] =
     await Promise.all([
       payload.find({
         collection: "content",
@@ -119,6 +119,11 @@ export async function readDraftSnapshot(payload: Payload): Promise<Snapshot> {
       }),
       payload.findGlobal({
         slug: "home-gallery",
+        depth: 0,
+        overrideAccess: true,
+      }),
+      payload.findGlobal({
+        slug: "office-gallery",
         depth: 0,
         overrideAccess: true,
       }),
@@ -206,6 +211,18 @@ export async function readDraftSnapshot(payload: Payload): Promise<Snapshot> {
         }),
       ),
     },
+    ...(officeGallery.configured
+      ? {
+          officeGallery: {
+            photos: (officeGallery.photos ?? []).map(
+              (photo: { image: unknown; caption?: string | null }) => ({
+                imageId: relation(photo.image) || "",
+                caption: string(photo.caption).trim(),
+              }),
+            ),
+          },
+        }
+      : {}),
     recruitment: {
       jobs: (recruitment.jobs ?? []).map(
         (job: Record<string, unknown>): RecruitmentJob => ({

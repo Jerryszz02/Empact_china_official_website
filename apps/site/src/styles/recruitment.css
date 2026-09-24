@@ -89,6 +89,55 @@
 }
 .recruitment-office-photos figure {
   margin: 0;
+  min-width: 0;
+}
+.recruitment-office-photos:has(> figure:only-child) {
+  grid-template-columns: minmax(0, 1fr);
+}
+.recruitment-office-photos[data-many="true"] {
+  grid-template-columns: none;
+  grid-auto-flow: column;
+  grid-auto-columns: 48%;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x mandatory;
+  padding-bottom: 1rem;
+}
+.recruitment-office-photos[data-many="true"] figure {
+  scroll-snap-align: start;
+}
+.recruitment-office-photos[data-many="true"] img {
+  aspect-ratio: 4 / 3;
+  object-fit: contain;
+  background: rgba(0, 0, 0, 0.04);
+}
+.office-gallery-controls:not([hidden]) {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+.office-gallery-controls span {
+  font-size: 0.85rem;
+}
+.office-gallery-controls button {
+  width: 2.75rem;
+  height: 2.75rem;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  color: inherit;
+  background: transparent;
+  cursor: pointer;
+}
+.office-gallery-controls button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.recruitment-office-photos:focus-visible,
+.office-gallery-controls button:focus-visible {
+  outline: 3px solid var(--blue);
+  outline-offset: 4px;
 }
 .recruitment-office-photos img {
   display: block;
@@ -98,6 +147,7 @@
 .recruitment-office-photos figcaption {
   padding-top: 0.7rem;
   font-size: 0.85rem;
+  overflow-wrap: anywhere;
 }
 .recruitment-opportunities {
   scroll-margin-top: 2rem;
@@ -289,7 +339,11 @@
     grid-template-columns: 1fr;
     gap: 2rem;
   }
-  .recruitment-office-photos figure:last-child {
+  .recruitment-office-photos[data-many="true"] {
+    grid-auto-columns: 85%;
+  }
+  .recruitment-office-photos[data-many="false"]
+    figure:last-child:not(:only-child) {
     width: 70%;
     justify-self: end;
   }

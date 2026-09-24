@@ -7,6 +7,8 @@ import * as migration_20260923_044956_home_gallery from "./20260923_044956_home_
 
 import * as migration_20260923_091722_recruitment from "./20260923_091722_recruitment.js";
 
+import * as migration_20260924_041925 from "./20260924_041925.js";
+
 export const migrations = [
   {
     up: migration_20260909_124032_initial.up,
@@ -37,5 +39,10 @@ export const migrations = [
     up: migration_20260923_091722_recruitment.up,
     down: migration_20260923_091722_recruitment.down,
     name: "20260923_091722_recruitment",
+  },
+  {
+    up: migration_20260924_041925.up,
+    down: migration_20260924_041925.down,
+    name: "20260924_041925",
   },
 ];

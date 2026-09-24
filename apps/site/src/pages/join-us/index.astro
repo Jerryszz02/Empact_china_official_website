@@ -8,8 +8,7 @@ import {
   jobTypeLabel,
 } from "@/lib/recruitment";
 import teamPhoto from "@/assets/recruitment/team.jpg";
-import officePhoto from "@/assets/recruitment/office.jpg";
-import brandPhoto from "@/assets/recruitment/office-brand.jpg";
+import OfficeGallery from "@/components/OfficeGallery.astro";
 import "@/styles/recruitment.css";
 
 const preview = import.meta.env.SITE_MODE === "preview";
@@ -103,44 +102,7 @@ const hasExamples = jobs.some((job) => job.isExample);
         </div>
       </section>
 
-      <section
-        class="section recruitment-office"
-        aria-labelledby="office-title"
-      >
-        <div class="recruitment-section-heading">
-          <span class="eyebrow">A glimpse of everyday life</span>
-          <h2 id="office-title">一起工作的地方</h2>
-          <p>认识 Empact，也从日常的工作空间开始。</p>
-        </div>
-        <div class="recruitment-office-photos">
-          <figure>
-            <Image
-              src={officePhoto}
-              alt="Empact 办公空间的工位、绿植与窗边区域"
-              width={1440}
-              widths={[640, 960, 1440]}
-              sizes="(max-width: 640px) calc(100vw - 2.2rem), 60vw"
-              format="webp"
-              quality={80}
-              loading="lazy"
-            />
-            <figcaption>Empact 办公空间</figcaption>
-          </figure>
-          <figure>
-            <Image
-              src={brandPhoto}
-              alt="办公室的蓝色 Empact 品牌墙与展示柜一角"
-              width={960}
-              widths={[480, 640, 960]}
-              sizes="(max-width: 640px) calc(100vw - 2.2rem), 34vw"
-              format="webp"
-              quality={80}
-              loading="lazy"
-            />
-            <figcaption>办公室一角</figcaption>
-          </figure>
-        </div>
-      </section>
+      <OfficeGallery />
 
       <section
         class="section recruitment-opportunities"
