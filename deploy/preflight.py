@@ -79,7 +79,7 @@ def report(base, head, require_plan=False):
             "These files or dependencies are protected by the server schema gate. "
             "CI passing does not authorize deployment. Inspect the full diff against "
             "the installed production revision and include an exact reviewed plan in "
-            "deploy/schema-plans using docs/automatic-deployment.md. Changes beyond "
+            "deploy/schema-plans using docs/planning/operations/automatic-deployment.md. Changes beyond "
             "additive tables need a separate migration review.\n\n"
         )
         print("::warning title=Production deployment needs maintainer review::"

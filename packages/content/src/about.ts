@@ -1,6 +1,6 @@
 import { aboutAwardsHtml, businessBoundaryHtml } from "./about-awards.js";
 
-// Semantic content transcribed from docs/关于Empact页面_demo.html.
+// Preview copy and CMS publishing rules: docs/planning/features/about-page.md.
 // Keep this CMS-editable default separate from the site layout.
 export const aboutSummary =
   "empact 是一家 2011 年成立于新加坡的社会企业。15 年来，我们已在亚太地区 为 2,000+ 家公益机构和企业赋能——让企业与社会组织的每一份善意， 都有可被世界看见的影响力。";

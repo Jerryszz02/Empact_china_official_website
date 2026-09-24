@@ -1,6 +1,6 @@
 import type { Media } from "./schema.js";
 
-// Source slides and image provenance: docs/singapore-camp-2026-sources.md.
+// Source slides and image provenance: docs/planning/content/singapore-camp-2026-sources.md.
 // The supplied deck describes a planned itinerary, not a completed-trip report.
 export const singaporeCampArticle = {
   slug: "singapore-social-innovation-camp-2026",

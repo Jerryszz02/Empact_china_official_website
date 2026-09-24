@@ -1,6 +1,6 @@
 import type { Media } from "./schema.js";
 
-/** Original photos from the company deck; provenance is in docs/about-page.md. */
+/** Original photos from the company deck; provenance is in docs/planning/features/about-page.md. */
 export const aboutMedia: Media[] = [
   {
     id: "about-pvpa-2022",

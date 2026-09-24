@@ -1,5 +1,5 @@
 // Workbook case numbers and their source slides are recorded in
-// docs/business-directory-sync.md. Keep client anonymity used by the source.
+// docs/planning/content/business-directory-sync.md. Keep client anonymity used by the source.
 const source = "杨祯慧 Maggie 博士课程介绍（2026.9.15）";
 
 export const enterpriseArticles = [

@@ -13,3 +13,7 @@ playwright-report/
 test-results/
 *.tsbuildinfo
 .code-revision
+.playwright-cli/
+__pycache__/
+*.pyc
+/assets/原始照片/
