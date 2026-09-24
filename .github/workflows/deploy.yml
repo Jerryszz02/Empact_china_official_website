@@ -39,13 +39,6 @@ jobs:
         id: target
         run: python3 deploy/actions-client.py select
 
-      - name: Download the exact CI-built runtime
-        if: steps.target.outputs.ready == 'true'
-        id: artifact
-        env:
-          TARGET_SHA: ${{ steps.target.outputs.sha }}
-        run: python3 deploy/actions-client.py download-runtime "$TARGET_SHA" "$RUNNER_TEMP/empact-runtime.zip"
-
       - name: Record exact deployment revision
         if: steps.target.outputs.ready == 'true'
         id: record
@@ -56,6 +49,13 @@ jobs:
           id=$(gh api "repos/$GITHUB_REPOSITORY/deployments" --input "$RUNNER_TEMP/deployment.json" --jq .id)
           echo "id=$id" >> "$GITHUB_OUTPUT"
           gh api "repos/$GITHUB_REPOSITORY/deployments/$id/statuses" -f state=in_progress -f environment_url=https://empact.cn -f log_url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" > /dev/null
+
+      - name: Download the exact CI-built runtime
+        if: steps.target.outputs.ready == 'true'
+        id: artifact
+        env:
+          TARGET_SHA: ${{ steps.target.outputs.sha }}
+        run: python3 deploy/actions-client.py download-runtime "$TARGET_SHA" "$RUNNER_TEMP/empact-runtime.zip"
 
       - name: Configure restricted deployment connection
         if: steps.target.outputs.ready == 'true'

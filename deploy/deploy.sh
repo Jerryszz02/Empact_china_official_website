@@ -75,6 +75,8 @@ flock -n 9 || { echo 'another deployment is already running' >&2; exit 75; }
 current_code=''
 if [[ -e $CURRENT ]]; then current_code=$(readlink -f "$CURRENT"); fi
 timestamp=$(date -u +%Y%m%dT%H%M%SZ)
+receipt="$ROOT/receipts/deploy-$timestamp-$sha.json"
+receipt_tmp="$ROOT/receipts/.deploy-$timestamp-$sha-$$.tmp"
 archive="$ROOT/staging/artifact-$sha.zip"
 artifact_metadata="$ROOT/staging/artifact-$sha.json"
 candidate="$CODE_ROOT/$sha"
@@ -126,6 +128,13 @@ wait_for() {
 finish() {
   local status=$?
   trap - EXIT TERM INT
+  # The atomic receipt rename is the commit point, including a signal arriving
+  # between that rename and the in-memory flag assignment.
+  if [[ -f $receipt && $(readlink -f "$CURRENT" || true) == "$candidate" ]]; then committed=true; fi
+  if $committed && (( status != 0 )); then
+    echo 'WARNING: committed release is healthy; post-deployment cleanup was interrupted.' >&2
+    status=0
+  fi
   if (( status != 0 )) && ! $committed; then
     if $maintenance; then
       systemctl stop empact-expiry.timer empact-expiry.service empact-cms.service || true
@@ -144,6 +153,7 @@ finish() {
   else
     rm -f "$archive" "$artifact_metadata" || echo 'Artifact cleanup incomplete.' >&2
   fi
+  rm -f "$receipt_tmp" || true
   exit "$status"
 }
 trap finish EXIT
@@ -269,9 +279,9 @@ wait_for https://empact.cn/release.json | grep -F '"codeRevision":"'$sha'"'
 wait_for http://127.0.0.1:3000/admin/ >/dev/null
 wait_for https://chatcircle.empact.cn/api/cc/health >/dev/null
 $was_timer && systemctl start empact-expiry.timer || true
-receipt="$ROOT/receipts/deploy-$timestamp-$sha.json"
-printf '{"sha":"%s","previousCode":"%s","previousPublic":"%s","deployedAt":"%s"}\n' \
-  "$sha" "$previous_code" "$previous_public" "$timestamp" > "$receipt"
+printf '{"sha":"%s","previousCode":"%s","previousPublic":"%s","deployedAt":"%s","installer":"%s"}\n' \
+  "$sha" "$previous_code" "$previous_public" "$timestamp" "$installer_revision" > "$receipt_tmp"
+mv -Tf "$receipt_tmp" "$receipt"
 committed=true
 phase=cleanup
 # The release is committed. Cleanup errors must not roll a healthy site back.

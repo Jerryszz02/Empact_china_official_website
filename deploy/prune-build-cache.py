@@ -9,6 +9,7 @@ import os
 from pathlib import Path
 import re
 import shutil
+import stat
 import sys
 import tarfile
 import tempfile
@@ -153,7 +154,20 @@ def retired_marker(root, sha, current):
     return root / "receipts" / ("retired-" + current + "-" + sha + ".json")
 
 
-def backup_valid(path):
+def backup_signature(path):
+    """Cheap identity of an archive directory and every direct child."""
+    directory = path.lstat()
+    entries = []
+    if stat.S_ISDIR(directory.st_mode):
+        for item in sorted(path.iterdir()):
+            info = item.lstat()
+            entries.append((item.name, info.st_mode, info.st_dev, info.st_ino,
+                            info.st_size, info.st_mtime_ns, info.st_ctime_ns))
+    return ((directory.st_mode, directory.st_dev, directory.st_ino,
+             directory.st_size, directory.st_mtime_ns, directory.st_ctime_ns), tuple(entries))
+
+
+def _backup_valid_uncached(path):
     if path.is_symlink() or not path.is_dir():
         return False
     archives = list(path.glob("*.tar.gz"))
@@ -189,7 +203,26 @@ def backup_valid(path):
         return False
 
 
-def plan(root, candidate, proc, phase="complete", discard_candidate=False):
+def backup_valid(path, cache=None):
+    try:
+        before = backup_signature(path)
+    except OSError:
+        return False
+    if cache is not None and path in cache and cache[path][0] == before:
+        return cache[path][1]
+    valid = _backup_valid_uncached(path)
+    try:
+        after = backup_signature(path)
+    except OSError:
+        return False
+    if before != after:
+        return False  # A writer changed the directory during verification.
+    if cache is not None:
+        cache[path] = (after, valid)
+    return valid
+
+
+def plan(root, candidate, proc, phase="complete", discard_candidate=False, _validation_cache=None):
     root = root.resolve(strict=True)
     code = root / "code"
     if code.is_symlink() or not code.is_dir() or not SHA.fullmatch(candidate):
@@ -289,7 +322,7 @@ def plan(root, candidate, proc, phase="complete", discard_candidate=False):
         matched.sort(key=lambda path: AUTO_BACKUP.fullmatch(path.name).group(2))
         # Invalid backups remain untouched. Valid successful recovery points
         # still establish a safe floor even if an older backup is damaged.
-        valid_success = [path for path in matched if backup_valid(path)]
+        valid_success = [path for path in matched if backup_valid(path, _validation_cache)]
         if len(valid_success) >= 2:
             if len(valid_success) > 2:
                 protected = set(valid_success[-2:])
@@ -299,7 +332,7 @@ def plan(root, candidate, proc, phase="complete", discard_candidate=False):
                         protected.add(matching[-1])
                 paths.extend(path for path in valid_success if path not in protected)
             failed_matched.sort(key=lambda path: AUTO_BACKUP.fullmatch(path.name).group(2))
-            valid_failed = [path for path in failed_matched if failed[path] and backup_valid(path)]
+            valid_failed = [path for path in failed_matched if failed[path] and backup_valid(path, _validation_cache)]
             newest_success = AUTO_BACKUP.fullmatch(valid_success[-1].name).group(2)
             protected_failed = (valid_failed[-1] if valid_failed and
                                 AUTO_BACKUP.fullmatch(valid_failed[-1].name).group(2) > newest_success else None)
@@ -311,7 +344,8 @@ def plan(root, candidate, proc, phase="complete", discard_candidate=False):
 
 def prune(root, candidate, proc, apply=False, phase="complete", discard_candidate=False):
     root = root.resolve(strict=True)
-    keep, paths = plan(root, candidate, proc, phase, discard_candidate)
+    validation_cache = {}
+    keep, paths = plan(root, candidate, proc, phase, discard_candidate, validation_cache)
     print("Preserving revisions: " + ", ".join(sorted(keep)))
     if apply and not shutil.rmtree.avoids_symlink_attacks:
         raise RuntimeError("safe directory removal is unavailable on this platform")
@@ -346,10 +380,10 @@ def prune(root, candidate, proc, apply=False, phase="complete", discard_candidat
             if has_mount(path):
                 raise RuntimeError("cleanup directory contains a mount: " + str(path))
             if path.parent == root / "backups":
-                if path not in plan(root, candidate, proc, phase, discard_candidate)[1]:
+                if path not in plan(root, candidate, proc, phase, discard_candidate, validation_cache)[1]:
                     raise RuntimeError("backup retention protections changed: " + str(path))
                 known_failed = path in failed_backups(root)
-                if not standard_backup_files(path) or (not known_failed and not backup_valid(path)):
+                if not standard_backup_files(path) or (not known_failed and not backup_valid(path, validation_cache)):
                     raise RuntimeError("backup changed during cleanup: " + str(path))
             shutil.rmtree(str(path))
         else:

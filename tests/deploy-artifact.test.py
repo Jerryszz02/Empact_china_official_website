@@ -38,13 +38,15 @@ class ArtifactMetadataTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)
             files = {
-                "package.json": b"{}", "apps/site/src/main.ts": b"export {}",
+                "package.json": b'{"workspaces":["apps/*","packages/*"]}', "apps/site/src/main.ts": b"export {}",
                 "apps/site/public/assets/logo.png": b"public image",
                 "deploy/schema-plans/plan.json": b"{}",
                 "apps/cms/.next/server/app.js": b"built cms",
                 "apps/cms/.next/cache/old": b"cache",
                 "node_modules/pkg/index.js": b"module.exports = 1",
                 "node_modules/pkg/.env": b"private",
+                "apps/cms/node_modules/payload/package.json": b'{"name":"payload"}',
+                "apps/site/node_modules/site-only/index.js": b"site dependency",
             }
             for relative, content in files.items():
                 path = root / relative
@@ -69,6 +71,8 @@ class ArtifactMetadataTests(unittest.TestCase):
                 self.assertIn("apps/site/public/assets/logo.png", names)
                 self.assertIn("apps/cms/.next/server/app.js", names)
                 self.assertIn("node_modules/pkg/index.js", names)
+                self.assertIn("apps/cms/node_modules/payload/package.json", names)
+                self.assertIn("apps/site/node_modules/site-only/index.js", names)
                 self.assertNotIn("apps/cms/.next/cache/old", names)
                 self.assertNotIn("node_modules/pkg/.env", names)
                 manifest = json.load(bundle.extractfile(runtime.MANIFEST_NAME))

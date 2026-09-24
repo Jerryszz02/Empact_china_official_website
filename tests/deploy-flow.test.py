@@ -11,7 +11,7 @@ import unittest
 ROOT = Path(__file__).parents[1]
 SHA, OLD = "a" * 40, "b" * 40
 FAKE_COMMAND = r'''
-import json, os, pathlib, sys
+import json, os, pathlib, signal, sys
 p = pathlib.Path
 root = p(os.environ["FIXTURE_ROOT"])
 name, args = p(sys.argv[0]).name, sys.argv[1:]
@@ -27,7 +27,10 @@ elif name == "install":
 elif name == "readlink":
     print(p(args[-1]).resolve())
 elif name == "mv":
+    committing = p(args[-1]).parent == root / "receipts"
+    if fail == "receipt" and committing: sys.exit(21)
     os.replace(args[-2], args[-1])
+    if fail == "commit-signal" and committing: os.kill(os.getppid(), signal.SIGTERM)
 elif name == "systemctl":
     pass
 elif name == "curl":
@@ -115,7 +118,7 @@ class InstallerFlowTests(unittest.TestCase):
         return root, result
 
     def test_failures_preserve_live_release_and_remove_owned_attempt(self):
-        for phase in ("gate", "extract", "capacity", "runtime", "schema", "finish-gate", "backup", "migrate", "publish", "verify"):
+        for phase in ("gate", "extract", "capacity", "runtime", "schema", "finish-gate", "backup", "migrate", "publish", "verify", "receipt"):
             with self.subTest(phase=phase):
                 root, result = self.run_installer(phase)
                 self.assertNotEqual(result.returncode, 0, result.stdout)
@@ -127,6 +130,8 @@ class InstallerFlowTests(unittest.TestCase):
                 self.assertFalse(list((root / "staging").glob("artifact-*")), result.stdout)
                 self.assertFalse(list((root / "staging").glob("*.tmp")), result.stdout)
                 self.assertTrue(list((root / "receipts").glob("failed-*.json")))
+                self.assertFalse(list((root / "receipts").glob("deploy-*.json")))
+                self.assertFalse(list((root / "receipts").glob("*.tmp")))
 
     def test_success_promotes_previous_current_and_retains_no_upload(self):
         root, result = self.run_installer()
@@ -143,6 +148,12 @@ class InstallerFlowTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stdout)
         self.assertEqual((root / "code/current").resolve().name, SHA)
         self.assertIn("retention cleanup needs operator attention", result.stdout)
+
+    def test_signal_immediately_after_commit_does_not_rollback(self):
+        root, result = self.run_installer("commit-signal")
+        self.assertEqual(result.returncode, 0, result.stdout)
+        self.assertEqual((root / "code/current").resolve().name, SHA)
+        self.assertTrue(list((root / "receipts").glob("deploy-*.json")))
 
 
 if __name__ == "__main__":

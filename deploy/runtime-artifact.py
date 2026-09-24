@@ -255,7 +255,23 @@ def _selected_tracked(root):
 
 def _runtime_paths(root):
     selected = set(_selected_tracked(root))
-    for base in ("node_modules", "apps/cms/.next"):
+    package = json.loads((root / "package.json").read_text())
+    patterns = package.get("workspaces")
+    if not isinstance(patterns, list) or not all(isinstance(item, str) for item in patterns):
+        raise ValueError("root package workspaces are missing")
+    dependency_roots = ["node_modules"]
+    for pattern in patterns:
+        if (not pattern or pattern.startswith("/") or ".." in Path(pattern).parts or
+                "\\" in pattern):
+            raise ValueError("unsafe workspace pattern")
+        for workspace in root.glob(pattern):
+            if workspace.is_symlink() or not workspace.is_dir():
+                raise ValueError("unsafe workspace directory: " + str(workspace))
+            workspace.relative_to(root)
+            dependencies = workspace / "node_modules"
+            if dependencies.exists() or dependencies.is_symlink():
+                dependency_roots.append(str(dependencies.relative_to(root)))
+    for base in dependency_roots + ["apps/cms/.next"]:
         source = root / base
         if not source.is_dir() or source.is_symlink():
             raise ValueError("required build directory missing: " + base)

@@ -295,6 +295,35 @@ class PruneTests(unittest.TestCase):
         self.failed_receipt(sha, stamp, directory, False)
         self.assertNotIn(directory, prune.plan(self.root, self.candidate, self.proc)[1])
 
+    def test_backup_validation_cache_reuses_unchanged_files_and_invalidates_changes(self):
+        old = "e" * 40
+        self.receipt(old, None, "20260830T000000Z")
+        self.receipt(self.previous, None, "20260831T000000Z")
+        first = self.backup(old, "20260830T000000Z")
+        self.backup(self.previous, "20260831T000000Z")
+        latest = self.backup(self.current, "20260901T000000Z")
+        cache = {}
+        with mock.patch.object(prune, "_backup_valid_uncached", wraps=prune._backup_valid_uncached) as verify:
+            self.assertIn(first, prune.plan(self.root, self.candidate, self.proc,
+                                            _validation_cache=cache)[1])
+            self.assertEqual(verify.call_count, 3)
+            prune.plan(self.root, self.candidate, self.proc, _validation_cache=cache)
+            self.assertEqual(verify.call_count, 3)
+            checksum = next(latest.glob("*.sha256"))
+            original_checksum = checksum.read_text()
+            checksum.write_text("0" * 64 + "  " + str(next(latest.glob("*.tar.gz"))))
+            self.assertNotIn(first, prune.plan(self.root, self.candidate, self.proc,
+                                               _validation_cache=cache)[1])
+            self.assertEqual(verify.call_count, 4)
+            checksum.write_text(original_checksum)
+            self.assertIn(first, prune.plan(self.root, self.candidate, self.proc,
+                                            _validation_cache=cache)[1])
+            self.assertEqual(verify.call_count, 5)
+            next(latest.glob("*.tar.gz")).write_bytes(b"changed archive")
+            self.assertNotIn(first, prune.plan(self.root, self.candidate, self.proc,
+                                               _validation_cache=cache)[1])
+            self.assertEqual(verify.call_count, 6)
+
 
 if __name__ == "__main__":
     unittest.main()

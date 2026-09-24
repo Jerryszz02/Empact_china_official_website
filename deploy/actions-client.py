@@ -174,7 +174,7 @@ def main():
                 args.sha, release.get("version", "unknown")
             ))
     else:
-        parser.error("select, check-connection or verify is required")
+        parser.error("select, check-connection, download-runtime or verify is required")
 
 
 if __name__ == "__main__":

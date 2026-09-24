@@ -12,6 +12,7 @@ for file in "${files[@]}"; do
     python3 -c 'import ast,sys; ast.parse(open(sys.argv[1]).read())' "$source_dir/$file"
   fi
 done
+systemd-analyze verify "$source_dir/empact-release@.service"
 exec 8>/run/lock/empact-actions.lock
 flock -n 8 || { echo 'An Actions upload/deployment is active; wait before upgrading.' >&2; exit 75; }
 exec 9>/run/lock/empact-deploy.lock
@@ -22,6 +23,25 @@ for file in "${files[@]}"; do
   if [[ -f "$destination/$file" ]]; then cp -p "$destination/$file" "$backup/"; fi
 done
 if [[ -f /etc/systemd/system/empact-release@.service ]]; then cp -p /etc/systemd/system/empact-release@.service "$backup/"; fi
+if [[ -f "$destination/installed.sha256" ]]; then cp -p "$destination/installed.sha256" "$backup/"; fi
+recover_upgrade() {
+  local status=$?
+  trap - EXIT
+  if (( status != 0 )); then
+    for file in "${files[@]}" installed.sha256; do
+      if [[ -f "$backup/$file" ]]; then cp -p "$backup/$file" "$destination/$file"; else rm -f "$destination/$file"; fi
+    done
+    if [[ -f "$backup/empact-release@.service" ]]; then
+      cp -p "$backup/empact-release@.service" /etc/systemd/system/empact-release@.service
+    else
+      rm -f /etc/systemd/system/empact-release@.service
+    fi
+    systemctl daemon-reload || true
+    echo "Installer upgrade failed; restored previous tools from $backup" >&2
+  fi
+  exit "$status"
+}
+trap recover_upgrade EXIT
 for file in "${files[@]}"; do install -o root -g root -m 0755 "$source_dir/$file" "$destination/$file"; done
 install -o root -g root -m 0644 "$source_dir/empact-release@.service" /etc/systemd/system/empact-release@.service
 (cd "$destination" && sha256sum "${files[@]}") >"$destination/installed.sha256"
@@ -31,4 +51,5 @@ if systemctl cat empact-deploy.timer >/dev/null 2>&1; then
   systemctl disable --now empact-deploy.timer
 fi
 (cd "$destination" && sha256sum -c installed.sha256)
+trap - EXIT
 echo "Trusted installer updated; previous tools retained in $backup"
