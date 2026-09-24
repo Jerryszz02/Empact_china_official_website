@@ -25,6 +25,10 @@ jobs:
           [[ "$BASE_SHA" =~ ^[0-9a-f]{40}$ && "$BASE_SHA" != 0000000000000000000000000000000000000000 ]]
           git fetch --no-tags --depth=1 origin "$BASE_SHA"
           python3 deploy/preflight.py "$BASE_SHA" "$HEAD_SHA" --require-plan
+      - name: Audit documentation links and index
+        run: |
+          python3 tests/audit-planning-docs.test.py
+          python3 scripts/audit_planning_docs.py --root .
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
