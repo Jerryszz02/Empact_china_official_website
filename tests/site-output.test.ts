@@ -27,6 +27,7 @@ test(
         legalName: "验收夹具主体",
         email: "test@example.invalid",
         description: "仅用于自动测试的隔离内容。",
+        address: "隔离验收地址",
         approved: true,
         privacyApproved: true,
         contactEnabled: false,
@@ -291,6 +292,18 @@ test(
       );
       assert.equal(business("#cases h2").text(), "相关案例");
       const home = load(await readFile(join(out, "index.html"), "utf8"));
+      const organization = home('script[type="application/ld+json"]')
+        .toArray()
+        .map((element) => JSON.parse(home(element).text()))
+        .find((item) => item["@type"] === "Organization");
+      assert.equal(organization["@id"], "https://empact.cn/#organization");
+      assert.equal(organization.description, "仅用于自动测试的隔离内容。");
+      assert.deepEqual(organization.address, {
+        "@type": "PostalAddress",
+        streetAddress: "隔离验收地址",
+        addressCountry: "CN",
+      });
+      assert.equal(organization.telephone, undefined);
       for (const html of [home, business]) {
         assert.equal(html(".case-image-placeholder").length, 0);
         assert.equal(html('footer a[href="/admin"]').text().trim(), "后台管理");
@@ -452,9 +465,9 @@ test(
         const landing = load(
           await readFile(join(out, segment, "index.html"), "utf8"),
         );
-        assert.equal(landing(".content-wrap > .prose").length, 0);
-        assert.doesNotMatch(
-          landing("main").text(),
+        assert.equal(landing(".content-wrap > .prose.page-intro").length, 1);
+        assert.match(
+          landing(".page-intro").text(),
           /仅用于自动检查页面输出的隔离正文。/,
         );
         assert.ok(landing(".service-list a").length > 0);
