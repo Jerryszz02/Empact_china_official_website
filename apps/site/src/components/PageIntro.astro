@@ -1,0 +1,15 @@
+---
+import { htmlToText } from "@/lib/content";
+
+interface Props {
+  html?: string;
+}
+
+// Overview pages show the approved body copy as a short intro between the
+// summary and the directory. Empty or markup-only bodies keep the original
+// layout without an intro block.
+const { html = "" } = Astro.props;
+const hasIntro = htmlToText(html).length > 0;
+---
+
+{hasIntro && <article class="prose page-intro" set:html={html} />}

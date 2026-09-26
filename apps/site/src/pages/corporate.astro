@@ -1,5 +1,6 @@
 ---
 import BaseLayout from "@/layouts/BaseLayout.astro";
+import PageIntro from "@/components/PageIntro.astro";
 import { businesses, pageBySlug, pathFor } from "@/lib/content";
 const entry = pageBySlug("corporate");
 const services = businesses.filter((item) => item.segment === "corporate");
@@ -22,6 +23,7 @@ const services = businesses.filter((item) => item.segment === "corporate");
     </p>
   </section>
   <section class="content-wrap">
+    <PageIntro html={entry?.bodyHtml} />
     {services.length > 0 && (
       <div class="service-list service-list-spaced">
         {services.map((item) => (

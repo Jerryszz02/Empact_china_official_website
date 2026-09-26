@@ -605,6 +605,15 @@ h3 {
   max-width: 100%;
   overflow-x: auto;
 }
+.page-intro {
+  margin-bottom: 0.5rem;
+}
+.page-intro p {
+  margin: 0 0 1rem;
+}
+.page-intro p:last-child {
+  margin-bottom: 0;
+}
 .detail-meta {
   display: flex;
   flex-wrap: wrap;

@@ -1,5 +1,6 @@
 ---
 import BaseLayout from "@/layouts/BaseLayout.astro";
+import PageIntro from "@/components/PageIntro.astro";
 import { servicesForSegment, pageBySlug, pathFor } from "@/lib/content";
 const entry = pageBySlug("youth");
 const youthBusinesses = servicesForSegment("youth");
@@ -24,6 +25,7 @@ const services = youthBusinesses.filter((item) => item !== model);
     </p>
   </section>
   <section class="content-wrap">
+    <PageIntro html={entry?.bodyHtml} />
     <aside class="model-intro" aria-labelledby="model-intro-title">
       <span class="eyebrow">我们的培养理念</span>
       <h2 id="model-intro-title">从认识自己，到理解世界、主动行动</h2>

@@ -1,5 +1,6 @@
 ---
 import BaseLayout from "@/layouts/BaseLayout.astro";
+import PageIntro from "@/components/PageIntro.astro";
 import { servicesForSegment, pageBySlug, pathFor } from "@/lib/content";
 interface Props {
   segment: "school" | "community";
@@ -22,6 +23,7 @@ const summary = entry?.summary ?? "欢迎与我们交流你的需求，探讨合
     <p class="page-summary">{summary}</p>
   </section>
   <section class="content-wrap">
+    <PageIntro html={entry?.bodyHtml} />
     {services.length > 0 && (
       <div class="service-list service-list-spaced">
         {services.map((item) => (
