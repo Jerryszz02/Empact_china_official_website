@@ -17,6 +17,7 @@
 - [案例封面补全（2026-09-20）](content/case-cover-sources-2026-09-20.md)
 - [在官网后台新增案例](content/case-upload-guide.md)
 - [内容维护与素材清单](content/content-checklist.md)
+- [GEO 引言文案变更清单](content/geo-intro-copy.md)
 - [公益品牌出海与波克公益案例来源](content/philanthropy-brand-overseas-sources.md)
 - [2026 暑期新加坡营文章来源](content/singapore-camp-2026-sources.md)
 - [杨浦双语课程与进入中国年份更新](content/yangpu-course-sources-2026-09-21.md)
