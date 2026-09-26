@@ -7,7 +7,9 @@
     "./business": "./src/business.ts",
     "./inquiry": "./src/inquiry.ts",
     "./recruitment": "./src/recruitment.ts",
+    "./about": "./src/about.ts",
     "./about-awards": "./src/about-awards.ts",
+    "./business-directory": "./src/business-directory.ts",
     "./legal": "./src/legal.ts",
     "./fixtures": "./src/fixtures.ts"
   }

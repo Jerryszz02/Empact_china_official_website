@@ -41,6 +41,7 @@ const breadcrumb = [...ancestors, ...(current ? [current] : [])].map(
 );
 if (!current && breadcrumbTitle)
   breadcrumb.push({ title: breadcrumbTitle, path: Astro.url.pathname });
+const organizationId = "https://empact.cn/#organization";
 const jsonLd =
   isPreviewMode() || noIndex
     ? []
@@ -48,10 +49,24 @@ const jsonLd =
         {
           "@context": "https://schema.org",
           "@type": "Organization",
+          "@id": organizationId,
           name: snapshot.company.name,
           legalName: snapshot.company.legalName,
+          description: snapshot.company.description,
           url: "https://empact.cn",
           email: snapshot.company.email,
+          ...(snapshot.company.address
+            ? {
+                address: {
+                  "@type": "PostalAddress",
+                  streetAddress: snapshot.company.address,
+                  addressCountry: "CN",
+                },
+              }
+            : {}),
+          ...(snapshot.company.phone
+            ? { telephone: snapshot.company.phone }
+            : {}),
         },
         {
           "@context": "https://schema.org",
@@ -80,6 +95,7 @@ const jsonLd =
                 datePublished: current?.publishedAt,
                 publisher: {
                   "@type": "Organization",
+                  "@id": organizationId,
                   name: snapshot.company.name,
                 },
               },
