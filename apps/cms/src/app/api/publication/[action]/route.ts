@@ -15,6 +15,7 @@ import {
   cleanupExpiredPreviews,
   snapshotDigest,
   removeFailedPreview,
+  writePreviewOwner,
 } from "../../../../publisher.js";
 import { readDraftSnapshot } from "../../../../cms-data.js";
 import {
@@ -197,6 +198,7 @@ export async function POST(
         directory = join(previews, id),
         baseVersion = live?.version;
       await mkdir(building, { recursive: true, mode: 0o700 });
+      await writePreviewOwner(building);
       await writeFile(
         join(building, "snapshot.json"),
         JSON.stringify(snapshot),

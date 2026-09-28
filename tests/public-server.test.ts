@@ -7,12 +7,98 @@ import {
   symlink,
   rename,
   rm,
+  utimes,
 } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { randomUUID } from "node:crypto";
 import { createPublicServer } from "../scripts/public-server.js";
+import {
+  preservePublicAssets,
+  publicAssetRetentionMs,
+} from "../scripts/public-assets.js";
 import type { ContactMessage } from "../scripts/contact.js";
+
+test("publication retains only public hashed assets and never caches missing resources", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "empact-assets-"));
+  const server = createPublicServer({
+    root: join(dir, "current"),
+    origin: "https://empact.cn",
+  });
+  server.listen(0, "127.0.0.1");
+  await new Promise<void>((done) => server.once("listening", done));
+  const url = `http://127.0.0.1:${(server.address() as { port: number }).port}`;
+  try {
+    for (const release of ["one", "two"]) {
+      await mkdir(join(dir, release, "_astro"), { recursive: true });
+      await writeFile(join(dir, release, "index.html"), release);
+      await writeFile(join(dir, release, "404.html"), "missing");
+    }
+    await writeFile(
+      join(dir, "one/_astro/page.abcdefgh.css"),
+      "body{color:red}",
+    );
+    await writeFile(
+      join(dir, "one/_astro/private.abcdefgh.html"),
+      "private html",
+    );
+    await writeFile(join(dir, "one/_astro/unhashed.css"), "not immutable");
+    await writeFile(join(dir, "one/removed.html"), "withdrawn content");
+    await writeFile(join(dir, "secret.abcdefgh.js"), "private");
+    await symlink(
+      join(dir, "secret.abcdefgh.js"),
+      join(dir, "one/_astro/leak.abcdefgh.js"),
+    );
+    await symlink(join(dir, "one"), join(dir, "current"));
+    assert.match(await (await fetch(url)).text(), /one/);
+    await preservePublicAssets(dir, join(dir, "one"));
+    await symlink(join(dir, "two"), join(dir, "next"));
+    await rename(join(dir, "next"), join(dir, "current"));
+    await rm(join(dir, "one"), { recursive: true });
+    for (const method of ["GET", "HEAD"]) {
+      const resource = await fetch(url + "/_astro/page.abcdefgh.css", {
+        method,
+      });
+      assert.equal(resource.status, 200);
+      assert.match(resource.headers.get("cache-control")!, /immutable/);
+      assert.match(resource.headers.get("content-type")!, /text\/css/);
+      assert.equal(
+        await resource.text(),
+        method === "HEAD" ? "" : "body{color:red}",
+      );
+    }
+    for (const path of [
+      "/_astro/unknown.abcdefgh.css",
+      "/_astro/private.abcdefgh.html",
+      "/_astro/unhashed.css",
+      "/_astro/leak.abcdefgh.js",
+      "/removed.html",
+      "/snapshot.json",
+      "/public-assets/page.abcdefgh.css",
+    ]) {
+      const missing = await fetch(url + path);
+      assert.equal(missing.status, 404, path);
+      assert.equal(missing.headers.get("cache-control"), "no-store", path);
+    }
+    const expired = new Date(Date.now() - publicAssetRetentionMs - 1000);
+    await utimes(
+      join(dir, "public-assets/page.abcdefgh.css"),
+      expired,
+      expired,
+    );
+    assert.equal((await fetch(url + "/_astro/page.abcdefgh.css")).status, 404);
+    await preservePublicAssets(dir);
+    await mkdir(join(dir, "unsafe"));
+    await symlink(join(dir, "public-assets"), join(dir, "unsafe/_astro"));
+    await assert.rejects(
+      preservePublicAssets(dir, join(dir, "unsafe")),
+      /outside release/,
+    );
+  } finally {
+    await new Promise<void>((done) => server.close(() => done()));
+    await rm(dir, { recursive: true, force: true });
+  }
+});
 
 test("static server preserves real 404, blocks private files, switches release atomically and gates contact", async () => {
   const dir = await mkdtemp(join(tmpdir(), "empact-static-"));

@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import importlib.util
+import json
 import os
 import tempfile
 import threading
@@ -105,7 +106,7 @@ class AutoDeployTests(unittest.TestCase):
     def test_maintenance_waits_for_publication_and_releases_its_own_lock(self):
         with tempfile.TemporaryDirectory() as directory:
             lock = Path(directory) / "publish.lock"
-            lock.write_text('{"pid":123}')
+            lock.write_text(json.dumps({"pid": os.getpid()}))
             publisher_finishes = threading.Timer(0.1, lock.unlink)
             publisher_finishes.start()
             try:
@@ -121,12 +122,57 @@ class AutoDeployTests(unittest.TestCase):
     def test_maintenance_never_removes_another_publications_lock(self):
         with tempfile.TemporaryDirectory() as directory:
             lock = Path(directory) / "publish.lock"
-            lock.write_text('{"pid":123}')
+            lock.write_text(json.dumps({"pid": os.getpid()}))
             with self.assertRaises(RuntimeError):
                 publication_lock.acquire(directory, "maintenance", timeout=0)
             with self.assertRaises(RuntimeError):
                 publication_lock.release(directory, "maintenance")
-            self.assertEqual(lock.read_text(), '{"pid":123}')
+            self.assertEqual(json.loads(lock.read_text()), {"pid": os.getpid()})
+
+    def test_killed_cms_holder_is_recovered_and_live_holder_is_excluded(self):
+        with tempfile.TemporaryDirectory() as directory:
+            holder = subprocess.Popen(["python3", "-c", "import time; time.sleep(30)"])
+            try:
+                publication_lock.acquire(
+                    directory, "cms", timeout=0, owner_pid=holder.pid, maintenance=False
+                )
+                record = json.loads((Path(directory) / "publish.lock").read_text())
+                self.assertEqual(record["pid"], holder.pid)
+                with self.assertRaises(RuntimeError):
+                    publication_lock.acquire(directory, "maintenance", timeout=0)
+                holder.kill()
+                holder.wait(timeout=5)
+                publication_lock.acquire(directory, "maintenance", timeout=1)
+                self.assertIn('"maintenanceToken": "maintenance"',
+                              (Path(directory) / "publish.lock").read_text())
+                publication_lock.release(directory, "maintenance")
+                self.assertFalse((Path(directory) / "publish.lock").exists())
+            finally:
+                if holder.poll() is None:
+                    holder.kill()
+                    holder.wait(timeout=5)
+
+    def test_reused_pid_identity_does_not_keep_abandoned_lock(self):
+        with tempfile.TemporaryDirectory() as directory:
+            lock = Path(directory) / "publish.lock"
+            lock.write_text(json.dumps({
+                "pid": os.getpid(), "processStart": "old-process",
+                "publicationToken": "old",
+            }))
+            if publication_lock.process_start(os.getpid()) is None:
+                self.skipTest("kernel process birth marker unavailable")
+            publication_lock.acquire(directory, "maintenance", timeout=0)
+            publication_lock.release(directory, "maintenance")
+            self.assertFalse(lock.exists())
+
+    def test_guard_symlink_is_rejected_without_touching_target(self):
+        with tempfile.TemporaryDirectory() as directory:
+            target = Path(directory) / "target"
+            target.write_text("keep")
+            (Path(directory) / "publish.guard").symlink_to(target)
+            with self.assertRaises(OSError):
+                publication_lock.acquire(directory, "maintenance", timeout=0)
+            self.assertEqual(target.read_text(), "keep")
 
     def test_pending_failed_wrong_event_or_sha_is_rejected(self):
         for candidate in [

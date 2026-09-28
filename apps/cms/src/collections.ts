@@ -1,5 +1,11 @@
 import { APIError } from "payload";
-import type { CollectionConfig, GlobalConfig, Field, Where } from "payload";
+import type {
+  CollectionConfig,
+  GlobalConfig,
+  Field,
+  Where,
+  PayloadRequest,
+} from "payload";
 import { lexicalMediaIds, serializeLexicalBody } from "./cms-data.js";
 import { assertBusinessDependencyFree } from "./business-admin.js";
 import { randomUUID } from "node:crypto";
@@ -652,7 +658,79 @@ export const Content: CollectionConfig = {
     },
   ],
 };
+/** The same invariant applies before file removal, even with overrideAccess. */
+export async function mediaCanBeDeleted(
+  req: PayloadRequest,
+  id: string | number,
+) {
+  const refs = await req.payload.find({
+    collection: "content",
+    req,
+    where: { image: { equals: id } },
+    overrideAccess: true,
+    limit: 1,
+  });
+  if (refs.totalDocs) return false;
+  const drafts = await req.payload.find({
+    collection: "content",
+    req,
+    pagination: false,
+    depth: 0,
+    overrideAccess: true,
+  });
+  if (drafts.docs.some((doc) => lexicalMediaIds(doc.body).includes(String(id))))
+    return false;
+  const versions = await req.payload.findVersions({
+    collection: "content",
+    req,
+    pagination: false,
+    depth: 0,
+    overrideAccess: true,
+  });
+  if (
+    versions.docs.some(
+      (doc) =>
+        String(doc.version.image) === String(id) ||
+        lexicalMediaIds(doc.version.body).includes(String(id)),
+    )
+  )
+    return false;
+  const gallery = await req.payload.findGlobal({
+    slug: "home-gallery",
+    req,
+    depth: 0,
+    overrideAccess: true,
+  });
+  if (
+    gallery.photos?.some(
+      (photo: { image: unknown }) => String(photo.image) === String(id),
+    )
+  )
+    return false;
+  const officeGallery = await req.payload.findGlobal({
+    slug: "office-gallery",
+    req,
+    depth: 0,
+    overrideAccess: true,
+  });
+  if (
+    officeGallery.photos?.some(
+      (photo: { image: unknown }) => String(photo.image) === String(id),
+    )
+  )
+    return false;
+  for (const receipt of await listReceipts()) {
+    if (!receipt.releasePath) continue;
+    const snapshot = JSON.parse(
+      await readFile(join(receipt.releasePath, "snapshot.json"), "utf8"),
+    );
+    if (snapshot.media.some((item: { id: string }) => item.id === String(id)))
+      return false;
+  }
+  return true;
+}
 export const Media: CollectionConfig = {
+  disableBulkDelete: true,
   slug: "media",
   labels: { singular: "图片素材", plural: "图片素材" },
   admin: {
@@ -666,75 +744,20 @@ export const Media: CollectionConfig = {
     update: adminOnly,
     delete: async ({ req, id }) => {
       if (!adminOnly({ req })) return false;
-      if (id == null) return true;
-      const refs = await req.payload.find({
-        collection: "content",
-        where: { image: { equals: id } },
-        limit: 1,
-      });
-      if (refs.totalDocs) return false;
-      const drafts = await req.payload.find({
-        collection: "content",
-        pagination: false,
-        depth: 0,
-        overrideAccess: true,
-      });
-      if (
-        drafts.docs.some((doc) =>
-          lexicalMediaIds(doc.body).includes(String(id)),
-        )
-      )
-        return false;
-      const versions = await req.payload.findVersions({
-        collection: "content",
-        pagination: false,
-        depth: 0,
-        overrideAccess: true,
-      });
-      if (
-        versions.docs.some(
-          (doc) =>
-            String(doc.version.image) === String(id) ||
-            lexicalMediaIds(doc.version.body).includes(String(id)),
-        )
-      )
-        return false;
-      const gallery = await req.payload.findGlobal({
-        slug: "home-gallery",
-        depth: 0,
-        overrideAccess: true,
-      });
-      if (
-        gallery.photos?.some(
-          (photo: { image: unknown }) => String(photo.image) === String(id),
-        )
-      )
-        return false;
-      const officeGallery = await req.payload.findGlobal({
-        slug: "office-gallery",
-        depth: 0,
-        overrideAccess: true,
-      });
-      if (
-        officeGallery.photos?.some(
-          (photo: { image: unknown }) => String(photo.image) === String(id),
-        )
-      )
-        return false;
-      for (const receipt of await listReceipts()) {
-        if (!receipt.releasePath) continue;
-        const snapshot = JSON.parse(
-          await readFile(join(receipt.releasePath, "snapshot.json"), "utf8"),
-        );
-        if (
-          snapshot.media.some((item: { id: string }) => item.id === String(id))
-        )
-          return false;
-      }
-      return true;
+      if (id == null) return false;
+      return mediaCanBeDeleted(req, id);
     },
   },
   hooks: {
+    beforeDelete: [
+      async ({ req, id }) => {
+        if (!(await mediaCanBeDeleted(req, id)))
+          throw new APIError(
+            "图片仍被内容、历史版本或发布快照引用，无法删除。",
+            409,
+          );
+      },
+    ],
     beforeOperation: [
       async ({ req, operation }) => {
         if ((operation === "create" || operation === "update") && req.file) {

@@ -188,11 +188,69 @@ export async function verifyRecruitmentWorkflow(options: {
     headers: { Cookie: cookies, "Sec-Fetch-Site": "same-origin" },
   });
   assert.equal(previewPage.status, 200);
-  const previewCards = load(await previewPage.text())(
-    "[data-recruitment-job]",
-  ).text();
+  const previewHTML = load(await previewPage.text());
+  const previewCards = previewHTML("[data-recruitment-job]").text();
   assert.match(previewCards, /招聘集成开放岗位/);
   assert.match(previewCards, /招聘预览示例岗位/);
+  assert.ok(previewHTML("img[srcset]").length > 0);
+  const browser = await chromium.launch(
+    process.platform === "darwin" ? { channel: "chrome" } : {},
+  );
+  try {
+    for (const [width, deviceScaleFactor] of [
+      [390, 3],
+      [1440, 1],
+    ]) {
+      const context = await browser.newContext({
+        viewport: { width, height: 900 },
+        deviceScaleFactor,
+      });
+      await context.addCookies(
+        cookies.split(/;\s*/).map((cookie) => {
+          const separator = cookie.indexOf("=");
+          return {
+            name: cookie.slice(0, separator),
+            value: cookie.slice(separator + 1),
+            url: base,
+          };
+        }),
+      );
+      const page = await context.newPage();
+      const imageRequests: string[] = [];
+      page.on("request", (request) => {
+        if (request.resourceType() === "image")
+          imageRequests.push(new URL(request.url()).pathname);
+      });
+      await page.goto(base + `${preview.previewUrl}join-us/`);
+      for (const img of await page.locator("img[srcset]").all()) {
+        await img.scrollIntoViewIfNeeded();
+        await expect
+          .poll(() =>
+            img.evaluate(
+              (element: HTMLImageElement) =>
+                element.complete && element.naturalWidth > 0,
+            ),
+          )
+          .toBe(true);
+        const current = await img.evaluate(
+          (element: HTMLImageElement) => new URL(element.currentSrc).pathname,
+        );
+        assert.ok(current.startsWith(`/preview/${previewId}/_astro/`), current);
+      }
+      assert.ok(
+        imageRequests.some((path) =>
+          path.startsWith(`/preview/${previewId}/_astro/`),
+        ),
+      );
+      assert.ok(
+        imageRequests.every((path) => !path.startsWith("/_astro/")),
+        imageRequests.join(", "),
+      );
+      await context.close();
+    }
+  } finally {
+    await browser.close();
+  }
 
   const wrongSelection = await fetch(base + "/api/publication/publish", {
     method: "POST",

@@ -179,7 +179,7 @@ export function BusinessAdminDashboard() {
   }
 
   async function action(
-    type: "preview" | "publish" | "unpublish" | "delete",
+    type: "preview" | "publish" | "sync" | "unpublish" | "delete",
     item: Item,
   ) {
     if (
@@ -189,7 +189,9 @@ export function BusinessAdminDashboard() {
           ? `确定删除“${item.title}”？已发布内容会先撤下；有依赖的业务类型无法删除。`
           : type === "publish"
             ? `发布“${item.title}”？请确认已保存最新修改。`
-            : `撤下“${item.title}”？撤下后可在草稿中继续管理。`,
+            : type === "sync"
+              ? `重试“${item.title}”的后台状态同步？官网已发布，不会再次构建。`
+              : `撤下“${item.title}”？撤下后可在草稿中继续管理。`,
       )
     )
       return;
@@ -201,7 +203,11 @@ export function BusinessAdminDashboard() {
       const response = await fetch(`/api/business-admin/${type}`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ id: item.id, confirmed: true }),
+        body: JSON.stringify({
+          id: item.id,
+          confirmed: true,
+          ...(type === "sync" ? { receiptId: item.syncReceiptId } : {}),
+        }),
       });
       const data = await response.json();
       if (!response.ok)
@@ -239,6 +245,15 @@ export function BusinessAdminDashboard() {
             onClick={() => void action("publish", item)}
           >
             {item.live ? "发布更新" : "发布到官网"}
+          </button>
+        )}
+        {item.syncStatus === "pending" && item.syncReceiptId && (
+          <button
+            className="button button--quiet"
+            disabled={busy}
+            onClick={() => void action("sync", item)}
+          >
+            重试状态同步
           </button>
         )}
         {item.live && (
@@ -312,7 +327,9 @@ export function BusinessAdminDashboard() {
       <a className="office-gallery-entry" href="/admin/globals/office-gallery">
         <span>
           <strong>办公空间照片</strong>
-          <small>管理“加入我们”的办公空间照片和图片说明，保存后可预览、发布。</small>
+          <small>
+            管理“加入我们”的办公空间照片和图片说明，保存后可预览、发布。
+          </small>
         </span>
         <span className="home-gallery-entry__action" aria-hidden="true">
           编辑照片 ↗

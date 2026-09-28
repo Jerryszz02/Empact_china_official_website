@@ -12,12 +12,15 @@ import {
   realpath,
   copyFile,
   rm,
+  stat,
 } from "node:fs/promises";
 import { basename, dirname, join, resolve } from "node:path";
 import { randomUUID, createHash } from "node:crypto";
-import { spawn } from "node:child_process";
+import { execFile, spawn } from "node:child_process";
+import { promisify } from "node:util";
 import { validateSnapshot, type Snapshot } from "@empact/content/schema";
 import { checkOutput } from "../../../scripts/check-output.js";
+import { preservePublicAssets } from "../../../scripts/public-assets.js";
 
 export type ReceiptState =
   "publishing" | "published" | "failed" | "rolled_back" | "unpublished";
@@ -31,6 +34,7 @@ export type PublicationReceipt = {
   releasePath?: string;
   selectedIds?: string[];
   baseVersion?: string;
+  targetState?: "published" | "unpublished" | "rolled_back";
 };
 export type PublisherOptions = {
   runtimeDir?: string;
@@ -52,6 +56,43 @@ const repository = resolve(
     (basename(process.cwd()) === "cms" ? "../.." : "."),
 );
 const identifier = /^[a-zA-Z0-9_-]{1,100}$/;
+const execFileAsync = promisify(execFile);
+const abandonedPreviewAge = 15 * 60_000;
+async function processStart(pid: number) {
+  try {
+    const stat = await readFile(`/proc/${pid}/stat`, "utf8");
+    return stat
+      .slice(stat.lastIndexOf(")") + 1)
+      .trim()
+      .split(/\s+/)[19];
+  } catch {
+    return undefined;
+  }
+}
+async function processAlive(pid: unknown, expectedStart?: unknown) {
+  if (!Number.isSafeInteger(pid) || (pid as number) < 1) return true;
+  try {
+    process.kill(pid as number, 0);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ESRCH") return false;
+  }
+  const currentStart = await processStart(pid as number);
+  return (
+    typeof expectedStart !== "string" ||
+    currentStart === undefined ||
+    expectedStart === currentStart
+  );
+}
+export async function writePreviewOwner(directory: string) {
+  await writeFile(
+    join(directory, "owner.json"),
+    JSON.stringify({
+      pid: process.pid,
+      processStart: await processStart(process.pid),
+    }),
+    { flag: "wx", mode: 0o600 },
+  );
+}
 export function snapshotDigest(snapshot: Snapshot) {
   return createHash("sha256").update(JSON.stringify(snapshot)).digest("hex");
 }
@@ -64,8 +105,32 @@ export async function cleanupExpiredPreviews(
     () => [] as import("node:fs").Dirent[],
   );
   for (const entry of entries) {
-    if (!entry.isDirectory() || !validPreviewId(entry.name)) continue;
+    if (!entry.isDirectory()) continue;
     const directory = join(root, entry.name);
+    if (entry.name.endsWith(".building")) {
+      if (!validPreviewId(entry.name.slice(0, -".building".length))) continue;
+      let owner: { pid?: unknown; processStart?: unknown } | undefined;
+      try {
+        owner = JSON.parse(
+          await readFile(join(directory, "owner.json"), "utf8"),
+        );
+      } catch {
+        // Older interrupted builds have no owner marker.
+      }
+      if (owner && !(await processAlive(owner.pid, owner.processStart))) {
+        await rm(directory, { recursive: true, force: true });
+      } else if (!owner) {
+        const info = await stat(directory).catch((error) => {
+          if ((error as NodeJS.ErrnoException).code === "ENOENT")
+            return undefined;
+          throw error;
+        });
+        if (info && now - info.mtimeMs > abandonedPreviewAge)
+          await rm(directory, { recursive: true, force: true });
+      }
+      continue;
+    }
+    if (!validPreviewId(entry.name)) continue;
     try {
       const expires = JSON.parse(
         await readFile(join(directory, "expires.json"), "utf8"),
@@ -134,22 +199,66 @@ async function receiptWrite(runtime: string, receipt: PublicationReceipt) {
 }
 async function lock<T>(runtime: string, callback: () => Promise<T>) {
   await mkdir(runtime, { recursive: true, mode: 0o700 });
-  let handle;
+  const token = randomUUID();
+  const helper = join(repository, "deploy", "publication-lock.py");
   try {
-    handle = await open(join(runtime, "publish.lock"), "wx", 0o600);
+    await execFileAsync("python3", [
+      helper,
+      "acquire",
+      runtime,
+      token,
+      "--cms-owner",
+      String(process.pid),
+    ]);
   } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === "EEXIST")
+    if ((error as { code?: string | number }).code === 75)
       throw new Error("已有发布任务正在执行，请等待完成。");
     throw error;
   }
-  await handle.writeFile(
-    JSON.stringify({ pid: process.pid, startedAt: new Date().toISOString() }),
-  );
   try {
+    await reconcileInterruptedReceipts(runtime);
     return await callback();
   } finally {
-    await handle.close();
-    await unlink(join(runtime, "publish.lock"));
+    await execFileAsync("python3", [
+      helper,
+      "release",
+      runtime,
+      token,
+      "--cms-owner",
+      String(process.pid),
+    ]);
+  }
+}
+export async function withPublicationLock<T>(
+  runtime: string,
+  callback: () => Promise<T>,
+) {
+  return lock(resolve(runtime), callback);
+}
+async function reconcileInterruptedReceipts(runtime: string) {
+  const current = await currentRelease(runtime);
+  for (const receipt of await listReceipts(runtime)) {
+    if (receipt.state !== "publishing") continue;
+    const release =
+      receipt.releasePath || join(runtime, "releases", receipt.id);
+    const output = await realpath(join(release, "public")).catch(
+      () => undefined,
+    );
+    const metadata =
+      output && current === output
+        ? await readFile(join(output, "release.json"), "utf8")
+            .then((text) => JSON.parse(text) as { version?: string })
+            .catch(() => undefined)
+        : undefined;
+    if (metadata?.version === receipt.version) {
+      receipt.state = receipt.targetState || "published";
+      receipt.releasePath = release;
+    } else {
+      receipt.state = "failed";
+      receipt.error = "发布进程中断，线上版本与本次回执不一致。";
+    }
+    receipt.finishedAt = new Date().toISOString();
+    await receiptWrite(runtime, receipt);
   }
 }
 async function switchCurrent(runtime: string, target?: string) {
@@ -204,8 +313,8 @@ export function mergeSelectedLive(
       id,
       (includeHomeGallery &&
         draft.homeGallery?.photos.some((photo) => photo.imageId === id)) ||
-      (includeOfficeGallery &&
-        draft.officeGallery?.photos.some((photo) => photo.imageId === id))
+        (includeOfficeGallery &&
+          draft.officeGallery?.photos.some((photo) => photo.imageId === id))
         ? { ...item, approved: true }
         : item,
     );
@@ -360,6 +469,7 @@ export async function publishSnapshot(
         state: "publishing",
         startedAt: now().toISOString(),
         selectedIds: options.selectedIds,
+        targetState: options.state || "published",
       };
     const previous = await currentRelease(runtime);
     receipt.baseVersion = (await readLiveSnapshot(runtime))?.version;
@@ -380,6 +490,7 @@ export async function publishSnapshot(
       const output = await buildSite(snapshot, release, options);
       if (!(await health(output, "before", snapshot, options)))
         throw new Error("发布前检查失败。");
+      await preservePublicAssets(runtime, previous);
       await switchCurrent(runtime, output);
       switched = true;
       if (!(await health(output, "after", snapshot, options)))
@@ -441,6 +552,7 @@ export async function rollback(
         version,
         state: "publishing",
         startedAt: new Date().toISOString(),
+        targetState: "rolled_back",
       },
       previous = await currentRelease(runtime);
     let switched = false;
@@ -461,10 +573,13 @@ export async function rollback(
       );
       // Rebuild the frozen content to respect deadlines that elapsed since its first release.
       receipt.selectedIds = snapshot.entries.map((entry) => entry.id);
-      const release = join(runtime, "releases", receipt.id),
-        output = await buildSite(snapshot, release, options);
+      const release = join(runtime, "releases", receipt.id);
+      receipt.releasePath = release;
+      await receiptWrite(runtime, receipt);
+      const output = await buildSite(snapshot, release, options);
       if (!(await health(output, "before", snapshot, options)))
         throw new Error("恢复版本检查失败。");
+      await preservePublicAssets(runtime, previous);
       await switchCurrent(runtime, output);
       switched = true;
       if (!(await health(output, "after", snapshot, options)))
