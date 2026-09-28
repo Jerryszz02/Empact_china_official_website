@@ -495,6 +495,44 @@ test("atomic metadata update skips an edit that lands after draft serialization"
   }
 });
 
+test("a cover image reused in the body is synchronized once", async () => {
+  const f = await fixture();
+  try {
+    const reusedBody = htmlToLexical(
+      '<p>与封面共用图片。</p><img src="/media/test.png" alt="测试图片">',
+      new Map([["/media/test.png", 1]]),
+    );
+    f.docs.push({
+      id: 100,
+      kind: "case",
+      slug: "reused-cover",
+      title: "共用图片案例",
+      summary: "摘要",
+      body: reusedBody,
+      parent: f.parent.id,
+      image: 1,
+      approved: false,
+    });
+    const update = f.payload.db.updateOne;
+    let mediaUpdates = 0;
+    f.payload.db.updateOne = async (args: any) => {
+      if (args.collection === "media") mediaUpdates++;
+      return update(args);
+    };
+    const result = await businessAdminMutation(
+      f.payload,
+      "publish",
+      "100",
+      f.options,
+    );
+    assert.equal(result.publication?.syncStatus, "complete");
+    assert.equal(mediaUpdates, 1);
+    assert.equal(f.images[0].approved, true);
+  } finally {
+    await rm(f.root, { recursive: true, force: true });
+  }
+});
+
 test("case republishing restores live coverage without publishing drafts or rolling back later updates", async () => {
   const f = await fixture();
   try {

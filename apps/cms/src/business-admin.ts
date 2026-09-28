@@ -162,7 +162,7 @@ async function syncPublishedMetadata(
           url: entryUrl(published),
           publication: publication("complete"),
         };
-      const mediaIds = usedMedia(published);
+      const mediaIds = [...new Set(usedMedia(published))];
       // Fetch revision tokens before serialization. A user edit at any point
       // afterwards must make the atomic metadata update miss its WHERE clause.
       const [rawContent, rawMedia] = await Promise.all([
