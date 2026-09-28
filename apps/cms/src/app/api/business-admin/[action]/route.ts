@@ -41,7 +41,9 @@ export async function POST(
     return Response.json({ error: "请求来源无效。" }, { status: 403, headers });
   const { action } = await context.params;
   if (
-    !["preview", "publish", "unpublish", "delete", "reorder"].includes(action)
+    !["preview", "publish", "sync", "unpublish", "delete", "reorder"].includes(
+      action,
+    )
   )
     return Response.json({ error: "操作不存在。" }, { status: 404, headers });
   try {
@@ -50,6 +52,7 @@ export async function POST(
       confirmed?: unknown;
       targetIndex?: unknown;
       expected?: unknown;
+      receiptId?: unknown;
     };
     if (typeof body.id !== "string" || !body.id)
       throw new Error("缺少内容 ID。");
@@ -57,11 +60,17 @@ export async function POST(
       return Response.json(await reorderBusiness(payload, body), { headers });
     if (action !== "preview" && body.confirmed !== true)
       throw new Error("请先勾选确认本次操作。");
+    if (
+      action === "sync" &&
+      (typeof body.receiptId !== "string" || !body.receiptId)
+    )
+      throw new Error("缺少发布回执，请刷新状态。");
     return Response.json(
       await businessAdminMutation(
         payload,
         action as BusinessAdminAction,
         body.id,
+        action === "sync" ? { receiptId: body.receiptId as string } : {},
       ),
       { headers },
     );

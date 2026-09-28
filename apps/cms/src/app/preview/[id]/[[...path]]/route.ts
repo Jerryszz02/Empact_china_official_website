@@ -2,7 +2,7 @@ import { getPayload } from "payload";
 import config from "@payload-config";
 import { readFile, realpath } from "node:fs/promises";
 import { join, resolve, extname, sep } from "node:path";
-import { load } from "cheerio";
+import { rewritePreviewHTML } from "../../../../preview-html.js";
 import {
   runtimeDir,
   validPreviewId,
@@ -71,15 +71,7 @@ export async function GET(
     const type = types[extname(file)];
     if (!type) throw new Error("type");
     if (file.endsWith(".html")) {
-      const $ = load(Buffer.from(data).toString("utf8"));
-      for (const element of $("[href],[src]"))
-        for (const attribute of ["href", "src"]) {
-          const value = $(element).attr(attribute);
-          if (value?.startsWith("/") && !value.startsWith("//"))
-            $(element).attr(attribute, `/preview/${id}${value}`);
-        }
-      $('form button[type="submit"]').attr("disabled", "disabled");
-      data = $.html();
+      data = rewritePreviewHTML(Buffer.from(data).toString("utf8"), id);
     }
     return new Response(data as BodyInit, {
       headers: { ...responseHeaders, "Content-Type": type },

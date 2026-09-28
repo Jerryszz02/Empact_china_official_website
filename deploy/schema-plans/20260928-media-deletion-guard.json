@@ -1,0 +1,7 @@
+{
+  "version": 1,
+  "from": "a286ebec5751bdce8f2a5f9ec7f0170115f750e0980f92f3e4ad186f207c74c1",
+  "to": "6ceb916e6471dd441f27028ec9ecb4685419375fa0fc424ab8e3e4a4170d3de5",
+  "description": "Disable media bulk deletion and enforce existing reference protection in the per-document deletion hook, including privileged local API calls. No fields, relationships, tables, indexes or migration files change.",
+  "statements": []
+}

@@ -23,6 +23,9 @@ export type AdminItem = {
   publishedAt?: string;
   lastError?: string;
   lastAction?: string;
+  syncReceiptId?: string;
+  syncVersion?: string;
+  syncStatus?: "pending" | "complete" | "skipped" | "superseded";
 };
 
 export const segmentLabels = {
@@ -33,6 +36,8 @@ export const segmentLabels = {
 } as const;
 
 export function itemStatus(item: AdminItem) {
+  if (item.live && item.syncStatus === "pending")
+    return { label: "已发布 · 后台状态待同步", tone: "changed" };
   if (item.lastError) return { label: "操作失败 · 可重试", tone: "changed" };
   if (item.live && item.modified)
     return { label: "已发布 · 有未发布修改", tone: "changed" };

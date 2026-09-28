@@ -10,6 +10,9 @@ import {
   readLiveSnapshot,
   runtimeDir,
   removeFailedPreview,
+  withPublicationLock,
+  writePreviewOwner,
+  type PublicationReceipt,
 } from "./publisher.js";
 import {
   entryPath,
@@ -19,11 +22,19 @@ import {
   type Snapshot,
 } from "@empact/content/schema";
 import { readDraftSnapshot } from "./cms-data.js";
-import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
 export type BusinessAdminAction =
-  "preview" | "publish" | "unpublish" | "delete";
+  "preview" | "publish" | "sync" | "unpublish" | "delete";
+type SyncStatus = "pending" | "complete" | "skipped" | "superseded";
+type SyncRecord = { receiptId: string; version: string; status: SyncStatus };
+type PublicationResult = {
+  state: "published";
+  receiptId: string;
+  version: string;
+  syncStatus: SyncStatus;
+};
 export type BusinessAdminItem = {
   id: string;
   title: string;
@@ -40,6 +51,9 @@ export type BusinessAdminItem = {
   publishedAt?: string;
   lastError?: string;
   lastAction?: string;
+  syncReceiptId?: string;
+  syncVersion?: string;
+  syncStatus?: SyncStatus;
 };
 
 const entryFor = (snapshot: Snapshot, id: string) =>
@@ -48,6 +62,221 @@ const usedMedia = (entry: Entry) =>
   [entry.imageId, ...(entry.bodyMediaIds ?? [])].filter((id): id is string =>
     Boolean(id),
   );
+
+async function readSyncRecord(runtime: string, receipt: PublicationReceipt) {
+  try {
+    const record = JSON.parse(
+      await readFile(
+        join(runtime, "business-sync", `${receipt.id}.json`),
+        "utf8",
+      ),
+    ) as SyncRecord;
+    return record.receiptId === receipt.id &&
+      record.version === receipt.version &&
+      ["pending", "complete", "skipped", "superseded"].includes(record.status)
+      ? record.status
+      : "pending";
+  } catch {
+    // Older receipts and interrupted post-publication updates remain retryable.
+    return "pending";
+  }
+}
+
+async function writeSyncRecord(
+  runtime: string,
+  receipt: PublicationReceipt,
+  status: SyncStatus,
+) {
+  const directory = join(runtime, "business-sync");
+  await mkdir(directory, { recursive: true, mode: 0o700 });
+  const target = join(directory, `${receipt.id}.json`);
+  const temporary = `${target}.${randomUUID()}.tmp`;
+  try {
+    await writeFile(
+      temporary,
+      JSON.stringify({
+        receiptId: receipt.id,
+        version: receipt.version,
+        status,
+      }),
+      {
+        mode: 0o600,
+      },
+    );
+    await rename(temporary, target);
+  } finally {
+    await rm(temporary, { force: true });
+  }
+}
+
+async function syncPublishedMetadata(
+  payload: Payload,
+  id: string,
+  receiptId: string,
+  runtime: string,
+): Promise<{ message: string; url?: string; publication: PublicationResult }> {
+  const receipt = (await listReceipts(runtime)).find(
+    (item) => item.id === receiptId,
+  );
+  if (
+    !receipt ||
+    receipt.state !== "published" ||
+    receipt.selectedIds?.length !== 1 ||
+    receipt.selectedIds[0] !== id
+  )
+    throw new Error("发布回执无效，请刷新状态。");
+  const publication = (syncStatus: SyncStatus): PublicationResult => ({
+    state: "published",
+    receiptId: receipt.id,
+    version: receipt.version,
+    syncStatus,
+  });
+  try {
+    return await withPublicationLock(runtime, async () => {
+      const [live, currentReceipt] = await Promise.all([
+        readLiveSnapshot(runtime),
+        listReceipts(runtime).then((items) =>
+          items.find((item) => item.id === receiptId),
+        ),
+      ]);
+      if (
+        currentReceipt?.state !== "published" ||
+        live?.version !== receipt.version
+      ) {
+        await writeSyncRecord(runtime, receipt, "superseded");
+        return {
+          message: "官网已发布该版本，但官网现已更新；旧回执不再同步后台状态。",
+          publication: publication("superseded"),
+        };
+      }
+      const published = entryFor(live, id);
+      if (
+        !published ||
+        (published.kind !== "business" && published.kind !== "case") ||
+        isFixedYouthModel(published)
+      )
+        throw new Error("发布回执与官网内容不一致，请联系维护人。");
+      if ((await readSyncRecord(runtime, receipt)) === "complete")
+        return {
+          message: "官网已发布，后台状态已同步。",
+          url: entryUrl(published),
+          publication: publication("complete"),
+        };
+      const mediaIds = [...new Set(usedMedia(published))];
+      // Fetch revision tokens before serialization. A user edit at any point
+      // afterwards must make the atomic metadata update miss its WHERE clause.
+      const [rawContent, rawMedia] = await Promise.all([
+        payload.findByID({
+          collection: "content",
+          id,
+          depth: 0,
+          overrideAccess: true,
+        }),
+        Promise.all(
+          mediaIds.map((mediaId) =>
+            payload.findByID({
+              collection: "media",
+              id: mediaId,
+              depth: 0,
+              overrideAccess: true,
+            }),
+          ),
+        ),
+      ]);
+      const draft = await readDraftSnapshot(payload);
+      const saved = entryFor(draft, id);
+      const sameEntry = Boolean(
+        saved &&
+        isDeepStrictEqual(
+          JSON.parse(
+            JSON.stringify({
+              ...saved,
+              approved: true,
+              publishedAt: published.publishedAt,
+            }),
+          ),
+          published,
+        ),
+      );
+      let skipped = !sameEntry;
+      async function atomicMetadataUpdate(
+        collection: "content" | "media",
+        documentId: string,
+        updatedAt: unknown,
+        data: Record<string, unknown>,
+      ) {
+        if (typeof updatedAt !== "string")
+          throw new Error("草稿缺少修订时间。");
+        return Boolean(
+          await payload.db.updateOne({
+            collection,
+            where: {
+              and: [
+                { id: { equals: documentId } },
+                { updatedAt: { equals: updatedAt } },
+              ],
+            },
+            data: { ...data, updatedAt: new Date().toISOString() },
+            options: { atomic: true },
+          }),
+        );
+      }
+      if (
+        sameEntry &&
+        saved &&
+        (!saved.approved || saved.publishedAt !== published.publishedAt)
+      )
+        if (
+          !(await atomicMetadataUpdate("content", id, rawContent.updatedAt, {
+            approved: true,
+            everPublished: true,
+            ...(published.publishedAt
+              ? { publishedAt: published.publishedAt }
+              : {}),
+          }))
+        )
+          skipped = true;
+      for (const [index, mediaId] of mediaIds.entries()) {
+        const savedMedia = draft.media.find((item) => item.id === mediaId);
+        const liveMedia = live.media.find((item) => item.id === mediaId);
+        if (
+          !savedMedia ||
+          !liveMedia ||
+          !isDeepStrictEqual({ ...savedMedia, approved: true }, liveMedia)
+        ) {
+          skipped = true;
+          continue;
+        }
+        if (!savedMedia.approved)
+          if (
+            !(await atomicMetadataUpdate(
+              "media",
+              mediaId,
+              rawMedia[index].updatedAt,
+              {
+                approved: true,
+              },
+            ))
+          )
+            skipped = true;
+      }
+      const status = skipped ? "skipped" : "complete";
+      await writeSyncRecord(runtime, receipt, status);
+      return {
+        message: skipped
+          ? "官网已发布；较新的草稿或图片修改已保留，未覆盖后台状态。"
+          : "官网已发布，后台状态已同步。",
+        url: entryUrl(published),
+        publication: publication(status),
+      };
+    });
+  } catch {
+    return {
+      message: "官网已发布，但后台状态同步未完成；请点击“重试状态同步”。",
+      publication: publication("pending"),
+    };
+  }
+}
 
 /** Shared guard for the Payload collection delete hook and the admin endpoint. */
 export async function assertBusinessDependencyFree(
@@ -71,55 +300,73 @@ export async function assertBusinessDependencyFree(
 
 export async function businessAdminState(
   payload: Payload,
+  runtime = runtimeDir(),
 ): Promise<{ items: BusinessAdminItem[] }> {
   const [draft, live, receipts] = await Promise.all([
     readDraftSnapshot(payload),
-    readLiveSnapshot(),
-    listReceipts(),
+    readLiveSnapshot(runtime),
+    listReceipts(runtime),
   ]);
   const latest = new Map<string, (typeof receipts)[number]>();
   for (const receipt of receipts)
     for (const id of receipt.selectedIds ?? [])
       if (!latest.has(id)) latest.set(id, receipt);
   return {
-    items: draft.entries
-      .filter(
-        (entry): entry is Entry & { kind: "business" | "case" } =>
-          entry.kind === "business" || entry.kind === "case",
-      )
-      .map((entry) => {
-        const current = live?.entries.find((item) => item.id === entry.id);
-        const receipt = latest.get(entry.id);
-        return {
-          lastError: receipt?.state === "failed" ? receipt.error : undefined,
-          lastAction: receipt?.state,
-          id: entry.id,
-          title: entry.title,
-          kind: entry.kind,
-          segment: entry.segment,
-          parentId: entry.parentId,
-          summary: entry.summary,
-          slug: entry.slug,
-          order: entry.order,
-          live: Boolean(current),
-          modified: Boolean(
-            current &&
-            (!isDeepStrictEqual(JSON.parse(JSON.stringify(entry)), current) ||
-              usedMedia(entry).some(
-                (id) =>
-                  !isDeepStrictEqual(
-                    draft.media.find((m) => m.id === id),
-                    live?.media.find((m) => m.id === id),
-                  ),
-              )),
-          ),
-          approved: entry.approved,
-          url: entryUrl(current ?? entry),
-          publishedAt:
-            entry.publishedAt ||
-            (receipt?.state === "published" ? receipt.finishedAt : undefined),
-        };
-      }),
+    items: await Promise.all(
+      draft.entries
+        .filter(
+          (entry): entry is Entry & { kind: "business" | "case" } =>
+            entry.kind === "business" || entry.kind === "case",
+        )
+        .map(async (entry) => {
+          const current = live?.entries.find((item) => item.id === entry.id);
+          const receipt = latest.get(entry.id);
+          const committed =
+            live &&
+            receipts.find(
+              (item) =>
+                item.state === "published" &&
+                item.version === live.version &&
+                item.selectedIds?.length === 1 &&
+                item.selectedIds[0] === entry.id,
+            );
+          const syncStatus = committed
+            ? await readSyncRecord(runtime, committed)
+            : undefined;
+          return {
+            lastError: receipt?.state === "failed" ? receipt.error : undefined,
+            lastAction: receipt?.state,
+            syncReceiptId: committed?.id,
+            syncVersion: committed?.version,
+            syncStatus,
+            id: entry.id,
+            title: entry.title,
+            kind: entry.kind,
+            segment: entry.segment,
+            parentId: entry.parentId,
+            summary: entry.summary,
+            slug: entry.slug,
+            order: entry.order,
+            live: Boolean(current),
+            modified: Boolean(
+              current &&
+              (!isDeepStrictEqual(JSON.parse(JSON.stringify(entry)), current) ||
+                usedMedia(entry).some(
+                  (id) =>
+                    !isDeepStrictEqual(
+                      draft.media.find((m) => m.id === id),
+                      live?.media.find((m) => m.id === id),
+                    ),
+                )),
+            ),
+            approved: entry.approved,
+            url: entryUrl(current ?? entry),
+            publishedAt:
+              entry.publishedAt ||
+              (receipt?.state === "published" ? receipt.finishedAt : undefined),
+          };
+        }),
+    ),
   };
 }
 
@@ -161,6 +408,7 @@ export async function businessAdminMutation(
   id: string,
   options: {
     runtimeDir?: string;
+    receiptId?: string;
     build?: (snapshotPath: string, outputDir: string) => Promise<void>;
     health?: (
       outputDir: string,
@@ -168,7 +416,21 @@ export async function businessAdminMutation(
       version: string,
     ) => Promise<boolean>;
   } = {},
-): Promise<{ message: string; url?: string; previewUrl?: string }> {
+): Promise<{
+  message: string;
+  url?: string;
+  previewUrl?: string;
+  publication?: PublicationResult;
+}> {
+  if (action === "sync") {
+    if (!options.receiptId) throw new Error("缺少发布回执，请刷新状态。");
+    return syncPublishedMetadata(
+      payload,
+      id,
+      options.receiptId,
+      options.runtimeDir || runtimeDir(),
+    );
+  }
   const draft = await readDraftSnapshot(payload),
     live = await readLiveSnapshot(options.runtimeDir);
   const entry = entryFor(draft, id);
@@ -216,6 +478,7 @@ export async function businessAdminMutation(
       building = join(previews, `${previewId}.building`),
       directory = join(previews, previewId);
     await mkdir(building, { recursive: true, mode: 0o700 });
+    await writePreviewOwner(building);
     await writeFile(join(building, "snapshot.json"), JSON.stringify(snapshot), {
       mode: 0o600,
     });
@@ -330,44 +593,30 @@ export async function businessAdminMutation(
     );
     if (result.state === "failed")
       throw new Error(result.error || "发布失败。");
-    const published = (
-      await readLiveSnapshot(options.runtimeDir)
-    )?.entries.find((item) => item.id === id);
-    if (!published) throw new Error("发布结果无法确认，请刷新状态。");
-    const firstPublishedAt = published.publishedAt;
-    const savedNow = (await readDraftSnapshot(payload)).entries.find(
-      (item) => item.id === id,
-    );
-    const unchanged =
-      savedNow &&
-      isDeepStrictEqual(
-        JSON.parse(
-          JSON.stringify({
-            ...savedNow,
-            approved: true,
-            publishedAt: firstPublishedAt,
-          }),
-        ),
-        published,
+    try {
+      await writeSyncRecord(
+        options.runtimeDir || runtimeDir(),
+        result,
+        "pending",
       );
-    await payload.update({
-      collection: "content",
-      id,
-      data: {
-        approved: Boolean(unchanged),
-        ...(firstPublishedAt ? { publishedAt: firstPublishedAt } : {}),
-      },
-      context: { freezeSlug: true, businessPublication: true },
-      overrideAccess: true,
-    });
-    for (const mediaId of usedMedia(published))
-      await payload.update({
-        collection: "media",
-        id: mediaId,
-        data: { approved: true },
-        overrideAccess: true,
-      });
-    return { message: "已发布。", url: entryUrl(published) };
+      return await syncPublishedMetadata(
+        payload,
+        id,
+        result.id,
+        options.runtimeDir || runtimeDir(),
+      );
+    } catch {
+      return {
+        message:
+          "官网已发布，但后台状态同步未完成；请刷新后点击“重试状态同步”。",
+        publication: {
+          state: "published",
+          receiptId: result.id,
+          version: result.version,
+          syncStatus: "pending",
+        },
+      };
+    }
   }
   if (entry.kind === "business")
     await assertBusinessDependencyFree(payload, id);

@@ -13,7 +13,10 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { frameworkSnapshot as previewSnapshot } from "./helpers/content-fixture.js";
 import { validateSnapshot, sanitizeBodyHtml } from "@empact/content/schema";
-import { businessAdminMutation } from "../apps/cms/src/business-admin.js";
+import {
+  businessAdminMutation,
+  businessAdminState,
+} from "../apps/cms/src/business-admin.js";
 import { readDraftSnapshot } from "../apps/cms/src/cms-data.js";
 import {
   publishSnapshot,
@@ -32,6 +35,7 @@ async function fixture() {
       body,
       bodyHtml: undefined,
       approved: true,
+      updatedAt: "2026-09-28T00:00:00.000Z",
     }));
   const company = {
     ...previewSnapshot.company,
@@ -49,6 +53,7 @@ async function fixture() {
       width: 20,
       height: 20,
       approved: false,
+      updatedAt: "2026-09-28T00:00:00.000Z",
     },
   ];
   const payload: any = {
@@ -67,6 +72,26 @@ async function fixture() {
             : docs,
     }),
     findGlobal: async () => company,
+    findByID: async ({ collection, id }: any) => {
+      const doc = (collection === "media" ? images : docs).find(
+        (d: any) => String(d.id) === String(id),
+      );
+      if (!doc) throw new Error("Document not found");
+      doc.updatedAt ||= "2026-09-28T00:00:00.000Z";
+      return { ...doc };
+    },
+    db: {
+      updateOne: async ({ collection, where, data, options }: any) => {
+        assert.equal(options.atomic, true);
+        const [id, updatedAt] = where.and;
+        const doc = (collection === "media" ? images : docs).find(
+          (d: any) => String(d.id) === String(id.id.equals),
+        );
+        if (!doc || doc.updatedAt !== updatedAt.updatedAt.equals) return null;
+        Object.assign(doc, data);
+        return { ...doc };
+      },
+    },
     update: async ({ collection, id, data }: any) => {
       const doc = (collection === "media" ? images : docs).find(
         (d: any) => String(d.id) === String(id),
@@ -258,6 +283,251 @@ test("rejects incomplete cases and preserves live version and saved draft on bui
       f.docs.some((d) => d.id === 100),
       false,
     );
+  } finally {
+    await rm(f.root, { recursive: true, force: true });
+  }
+});
+
+test("a committed publication reports pending metadata sync and retry does not rebuild", async () => {
+  const f = await fixture();
+  try {
+    f.docs.push({
+      id: 100,
+      kind: "case",
+      slug: "sync-retry",
+      title: "同步重试",
+      summary: "摘要",
+      body,
+      parent: f.parent.id,
+      image: 1,
+      approved: false,
+    });
+    let builds = 0;
+    const originalBuild = f.options.build;
+    const options = {
+      ...f.options,
+      build: async (snapshot: string, output: string) => {
+        builds++;
+        await originalBuild(snapshot, output);
+      },
+    };
+    const update = f.payload.db.updateOne;
+    let failContent = true;
+    f.payload.db.updateOne = async (args: any) => {
+      if (args.collection === "content" && failContent) {
+        failContent = false;
+        throw new Error("injected content update failure");
+      }
+      return update(args);
+    };
+    const result = await businessAdminMutation(
+      f.payload,
+      "publish",
+      "100",
+      options,
+    );
+    assert.equal(result.publication?.state, "published");
+    assert.equal(result.publication?.syncStatus, "pending");
+    assert.match(result.message, /官网已发布/);
+    assert.equal(
+      (await readLiveSnapshot(options.runtimeDir))?.version,
+      result.publication?.version,
+    );
+    assert.equal(f.docs.at(-1).approved, false);
+    assert.equal(builds, 1);
+    const pending = (
+      await businessAdminState(f.payload, options.runtimeDir)
+    ).items.find((item) => item.id === "100");
+    assert.equal(pending?.syncStatus, "pending");
+    assert.equal(pending?.syncReceiptId, result.publication?.receiptId);
+    const syncFile = join(
+      options.runtimeDir,
+      "business-sync",
+      `${result.publication?.receiptId}.json`,
+    );
+    assert.equal(
+      JSON.parse(await readFile(syncFile, "utf8")).status,
+      "pending",
+    );
+    assert.equal((await stat(syncFile)).mode & 0o777, 0o600);
+    const retry = await businessAdminMutation(f.payload, "sync", "100", {
+      ...options,
+      receiptId: result.publication!.receiptId,
+    });
+    assert.equal(retry.publication?.syncStatus, "complete");
+    assert.equal(
+      JSON.parse(await readFile(syncFile, "utf8")).status,
+      "complete",
+    );
+    assert.equal(f.docs.at(-1).approved, true);
+    assert.equal(f.images[0].approved, true);
+    assert.equal(builds, 1);
+    assert.equal(
+      (await readLiveSnapshot(options.runtimeDir))?.version,
+      result.publication?.version,
+    );
+    assert.equal(
+      (await businessAdminState(f.payload, options.runtimeDir)).items.find(
+        (item) => item.id === "100",
+      )?.syncStatus,
+      "complete",
+    );
+    const again = await businessAdminMutation(f.payload, "sync", "100", {
+      ...options,
+      receiptId: result.publication!.receiptId,
+    });
+    assert.equal(again.publication?.syncStatus, "complete");
+    assert.equal(builds, 1);
+  } finally {
+    await rm(f.root, { recursive: true, force: true });
+  }
+});
+
+test("media sync failure and later draft edits never approve newer content or media", async () => {
+  const f = await fixture();
+  try {
+    const entry = {
+      id: 100,
+      kind: "case",
+      slug: "media-retry",
+      title: "已发布内容",
+      summary: "摘要",
+      body,
+      parent: f.parent.id,
+      image: 1,
+      approved: false,
+    };
+    f.docs.push(entry);
+    let builds = 0;
+    const originalBuild = f.options.build;
+    const options = {
+      ...f.options,
+      build: async (snapshot: string, output: string) => {
+        builds++;
+        await originalBuild(snapshot, output);
+      },
+    };
+    const update = f.payload.db.updateOne;
+    let failMedia = true;
+    f.payload.db.updateOne = async (args: any) => {
+      if (args.collection === "media" && failMedia) {
+        failMedia = false;
+        throw new Error("injected media update failure");
+      }
+      return update(args);
+    };
+    const result = await businessAdminMutation(
+      f.payload,
+      "publish",
+      "100",
+      options,
+    );
+    assert.equal(result.publication?.syncStatus, "pending");
+    assert.equal(entry.approved, true);
+    assert.equal(f.images[0].approved, false);
+    const liveVersion = (await readLiveSnapshot(options.runtimeDir))?.version;
+    entry.title = "尚未发布的新草稿";
+    entry.approved = false;
+    (entry as any).updatedAt = "2026-09-28T01:00:00.000Z";
+    f.images[0].alt = "尚未发布的新图片说明";
+    f.images[0].updatedAt = "2026-09-28T01:00:00.000Z";
+    const retry = await businessAdminMutation(f.payload, "sync", "100", {
+      ...options,
+      receiptId: result.publication!.receiptId,
+    });
+    assert.equal(retry.publication?.syncStatus, "skipped");
+    assert.equal(entry.title, "尚未发布的新草稿");
+    assert.equal(entry.approved, false);
+    assert.equal(f.images[0].alt, "尚未发布的新图片说明");
+    assert.equal(f.images[0].approved, false);
+    assert.equal(builds, 1);
+    assert.equal(
+      (await readLiveSnapshot(options.runtimeDir))?.version,
+      liveVersion,
+    );
+  } finally {
+    await rm(f.root, { recursive: true, force: true });
+  }
+});
+
+test("atomic metadata update skips an edit that lands after draft serialization", async () => {
+  const f = await fixture();
+  try {
+    const entry = {
+      id: 100,
+      kind: "case",
+      slug: "racing-edit",
+      title: "已发布内容",
+      summary: "摘要",
+      body,
+      parent: f.parent.id,
+      image: 1,
+      approved: false,
+    };
+    f.docs.push(entry);
+    const update = f.payload.db.updateOne;
+    let edited = false;
+    f.payload.db.updateOne = async (args: any) => {
+      if (args.collection === "content" && !edited) {
+        edited = true;
+        entry.title = "同时保存的新草稿";
+        (entry as any).updatedAt = "2026-09-28T01:00:00.000Z";
+      }
+      return update(args);
+    };
+    const result = await businessAdminMutation(
+      f.payload,
+      "publish",
+      "100",
+      f.options,
+    );
+    assert.equal(result.publication?.syncStatus, "skipped");
+    assert.equal(entry.title, "同时保存的新草稿");
+    assert.equal(entry.approved, false);
+    assert.equal(
+      (await readLiveSnapshot(f.options.runtimeDir))?.entries.find(
+        (item) => item.id === "100",
+      )?.title,
+      "已发布内容",
+    );
+  } finally {
+    await rm(f.root, { recursive: true, force: true });
+  }
+});
+
+test("a cover image reused in the body is synchronized once", async () => {
+  const f = await fixture();
+  try {
+    const reusedBody = htmlToLexical(
+      '<p>与封面共用图片。</p><img src="/media/test.png" alt="测试图片">',
+      new Map([["/media/test.png", 1]]),
+    );
+    f.docs.push({
+      id: 100,
+      kind: "case",
+      slug: "reused-cover",
+      title: "共用图片案例",
+      summary: "摘要",
+      body: reusedBody,
+      parent: f.parent.id,
+      image: 1,
+      approved: false,
+    });
+    const update = f.payload.db.updateOne;
+    let mediaUpdates = 0;
+    f.payload.db.updateOne = async (args: any) => {
+      if (args.collection === "media") mediaUpdates++;
+      return update(args);
+    };
+    const result = await businessAdminMutation(
+      f.payload,
+      "publish",
+      "100",
+      f.options,
+    );
+    assert.equal(result.publication?.syncStatus, "complete");
+    assert.equal(mediaUpdates, 1);
+    assert.equal(f.images[0].approved, true);
   } finally {
     await rm(f.root, { recursive: true, force: true });
   }

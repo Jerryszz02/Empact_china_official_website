@@ -8,7 +8,13 @@ import {
 } from "@payloadcms/ui";
 import { useEffect, useRef, useState } from "react";
 
-type Status = { live: boolean; modified: boolean; lastError?: string };
+type Status = {
+  live: boolean;
+  modified: boolean;
+  lastError?: string;
+  syncReceiptId?: string;
+  syncStatus?: "pending" | "complete" | "skipped" | "superseded";
+};
 export function ContentDocumentActions() {
   const { id, data } = useDocumentInfo();
   const modified = useFormModified();
@@ -24,16 +30,20 @@ export function ContentDocumentActions() {
     error?: boolean;
   }>({});
   const initialized = useRef(false);
-  async function refresh() {
-    if (!id) return;
-    const response = await fetch("/api/business-admin/state", {
-      cache: "no-store",
-    });
-    if (response.ok) {
+  async function refresh(): Promise<boolean> {
+    if (!id) return false;
+    try {
+      const response = await fetch("/api/business-admin/state", {
+        cache: "no-store",
+      });
+      if (!response.ok) return false;
       const body = await response.json();
       setStatus(
         body.items.find((item: { id: string }) => item.id === String(id)),
       );
+      return true;
+    } catch {
+      return false;
     }
   }
   useEffect(() => {
@@ -67,13 +77,16 @@ export function ContentDocumentActions() {
         <a href="/admin#business-types">返回业务管理</a>
       </p>
     );
-  async function run(action: "preview" | "publish" | "unpublish" | "delete") {
+  async function run(
+    action: "preview" | "publish" | "sync" | "unpublish" | "delete",
+  ) {
     if (!id || modified) return;
     if (
       action !== "preview" &&
       !window.confirm(
         {
           publish: "发布到官网",
+          sync: "重试后台状态同步",
           unpublish: "从官网撤下",
           delete: "撤下并删除",
         }[action] + `“${data?.title ?? "当前内容"}”？`,
@@ -86,7 +99,11 @@ export function ContentDocumentActions() {
       const response = await fetch(`/api/business-admin/${action}`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ id: String(id), confirmed: true }),
+        body: JSON.stringify({
+          id: String(id),
+          confirmed: true,
+          ...(action === "sync" ? { receiptId: status?.syncReceiptId } : {}),
+        }),
       });
       const body = await response.json();
       if (!response.ok) throw new Error(body.error || "操作失败，请重试。");
@@ -95,7 +112,11 @@ export function ContentDocumentActions() {
         return;
       }
       setResult(body);
-      await refresh();
+      if (!(await refresh()))
+        setResult({
+          ...body,
+          message: `${body.message || "操作已完成。"} 后台状态刷新失败，请稍后刷新页面核对。`,
+        });
     } catch (error) {
       setResult({
         message:
@@ -114,11 +135,13 @@ export function ContentDocumentActions() {
         ← 返回项目管理
       </a>
       <p className="document-publish-status">
-        {status?.live
-          ? status.modified || modified
-            ? "有未发布修改 · 官网仍显示上次发布的版本"
-            : "已发布"
-          : "草稿 · 尚未公开"}
+        {status?.live && status.syncStatus === "pending"
+          ? "已发布 · 后台状态待同步"
+          : status?.live
+            ? status.modified || modified
+              ? "有未发布修改 · 官网仍显示上次发布的版本"
+              : "已发布"
+            : "草稿 · 尚未公开"}
       </p>
       <div className="content-document-actions__buttons">
         <button
@@ -137,6 +160,16 @@ export function ContentDocumentActions() {
         >
           {status?.live ? "发布更新" : "发布到官网"}
         </button>
+        {status?.syncStatus === "pending" && status.syncReceiptId && (
+          <button
+            type="button"
+            className="button button--quiet"
+            disabled={busy || modified}
+            onClick={() => void run("sync")}
+          >
+            重试状态同步
+          </button>
+        )}
         {status?.live && (
           <button
             type="button"

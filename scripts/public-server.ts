@@ -8,6 +8,10 @@ import { readFile, realpath, stat } from "node:fs/promises";
 import { dirname, extname, join, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
+  isImmutablePublicAsset,
+  retainedPublicAsset,
+} from "./public-assets.js";
+import {
   createContactHandler,
   smtpDelivery,
   type RecruitmentJobForApplication,
@@ -210,18 +214,27 @@ export function createPublicServer(options: {
         return res.end();
       }
     } catch {
-      status = 404;
       try {
-        file = await getFile("/404.html");
+        file = await retainedPublicAsset(
+          dirname(resolve(options.root)),
+          pathname,
+        );
       } catch {
-        return json(res, 404, { message: "页面不存在。" });
+        status = 404;
+        try {
+          file = await getFile("/404.html");
+        } catch {
+          return json(res, 404, { message: "页面不存在。" });
+        }
       }
     }
     res.setHeader(
       "Cache-Control",
-      pathname.startsWith("/_astro/")
-        ? "public, max-age=31536000, immutable"
-        : "no-cache",
+      status !== 200
+        ? "no-store"
+        : isImmutablePublicAsset(pathname)
+          ? "public, max-age=31536000, immutable"
+          : "no-cache",
     );
     res.writeHead(status, {
       "Content-Type": mime[extname(file)] || "application/octet-stream",

@@ -164,7 +164,31 @@ export async function verifyBusinessWorkflow(options: {
   });
   assert.equal(previewPage.status, 200);
   assert.match(await previewPage.text(), /案例原版正文/);
-  await action("publish", id);
+  const committedPublication = await action("publish", id);
+  assert.equal(committedPublication.publication.state, "published");
+  assert.equal(committedPublication.publication.syncStatus, "complete");
+  assert.equal((await request(`/api/content/${id}`)).approved, true);
+  assert.equal((await request(`/api/media/${image.id}`)).approved, true);
+  const metadataRetry = await request("/api/business-admin/sync", "POST", {
+    id,
+    confirmed: true,
+    receiptId: committedPublication.publication.receiptId,
+  });
+  assert.deepEqual(metadataRetry.publication, committedPublication.publication);
+  assert.equal(
+    (
+      await fetch(base + "/api/business-admin/sync", {
+        method: "POST",
+        headers: { Origin: base, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id,
+          confirmed: true,
+          receiptId: committedPublication.publication.receiptId,
+        }),
+      })
+    ).status,
+    401,
+  );
   const firstDate = (await request(`/api/content/${id}`)).publishedAt;
   assert.ok(firstDate);
   assert.match(await publicText(url), /案例原版正文/);
