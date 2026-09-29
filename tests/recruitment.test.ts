@@ -101,7 +101,7 @@ test("selective recruitment publication preserves other live content and removes
   assert.deepEqual(ordinary.recruitment, live.recruitment);
 });
 
-test("recruitment migration and CMS draft preserve editable examples", async () => {
+test("recruitment starts empty and new jobs do not require an example toggle", async () => {
   const cms = resolve("apps/cms");
   let payload: { destroy?: () => Promise<void> } | undefined;
   try {
@@ -115,10 +115,9 @@ test("recruitment migration and CMS draft preserve editable examples", async () 
       },
     );
     payload = await getPayload({ config });
-    assert.deepEqual(
-      (await readDraftSnapshot(payload as any)).recruitment,
-      exampleRecruitment,
-    );
+    assert.deepEqual((await readDraftSnapshot(payload as any)).recruitment, {
+      jobs: [],
+    });
     await (payload as any).updateGlobal({
       slug: "recruitment",
       data: {
@@ -150,7 +149,7 @@ test("recruitment migration and CMS draft preserve editable examples", async () 
             ...exampleRecruitment.jobs[0],
             id: undefined,
             jobId: "real-project-manager",
-            isExample: false,
+            isExample: undefined,
             title: "项目经理",
           },
         ],

@@ -588,7 +588,7 @@ export interface OfficeGallery {
 export interface Recruitment {
   id: number;
   /**
-   * 初始内容均为示例。确认真实招聘信息后，逐条取消“示例岗位”标记并保存、预览、发布；关闭或删除岗位后也需重新发布。
+   * 新增岗位后请保存、预览并发布；关闭或删除岗位后也需重新发布。
    */
   jobs?:
     | {
@@ -601,6 +601,9 @@ export interface Recruitment {
         requirements: string;
         commitment?: string | null;
         status: 'open' | 'closed';
+        /**
+         * 请先确认岗位内容，取消勾选并保存，再预览、发布。
+         */
         isExample?: boolean | null;
         id?: string | null;
       }[]

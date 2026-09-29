@@ -63,6 +63,7 @@
   font-weight: 700;
 }
 .content-document-actions {
+  color: var(--empact-ink);
   display: grid;
   gap: 10px;
   margin: 0 0 24px;
@@ -150,48 +151,9 @@
 }
 .admin-parts {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 22px;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 12px;
   margin-top: 22px;
-}
-.home-gallery-entry,
-.office-gallery-entry,
-.recruitment-entry {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 20px;
-  margin-top: 22px;
-  padding: 18px 26px;
-  border: 1px solid var(--empact-line);
-  border-radius: 16px;
-  color: var(--empact-blue-deep);
-  background: white;
-  text-decoration: none;
-}
-.home-gallery-entry span:first-child,
-.office-gallery-entry span:first-child,
-.recruitment-entry span:first-child {
-  display: grid;
-  gap: 4px;
-}
-.home-gallery-entry small,
-.office-gallery-entry small,
-.recruitment-entry small {
-  color: #64798a;
-  font-size: 13px;
-}
-.home-gallery-entry__action {
-  flex: none;
-  color: var(--empact-blue);
-  font-size: 13px;
-  font-weight: 700;
-}
-.home-gallery-entry:focus-visible,
-.office-gallery-entry:focus-visible,
-.recruitment-entry:focus-visible {
-  outline: 3px solid var(--empact-blue);
-  outline-offset: 3px;
 }
 .admin-workspace {
   min-width: 0;
@@ -244,6 +206,9 @@
   font-size: 13px;
 }
 .admin-part {
+  min-width: 0;
+  box-sizing: border-box;
+  align-content: start;
   display: grid;
   gap: 8px;
   width: 100%;
@@ -537,6 +502,9 @@
   bottom: -8px;
 }
 @media (max-width: 1100px) {
+  .admin-parts {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
   .business-board {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -700,14 +668,6 @@
   .business-admin-nav__links {
     flex-wrap: wrap;
     gap: 12px;
-  }
-  .home-gallery-entry,
-  .office-gallery-entry,
-  .recruitment-entry {
-    align-items: flex-start;
-    flex-direction: column;
-    gap: 10px;
-    padding: 16px;
   }
 }
 
