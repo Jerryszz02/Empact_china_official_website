@@ -38,7 +38,7 @@ test("consultation cascades by segment and preserves existing preselection links
   await expect(business).toBeDisabled();
 });
 
-test("detailed inquiry preserves values after failure and sends complete fields on retry", async ({
+test("simplified inquiry preserves values after failure and sends visible fields on retry", async ({
   page,
 }) => {
   await page.goto("/contact/?business=other");
@@ -68,12 +68,6 @@ test("detailed inquiry preserves values after failure and sends complete fields 
     organization: "测试机构",
     role: "项目负责人",
     message: "希望共同策划一场企业志愿服务活动。",
-    goal: "回应社区的实际需要",
-    location: "上海",
-    timeline: "十月至十一月",
-    participants: "30—50 人",
-    budget: "人民币 5 万元以内",
-    referenceUrl: "https://example.com/brief",
   };
   for (const [name, value] of Object.entries(details))
     await page.locator(`[name="${name}"]`).fill(value);
@@ -96,6 +90,15 @@ test("detailed inquiry preserves values after failure and sends complete fields 
     businessTitle: "其他／暂不确定",
     consent: true,
   });
+  for (const field of [
+    "goal",
+    "location",
+    "timeline",
+    "participants",
+    "budget",
+    "referenceUrl",
+  ])
+    expect(requests[1]).not.toHaveProperty(field);
   expect(requests[0].idempotencyKey).toBe(requests[1].idempotencyKey);
   expect(
     await page.evaluate(
@@ -106,6 +109,9 @@ test("detailed inquiry preserves values after failure and sends complete fields 
 
 test("minimal enquiry needs no optional details", async ({ page }) => {
   await page.goto("/contact/?business=other");
+  const needs = page.getByRole("group", { name: "03 / 咨询需求" });
+  await expect(needs.locator("input, select, textarea")).toHaveCount(1);
+  await expect(needs.getByLabel("咨询需求 *")).toHaveAttribute("required", "");
   await page.locator('[name="name"]').fill("家长");
   await page.locator('[name="contact"]').fill("weixin-example");
   await page
