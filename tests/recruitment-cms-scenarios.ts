@@ -112,11 +112,15 @@ async function verifyRecruitmentEditor(options: {
     await expect(first.getByLabel("任职要求")).toHaveValue(
       "更新后的任职要求。",
     );
-    await expect(page.getByLabel(/示例岗位/)).toHaveCount(0);
+    await expect(first.getByLabel(/示例岗位/)).toHaveCount(0);
     const sample = page.locator("#jobs-row-2");
     await expect(sample).toBeVisible();
     if (await sample.locator(".collapsible--collapsed").count())
       await sample.locator(".collapsible__toggle").click();
+    const legacyFlag = sample.getByLabel(/历史示例岗位/);
+    await expect(legacyFlag).toBeChecked();
+    await sample.getByLabel("岗位名称").fill("历史岗位转为正式招聘");
+    await legacyFlag.uncheck();
     await expect(sample.getByLabel(/示例岗位/)).toHaveCount(0);
 
     await title.fill("招聘集成浏览器保存岗位");
@@ -129,6 +133,12 @@ async function verifyRecruitmentEditor(options: {
         async () => (await request("/api/globals/recruitment")).jobs[0].title,
       )
       .toBe("招聘集成浏览器保存岗位");
+    const converted = (await request("/api/globals/recruitment")).jobs[2];
+    assert.equal(converted.isExample, false);
+    assert.equal(converted.title, "历史岗位转为正式招聘");
+    await page.reload();
+    await expect(page.getByLabel(/示例岗位/)).toHaveCount(0);
+    await expect(actions).toContainText("官网仍显示上次发布的岗位");
   } finally {
     await browser.close();
   }
@@ -441,7 +451,33 @@ export async function verifyRecruitmentWorkflow(options: {
     false,
   );
   await verifyRecruitmentEditor({ base, cookies, request });
+  const convertedPreview = await request("/api/publication/preview", "POST", {
+    ids: [],
+    includeRecruitment: true,
+  });
+  const convertedPublication = await request(
+    "/api/publication/publish",
+    "POST",
+    {
+      ids: [],
+      includeRecruitment: true,
+      previewId: String(convertedPreview.previewUrl).split("/")[2],
+      confirmed: true,
+    },
+  );
+  assert.equal(convertedPublication.result.state, "published");
+  const convertedLive = await readLiveSnapshot(runtime);
+  assert.deepEqual(convertedLive?.entries, before.entries);
+  assert.equal(
+    convertedLive?.recruitment?.jobs.find((job) => job.id === "cms-sample")
+      ?.isExample,
+    false,
+  );
+  const convertedCards = load(
+    await (await fetch(publicURL + "/join-us/")).text(),
+  )("[data-recruitment-job]").text();
+  assert.match(convertedCards, /历史岗位转为正式招聘/);
   console.log(
-    "PASS: recruitment draft access, editable jobs, selective preview/publish, example filtering, closing and removal.",
+    "PASS: recruitment draft access, editable jobs, selective preview/publish, legacy example conversion and publication, closing and removal.",
   );
 }

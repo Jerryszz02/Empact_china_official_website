@@ -601,6 +601,9 @@ export interface Recruitment {
         requirements: string;
         commitment?: string | null;
         status: 'open' | 'closed';
+        /**
+         * 请先确认岗位内容，取消勾选并保存，再预览、发布。
+         */
         isExample?: boolean | null;
         id?: string | null;
       }[]

@@ -1,7 +1,7 @@
 {
   "version": 1,
   "from": "6ceb916e6471dd441f27028ec9ecb4685419375fa0fc424ab8e3e4a4170d3de5",
-  "to": "702558da5aa56dcfa28c7790e678f4b674272497fa5e8d576a1094ad78cb3d32",
-  "description": "Use the light admin theme, start recruitment with an empty jobs array, and hide the legacy example flag with a false default for new jobs. Preserve the existing database columns and historical snapshot filtering. No tables, columns, indexes or migrations change.",
+  "to": "4b556ecc8ce0dfc85b3bad9790a21ce378f29e3814ea0ffdf1718f8ccbea5031",
+  "description": "Use the light admin theme and start recruitment with an empty jobs array. New jobs default to ordinary roles; only persisted legacy examples expose a checkbox to confirm conversion before publication. Preserve existing database columns and historical snapshot filtering. No tables, columns, indexes or migrations change.",
   "statements": []
 }

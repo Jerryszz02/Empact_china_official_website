@@ -1012,10 +1012,14 @@ export const Recruitment: GlobalConfig = {
         },
         {
           name: "isExample",
-          // Retain historical snapshot compatibility without exposing an editor option.
+          // Only historical examples need an explicit path to become real jobs.
+          label: "历史示例岗位（取消勾选后可正式发布）",
           type: "checkbox",
           defaultValue: false,
-          admin: { hidden: true },
+          admin: {
+            condition: (_data, siblingData) => siblingData?.isExample === true,
+            description: "请先确认岗位内容，取消勾选并保存，再预览、发布。",
+          },
         },
       ],
     },
