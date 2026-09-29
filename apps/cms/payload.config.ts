@@ -38,6 +38,7 @@ export default buildConfig({
   globals: [Company, HomeGallery, OfficeGallery, Recruitment],
   upload: { limits: { fileSize: 5 * 1024 * 1024 } },
   admin: {
+    theme: "light",
     user: "users",
     components: {
       Nav: "@/components/BusinessAdminNav#BusinessAdminNav",

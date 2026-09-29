@@ -21,5 +21,6 @@ test("public careers pages never turn examples or closed jobs into opportunities
     visibleRecruitmentJobs({ mode: "preview", recruitment: { jobs: [] } }),
     [],
   );
-  assert.equal(visibleRecruitmentJobs({ mode: "production" }, true).length, 3);
+  assert.deepEqual(visibleRecruitmentJobs({ mode: "production" }, true), []);
+  assert.deepEqual(visibleRecruitmentJobs({ mode: "preview" }), []);
 });

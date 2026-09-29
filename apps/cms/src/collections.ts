@@ -14,7 +14,6 @@ import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { isHttpUrl } from "@empact/content/schema";
 import { isFixedYouthModel, youthModelSlug } from "@empact/content/business";
-import { exampleRecruitment } from "@empact/content/recruitment";
 import {
   BlockquoteFeature,
   FixedToolbarFeature,
@@ -940,10 +939,7 @@ export const Recruitment: GlobalConfig = {
       label: "岗位（拖动调整展示顺序）",
       type: "array",
       maxRows: 30,
-      defaultValue: exampleRecruitment.jobs.map(({ id, ...job }) => ({
-        jobId: id,
-        ...job,
-      })),
+      defaultValue: [],
       validate: (value: unknown) => {
         if (!Array.isArray(value)) return true;
         const ids = value.map((job) => job?.jobId);
@@ -951,7 +947,7 @@ export const Recruitment: GlobalConfig = {
       },
       admin: {
         description:
-          "初始内容均为示例。确认真实招聘信息后，逐条取消“示例岗位”标记并保存、预览、发布；关闭或删除岗位后也需重新发布。",
+          "新增岗位后请保存、预览并发布；关闭或删除岗位后也需重新发布。",
       },
       fields: [
         {
@@ -1016,9 +1012,10 @@ export const Recruitment: GlobalConfig = {
         },
         {
           name: "isExample",
-          label: "示例岗位（正式站点不展示，也不开放申请）",
+          // Retain historical snapshot compatibility without exposing an editor option.
           type: "checkbox",
-          defaultValue: true,
+          defaultValue: false,
+          admin: { hidden: true },
         },
       ],
     },

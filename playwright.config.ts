@@ -12,7 +12,8 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: "npm run build:preview && npm run serve:preview",
+    command:
+      "tsx tests/helpers/build-browser-preview.ts && npm run serve:preview",
     url: previewURL,
     reuseExistingServer: false,
     timeout: 60_000,

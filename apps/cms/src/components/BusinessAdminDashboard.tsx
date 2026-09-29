@@ -395,38 +395,22 @@ export function BusinessAdminDashboard() {
             )}
           </a>
         ))}
-      </nav>
-      <a className="home-gallery-entry" href="/admin/globals/home-gallery">
-        <span>
+        <a className="admin-part" href="/admin/globals/home-gallery">
+          <span className="admin-part__number">05</span>
           <strong>首页照片</strong>
-          <small>管理首屏轮播照片和展示样式，保存后可预览、发布。</small>
-        </span>
-        <span className="home-gallery-entry__action" aria-hidden="true">
-          编辑照片 ↗
-        </span>
-      </a>
-      <a className="office-gallery-entry" href="/admin/globals/office-gallery">
-        <span>
+          <span>管理首屏轮播照片和展示样式，保存后可预览、发布。</span>
+        </a>
+        <a className="admin-part" href="/admin/globals/office-gallery">
+          <span className="admin-part__number">06</span>
           <strong>办公空间照片</strong>
-          <small>
-            管理“加入我们”的办公空间照片和图片说明，保存后可预览、发布。
-          </small>
-        </span>
-        <span className="home-gallery-entry__action" aria-hidden="true">
-          编辑照片 ↗
-        </span>
-      </a>
-      <a className="recruitment-entry" href="/admin/globals/recruitment">
-        <span>
+          <span>管理“加入我们”的办公空间照片和图片说明。</span>
+        </a>
+        <a className="admin-part" href="/admin/globals/recruitment">
+          <span className="admin-part__number">07</span>
           <strong>招聘岗位管理</strong>
-          <small>
-            新增和编辑全职、实习岗位，管理招聘状态，保存后可预览、发布。
-          </small>
-        </span>
-        <span className="home-gallery-entry__action" aria-hidden="true">
-          管理岗位 ↗
-        </span>
-      </a>
+          <span>新增和编辑全职、实习岗位，保存后可预览、发布。</span>
+        </a>
+      </nav>
       {message && (
         <p className="admin-notice" role="status">
           {message}

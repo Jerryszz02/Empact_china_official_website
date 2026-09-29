@@ -210,7 +210,9 @@ export async function verifyCmsUI({
     assert.equal(new URL(popup.url()).pathname, "/");
     await expect(page).toHaveURL(base + "/admin");
     await popup.close();
-    const galleryEntry = page.locator(".home-gallery-entry");
+    const galleryEntry = page
+      .getByRole("navigation", { name: "内容管理入口" })
+      .getByRole("link", { name: /首页照片/ });
     await expect(galleryEntry).toBeVisible();
     await expect(galleryEntry).toHaveAttribute(
       "href",
@@ -290,7 +292,7 @@ export async function verifyCmsUI({
     ).toBeVisible();
     await expect(
       page.getByRole("navigation", { name: "内容管理入口" }).getByRole("link"),
-    ).toHaveCount(4);
+    ).toHaveCount(7);
     for (const [segment, label] of [
       ["school", "学校业务"],
       ["community", "社区业务"],

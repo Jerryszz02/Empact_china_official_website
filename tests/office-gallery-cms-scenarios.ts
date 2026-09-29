@@ -35,7 +35,10 @@ export async function verifyOfficeGalleryWorkflow(options: {
     const page = await context.newPage();
     page.on("dialog", (dialog) => void dialog.accept());
     await page.goto(base + "/admin");
-    await page.locator("a.office-gallery-entry").click();
+    await page
+      .getByRole("navigation", { name: "内容管理入口" })
+      .getByRole("link", { name: /办公空间照片/ })
+      .click();
     await expect(page).toHaveURL(base + "/admin/globals/office-gallery");
     const actions = page.getByRole("region", { name: "办公空间照片操作" });
     await expect(actions).toBeVisible();

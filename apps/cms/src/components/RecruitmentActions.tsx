@@ -36,9 +36,7 @@ export function RecruitmentActions() {
     if (modified || busy) return;
     if (
       action === "publish" &&
-      !window.confirm(
-        "发布刚才预览的招聘岗位到官网？示例岗位不会在正式站点展示。",
-      )
+      !window.confirm("发布刚才预览的招聘岗位到官网？")
     )
       return;
     setBusy(true);
@@ -93,7 +91,7 @@ export function RecruitmentActions() {
           : "招聘岗位尚未单独发布"}
       </p>
       <p>
-        先保存下方岗位，再生成预览；确认后发布该预览版本。示例岗位仅在预览中展示。
+        先保存下方岗位，再生成预览；确认后发布该预览版本。没有岗位时，官网将显示“目前暂无开放岗位”。
       </p>
       <div className="content-document-actions__buttons">
         <button
