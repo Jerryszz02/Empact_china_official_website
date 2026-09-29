@@ -1,5 +1,6 @@
 import {
   mkdir,
+  chmod,
   cp,
   open,
   readFile,
@@ -535,6 +536,13 @@ export async function publishSnapshot(
       });
     } catch (error) {
       if (switched) await switchCurrent(runtime, previous);
+      if (process.env.PUBLIC_READER_GID !== undefined && receipt.releasePath) {
+        await chmod(join(receipt.releasePath, "public"), 0o700).catch(
+          (error) => {
+            if (error.code !== "ENOENT") throw error;
+          },
+        );
+      }
       Object.assign(receipt, {
         state: "failed",
         error: error instanceof Error ? error.message : "发布失败。",
@@ -620,6 +628,13 @@ export async function rollback(
       Object.assign(receipt, { state: "rolled_back", releasePath: release });
     } catch (error) {
       if (switched) await switchCurrent(runtime, previous);
+      if (process.env.PUBLIC_READER_GID !== undefined && receipt.releasePath) {
+        await chmod(join(receipt.releasePath, "public"), 0o700).catch(
+          (error) => {
+            if (error.code !== "ENOENT") throw error;
+          },
+        );
+      }
       Object.assign(receipt, {
         state: "failed",
         error: error instanceof Error ? error.message : "恢复失败。",

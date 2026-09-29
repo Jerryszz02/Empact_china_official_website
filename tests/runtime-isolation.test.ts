@@ -58,3 +58,58 @@ test("public permissions share only output and traverse ancestors without exposi
     await rm(root, { recursive: true, force: true });
   }
 });
+
+test("restore permission repair does not expose failed or preview output", async () => {
+  const { execFile } = await import("node:child_process");
+  const { promisify } = await import("node:util");
+  const runtime = await mkdtemp(join(tmpdir(), "empact-repair-"));
+  try {
+    await mkdir(join(runtime, "receipts"));
+    for (const state of ["published", "failed"]) {
+      const release = join(runtime, "releases", state);
+      await mkdir(join(release, "public"), { recursive: true, mode: 0o700 });
+      await writeFile(join(release, "public/index.html"), state, {
+        mode: 0o600,
+      });
+      await writeFile(
+        join(release, "snapshot.json"),
+        '{"recruitment":{"jobs":[]}}',
+        { mode: 0o600 },
+      );
+      await writeFile(
+        join(runtime, "receipts", state + ".json"),
+        JSON.stringify({
+          id: state,
+          state,
+          releasePath: release,
+          startedAt: "2026-09-29",
+        }),
+      );
+    }
+    await promisify(execFile)(
+      process.execPath,
+      ["--import", "tsx", "apps/cms/src/cli/repair-public-permissions.ts"],
+      {
+        env: {
+          ...process.env,
+          RUNTIME_DIR: runtime,
+          PUBLIC_READER_GID: String(process.getgid!()),
+        },
+      },
+    );
+    assert.equal(
+      (await stat(join(runtime, "releases/published/public"))).mode & 0o777,
+      0o750,
+    );
+    assert.equal(
+      (await stat(join(runtime, "releases/failed/public"))).mode & 0o777,
+      0o700,
+    );
+    await assert.rejects(
+      readFile(join(runtime, "releases/failed/public/.recruitment.json")),
+      { code: "ENOENT" },
+    );
+  } finally {
+    await rm(runtime, { recursive: true, force: true });
+  }
+});
