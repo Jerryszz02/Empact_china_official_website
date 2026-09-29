@@ -106,69 +106,16 @@ const entry = pageBySlug("contact");
         />
       </fieldset>
       <fieldset>
-        <legend>03 / 合作需求</legend>
-        <label for="message">需求说明 *</label>
+        <legend>03 / 咨询需求</legend>
+        <label for="message">咨询需求 *</label>
         <textarea
           id="message"
           name="message"
           required
           minlength="10"
           maxlength="3000"
-          placeholder="请用至少 10 个字介绍项目背景、目前的需求或想解决的问题。"
+          placeholder="请用至少 10 个字描述您的咨询需求。"
         ></textarea>
-        <label for="goal">合作目标（选填）</label>
-        <textarea
-          id="goal"
-          name="goal"
-          maxlength="1000"
-          placeholder="希望通过这次合作带来什么改变？"
-        ></textarea>
-        <div class="contact-fields-grid">
-          <div>
-            <label for="location">地点（选填）</label>
-            <input
-              id="location"
-              name="location"
-              maxlength="120"
-              placeholder="城市或线上"
-            />
-          </div>
-          <div>
-            <label for="timeline">预计时间（选填）</label>
-            <input
-              id="timeline"
-              name="timeline"
-              maxlength="160"
-              placeholder="开始及结束时间，或尚未确定"
-            />
-          </div>
-          <div>
-            <label for="participants">人数（选填）</label>
-            <input
-              id="participants"
-              name="participants"
-              maxlength="100"
-              placeholder="预计人数或范围"
-            />
-          </div>
-          <div>
-            <label for="budget">预算（选填）</label>
-            <input
-              id="budget"
-              name="budget"
-              maxlength="100"
-              placeholder="预算范围及币种，或尚未确定"
-            />
-          </div>
-        </div>
-        <label for="referenceUrl">资料链接（选填）</label>
-        <input
-          id="referenceUrl"
-          name="referenceUrl"
-          type="url"
-          maxlength="2000"
-          placeholder="https://，请确认我们有权限查看"
-        />
       </fieldset>
       <label class="consent">
         <input type="checkbox" name="consent" required />{" "}
