@@ -6,6 +6,7 @@ import {
   inquiryBusinessLabel,
   type RecruitmentApplicationRequest,
   type Inquiry,
+  type InquirySegment,
 } from "@empact/content/inquiry";
 
 export {
@@ -22,7 +23,10 @@ export type RecruitmentApplication = RecruitmentApplicationRequest & {
   jobTitle: string;
 };
 export type ContactMessage = Inquiry | RecruitmentApplication;
-type Delivery = (message: ContactMessage) => Promise<void>;
+type Delivery = (
+  message: ContactMessage,
+  segments?: readonly InquirySegment[],
+) => Promise<void>;
 type Result = { status: number; message: string };
 
 /** In-memory abuse/idempotency records contain hashes only, never submitted text. */
@@ -144,9 +148,12 @@ export function createContactHandler(options: {
   };
 }
 
-export function inquiryMailText(inquiry: Inquiry) {
+export function inquiryMailText(
+  inquiry: Inquiry,
+  segments?: readonly InquirySegment[],
+) {
   return [
-    `业务方向：${inquiryBusinessLabel(inquiry)}`,
+    `业务方向：${inquiryBusinessLabel(inquiry, segments)}`,
     `称呼：${inquiry.name || "未填写"}`,
     `联系方式：${inquiry.contact}`,
     `机构名称：${inquiry.organization || "未填写"}`,
@@ -213,7 +220,7 @@ export function smtpDelivery(
     disableFileAccess: true,
     disableUrlAccess: true,
   });
-  return async (message) => {
+  return async (message, segments) => {
     const result = await transport.sendMail({
       from: env.CONTACT_FROM,
       to: env.CONTACT_TO,
@@ -224,7 +231,7 @@ export function smtpDelivery(
       text:
         message.kind === "recruitment"
           ? recruitmentMailText(message)
-          : inquiryMailText(message),
+          : inquiryMailText(message, segments),
     });
     if (!result.accepted?.length || result.rejected?.length)
       throw new Error("Delivery rejected");

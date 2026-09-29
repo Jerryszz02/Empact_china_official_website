@@ -24,11 +24,16 @@ test("CMS builds copy completed assets to a separate filesystem", async () => {
   try {
     if (process.platform === "linux")
       assert.notEqual((await stat(runtime)).dev, (await stat(site)).dev);
-    const output = await buildSite(
-      { ...structuredClone(frameworkSnapshot), mode: "preview" },
-      join(runtime, "preview"),
-      { runtimeDir: runtime },
-    );
+    const snapshot = {
+      ...structuredClone(frameworkSnapshot),
+      mode: "preview" as const,
+    };
+    snapshot.entries.find(
+      (entry) => entry.kind === "page" && entry.slug === "school",
+    )!.title = "教育合作";
+    const output = await buildSite(snapshot, join(runtime, "preview"), {
+      runtimeDir: runtime,
+    });
     assert.deepEqual(await checkOutput(output, false), []);
     assert.ok(
       (await readdir(join(output, "_astro"))).some((f) => f.endsWith(".css")),
@@ -36,6 +41,15 @@ test("CMS builds copy completed assets to a separate filesystem", async () => {
     assert.equal(
       JSON.parse(await readFile(join(output, "release.json"), "utf8")).mode,
       "preview",
+    );
+    const metadata = JSON.parse(
+      await readFile(join(output, "release.json"), "utf8"),
+    );
+    assert.equal(
+      metadata.inquirySegments.find(
+        (item: { value: string }) => item.value === "school",
+      )?.label,
+      "教育合作",
     );
     const recruitment = JSON.parse(
       await readFile(join(output, ".recruitment.json"), "utf8"),

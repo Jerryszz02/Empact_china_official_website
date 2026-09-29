@@ -1,7 +1,8 @@
 ---
-import { inquirySegments } from "@empact/content/inquiry";
+import { inquirySegmentsForPages } from "@empact/content/inquiry";
 import BaseLayout from "@/layouts/BaseLayout.astro";
-import { snapshot, businesses, pageBySlug } from "@/lib/content";
+import { snapshot, businesses, pages, pageBySlug } from "@/lib/content";
+const inquirySegments = inquirySegmentsForPages(pages);
 const enabled =
   snapshot.company.contactEnabled &&
   snapshot.company.approved &&
@@ -152,10 +153,11 @@ const entry = pageBySlug("contact");
   </section>
   <section class="section contact-paths">
     <h2>从你的关注出发</h2>
-    <a href="/youth/">查看青少年项目 ↗</a>
-    <a href="/corporate/">查看企业服务 ↗</a>
-    <a href="/school/">查看学校业务 ↗</a>
-    <a href="/community/">查看社区业务 ↗</a>
+    {inquirySegments
+      .filter((item) => item.value !== "other")
+      .map((item) => (
+        <a href={`/${item.value}/`}>查看{item.label} ↗</a>
+      ))}
   </section>
   <script>
     import "@/lib/contact-form";

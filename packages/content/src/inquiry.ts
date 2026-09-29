@@ -8,6 +8,24 @@ export const inquirySegments = [
   { value: "other", label: "其他／暂不确定" },
 ] as const;
 
+export type InquirySegment = {
+  value: (typeof inquirySegments)[number]["value"];
+  label: string;
+};
+
+export function inquirySegmentsForPages(
+  pages: readonly { slug: string; title: string }[],
+): InquirySegment[] {
+  return inquirySegments.map((segment) => ({
+    ...segment,
+    label:
+      segment.value === "other"
+        ? segment.label
+        : (pages.find((page) => page.slug === segment.value)?.title ??
+          segment.label),
+  }));
+}
+
 const line = (max: number) =>
   z
     .string()
@@ -94,8 +112,11 @@ export const contactSubmissionSchema = z.union([
   contactSchema,
 ]);
 
-export function inquiryBusinessLabel(inquiry: Inquiry) {
-  const segment = inquirySegments.find(
+export function inquiryBusinessLabel(
+  inquiry: Inquiry,
+  segments: readonly InquirySegment[] = inquirySegments,
+) {
+  const segment = segments.find(
     (item) => item.value === inquiry.segment,
   )?.label;
   const business = inquiry.businessTitle || inquiry.business || "未选择";

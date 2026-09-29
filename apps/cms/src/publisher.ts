@@ -19,6 +19,7 @@ import { randomUUID, createHash } from "node:crypto";
 import { execFile, spawn } from "node:child_process";
 import { promisify } from "node:util";
 import { validateSnapshot, type Snapshot } from "@empact/content/schema";
+import { inquirySegmentsForPages } from "@empact/content/inquiry";
 import { checkOutput } from "../../../scripts/check-output.js";
 import { allowPublicRead } from "./public-permissions.js";
 import { createBuildWorkspace, buildEnvironment } from "./build-workspace.js";
@@ -456,6 +457,13 @@ export async function buildSite(
   const metadata = {
     ...(codeRevision ? { codeRevision } : {}),
     version: snapshot.version,
+    inquirySegments: inquirySegmentsForPages(
+      snapshot.entries.filter(
+        (entry) =>
+          entry.kind === "page" &&
+          (snapshot.mode === "preview" || entry.approved),
+      ),
+    ),
     generatedAt: snapshot.generatedAt,
     mode: snapshot.mode,
     contactEnabled:
