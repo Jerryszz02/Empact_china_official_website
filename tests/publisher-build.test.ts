@@ -37,6 +37,17 @@ test("CMS builds copy completed assets to a separate filesystem", async () => {
       JSON.parse(await readFile(join(output, "release.json"), "utf8")).mode,
       "preview",
     );
+    const recruitment = JSON.parse(
+      await readFile(join(output, ".recruitment.json"), "utf8"),
+    );
+    assert.deepEqual(Object.keys(recruitment), ["recruitment"]);
+    for (const job of recruitment.recruitment.jobs)
+      assert.deepEqual(Object.keys(job).sort(), [
+        "id",
+        "isExample",
+        "status",
+        "title",
+      ]);
     const failed = join(runtime, "failed");
     await assert.rejects(
       () =>

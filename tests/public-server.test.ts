@@ -280,7 +280,7 @@ test("static server preserves real 404, blocks private files, switches release a
   }
 });
 
-test("recruitment uses the current published snapshot and rejects a job closed after page load", async () => {
+test("recruitment uses private HTTP metadata and rejects a job closed after page load", async () => {
   const dir = await mkdtemp(join(tmpdir(), "empact-recruitment-"));
   const messages: ContactMessage[] = [];
   const server = createPublicServer({
@@ -345,6 +345,10 @@ test("recruitment uses the current published snapshot and rejects a job closed a
     await symlink(open, join(dir, "current"));
     assert.equal((await post(data)).status, 200);
     assert.equal(messages.length, 1);
+    assert.equal(
+      (await fetch(url.replace("/api/contact", "/.recruitment.json"))).status,
+      404,
+    );
     assert.equal(messages[0].kind, "recruitment");
     if (messages[0].kind !== "recruitment")
       throw new Error("unexpected inquiry");
