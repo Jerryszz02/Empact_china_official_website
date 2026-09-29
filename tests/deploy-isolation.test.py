@@ -69,10 +69,11 @@ class IsolationInstallerTests(unittest.TestCase):
         (root / 'srv/data/site/current').symlink_to(root / 'srv/data/site/releases/one/public')
         (root / 'lock').mkdir()
         (root / 'tools').mkdir()
-        for name in ['secure-runtime.py', 'publication-lock.py']:
+        for name in ['secure-runtime.py', 'publication-lock.py', 'deploy.sh', 'restore.sh']:
             path = root / 'tools' / name
             path.write_text('#!/bin/sh\nexit 0\n')
             path.chmod(0o755)
+            (src / name).write_bytes(path.read_bytes())
         binary = root / 'bin'
         binary.mkdir()
         for name in ['readlink', 'systemctl', 'systemd-analyze', 'getent', 'id', 'getfacl', 'setfacl', 'install', 'node', 'runuser', 'curl', 'chown', 'chgrp', 'usermod', 'flock']:

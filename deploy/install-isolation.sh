@@ -11,6 +11,9 @@ cmp "$source_dir/../apps/cms/src/public-permissions.ts" "$current/apps/cms/src/p
 cmp "$source_dir/../apps/cms/src/build-workspace.ts" "$current/apps/cms/src/build-workspace.ts"
 [[ ! -e /etc/empact/runtime-isolation.enabled ]] || { echo 'Isolation already enabled.'; exit 0; }
 [[ -x /usr/local/lib/empact/secure-runtime.py ]] || { echo 'Install reviewed deployment tools first.' >&2; exit 2; }
+for helper in deploy.sh restore.sh secure-runtime.py; do
+  cmp "$source_dir/$helper" "/usr/local/lib/empact/$helper"
+done
 for unit in empact-cms.service empact-public.service empact-expiry.service; do systemd-analyze verify "$source_dir/$unit"; done
 exec 8>/run/lock/empact-actions.lock
 flock -n 8 || exit 75
