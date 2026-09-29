@@ -102,7 +102,7 @@ export async function verifyBusinessOrderBoard({
   await expect(school).toHaveValue("教育服务最终版");
   await expect(schoolColumn.getByRole("status")).toHaveText("已保存到草稿");
 
-  const publicPage = await page.context().newPage();
+  const publicPage = await page.context().browser()!.newPage();
   try {
     const base = new URL(page.url()).origin;
     await publicPage.goto(`${base}/school/`);
