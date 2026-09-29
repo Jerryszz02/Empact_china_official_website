@@ -12,7 +12,10 @@ const pathways = [
   { href: "/corporate/", title: "企业服务", label: "For organisations" },
   { href: "/school/", title: "学校业务", label: "For schools" },
   { href: "/community/", title: "社区业务", label: "For communities" },
-];
+].map((pathway) => ({
+  ...pathway,
+  title: pageBySlug(pathway.href.split("/")[1])?.title ?? pathway.title,
+}));
 ---
 
 <BaseLayout

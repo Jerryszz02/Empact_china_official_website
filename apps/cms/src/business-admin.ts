@@ -1,3 +1,7 @@
+import {
+  businessCategories,
+  type BusinessCategory,
+} from "./business-category.js";
 import type { Payload } from "payload";
 import { isFixedYouthModel } from "@empact/content/business";
 import { randomUUID } from "node:crypto";
@@ -301,7 +305,7 @@ export async function assertBusinessDependencyFree(
 export async function businessAdminState(
   payload: Payload,
   runtime = runtimeDir(),
-): Promise<{ items: BusinessAdminItem[] }> {
+): Promise<{ items: BusinessAdminItem[]; categories: BusinessCategory[] }> {
   const [draft, live, receipts] = await Promise.all([
     readDraftSnapshot(payload),
     readLiveSnapshot(runtime),
@@ -312,6 +316,7 @@ export async function businessAdminState(
     for (const id of receipt.selectedIds ?? [])
       if (!latest.has(id)) latest.set(id, receipt);
   return {
+    categories: businessCategories(draft, live),
     items: await Promise.all(
       draft.entries
         .filter(

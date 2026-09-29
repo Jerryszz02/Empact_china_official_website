@@ -11,6 +11,7 @@ import {
   isImmutablePublicAsset,
   retainedPublicAsset,
 } from "./public-assets.js";
+import { inquirySegments } from "@empact/content/inquiry";
 import {
   createContactHandler,
   smtpDelivery,
@@ -40,7 +41,31 @@ export function createPublicServer(options: {
 }) {
   const contact = createContactHandler({
     origin: options.origin,
-    deliver: options.deliver,
+    deliver: options.deliver
+      ? async (message) => {
+          if (message.kind === "recruitment") return options.deliver!(message);
+          // Read the active publication for each delivery, including after a rename.
+          const release = JSON.parse(
+            await readFile(join(options.root, "release.json"), "utf8"),
+          );
+          const segments = inquirySegments.map((segment) => {
+            const published = Array.isArray(release.inquirySegments)
+              ? release.inquirySegments.find(
+                  (item: { value?: unknown; label?: unknown } | null) =>
+                    item?.value === segment.value,
+                )
+              : undefined;
+            return {
+              ...segment,
+              label:
+                typeof published?.label === "string" && published.label.trim()
+                  ? published.label
+                  : segment.label,
+            };
+          });
+          await options.deliver!(message, segments);
+        }
+      : undefined,
     getJob: async (jobId) => {
       // The current symlink is resolved for every submission so a page left open
       // before a publication change cannot apply to a removed or closed job.

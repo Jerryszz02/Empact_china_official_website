@@ -10,6 +10,8 @@ import {
   type AdminItem as Item,
 } from "./BusinessTypeBoard.js";
 
+import type { BusinessCategory } from "../business-category.js";
+
 const parts = [
   {
     id: "new-project",
@@ -30,6 +32,15 @@ const parts = [
 ] as const;
 type Part = (typeof parts)[number]["id"];
 export function BusinessAdminDashboard() {
+  const [categories, setCategories] = useState<BusinessCategory[]>([]);
+  const [pendingNames, setPendingNames] = useState<Record<string, boolean>>({});
+  const namesPending = Object.values(pendingNames).some(Boolean);
+  const labels = {
+    ...segmentLabels,
+    ...Object.fromEntries(
+      categories.map((category) => [category.segment, category.title]),
+    ),
+  };
   const [items, setItems] = useState<Item[]>([]);
   const [part, setPart] = useState<Part>("new-project");
   const [loading, setLoading] = useState(true);
@@ -52,6 +63,7 @@ export function BusinessAdminDashboard() {
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "项目数据暂时无法加载");
+      setCategories(Array.isArray(data.categories) ? data.categories : []);
       setItems(Array.isArray(data.items) ? data.items : []);
       return true;
     } catch (caught) {
@@ -116,8 +128,77 @@ export function BusinessAdminDashboard() {
     setSearch("");
   }
 
+  function namePending(segment: string, pending: boolean) {
+    setPendingNames((current) =>
+      current[segment] === pending
+        ? current
+        : { ...current, [segment]: pending },
+    );
+  }
+
+  async function renameCategory(
+    category: BusinessCategory,
+    title: string,
+    expected: string,
+  ) {
+    const response = await fetch("/api/business-admin/rename-category", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ id: category.id, title, expected }),
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || "名称保存失败，请重试。");
+    setCategories((current) =>
+      current.map((item) =>
+        item.id === category.id ? { ...item, title: data.title } : item,
+      ),
+    );
+    return data.title as string;
+  }
+
+  async function publishCategory(category: BusinessCategory) {
+    if (
+      busy ||
+      namesPending ||
+      !window.confirm(`发布大类名称“${category.title}”到官网？`)
+    )
+      return;
+    setBusy(true);
+    setError("");
+    setMessage("");
+    setResultUrl("");
+    try {
+      const response = await fetch("/api/business-admin/publish-category", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          id: category.id,
+          title: category.title,
+          expected: category.title,
+          confirmed: true,
+        }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "名称发布失败，请重试。");
+      setCategories((current) =>
+        current.map((item) =>
+          item.id === category.id
+            ? { ...item, publishedTitle: data.title }
+            : item,
+        ),
+      );
+      setMessage(data.message);
+    } catch (caught) {
+      setError(
+        caught instanceof Error ? caught.message : "名称发布失败，请重试。",
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function moveBusiness(item: Item, targetIndex: number) {
-    if (busy || loading || orderSaving.current) return;
+    if (busy || loading || namesPending || orderSaving.current) return;
     const group = businesses.filter((entry) => entry.segment === item.segment);
     const currentIndex = group.findIndex((entry) => entry.id === item.id);
     if (
@@ -377,7 +458,7 @@ export function BusinessAdminDashboard() {
           <button
             className="button button--quiet"
             onClick={() => void refresh()}
-            disabled={busy || loading}
+            disabled={busy || loading || namesPending}
           >
             刷新
           </button>
@@ -409,9 +490,13 @@ export function BusinessAdminDashboard() {
           <>
             {part === "business-types" && (
               <div className="admin-workspace__create">
-                <CreateContentButton kind="business" label="新增业务类型" />
+                <CreateContentButton
+                  kind="business"
+                  label="新增业务类型"
+                  categoryLabels={labels}
+                />
                 <p>
-                  使用上下箭头移动一位，或拖动手柄调整组内顺序。排序自动保存到草稿；发布有未发布修改的业务后，官网才会更新。
+                  大类名称可直接输入，停止输入后自动保存为草稿，点击“发布名称”后官网生效。使用上下箭头移动一位，或拖动手柄调整组内顺序。排序自动保存到草稿；发布有未发布修改的业务后，官网才会更新。
                 </p>
               </div>
             )}
@@ -437,7 +522,7 @@ export function BusinessAdminDashboard() {
                     }}
                   >
                     <option value="">全部业务范围</option>
-                    {Object.entries(segmentLabels).map(([value, label]) => (
+                    {Object.entries(labels).map(([value, label]) => (
                       <option key={value} value={value}>
                         {label}
                       </option>
@@ -487,6 +572,10 @@ export function BusinessAdminDashboard() {
             )}
             {part === "business-types" ? (
               <BusinessTypeBoard
+                categories={categories}
+                onRename={renameCategory}
+                onNamePending={namePending}
+                onPublishCategory={publishCategory}
                 items={businesses}
                 busy={busy || loading}
                 onMove={moveBusiness}
@@ -532,7 +621,7 @@ export function BusinessAdminDashboard() {
                             {item.kind === "case"
                               ? `所属业务：${business?.title || "未选择"}`
                               : item.segment
-                                ? segmentLabels[item.segment]
+                                ? labels[item.segment]
                                 : "未选择业务分组"}
                           </p>
                           <p>{item.summary || "暂无摘要"}</p>

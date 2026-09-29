@@ -17,7 +17,7 @@ import {
   preservePublicAssets,
   publicAssetRetentionMs,
 } from "../scripts/public-assets.js";
-import type { ContactMessage } from "../scripts/contact.js";
+import { inquiryMailText, type ContactMessage } from "../scripts/contact.js";
 
 test("publication retains only public hashed assets and never caches missing resources", async () => {
   const dir = await mkdtemp(join(tmpdir(), "empact-assets-"));
@@ -103,11 +103,14 @@ test("publication retains only public hashed assets and never caches missing res
 test("static server preserves real 404, blocks private files, switches release atomically and gates contact", async () => {
   const dir = await mkdtemp(join(tmpdir(), "empact-static-"));
   let deliveries = 0;
+  let lastInquiryMail = "";
   const server = createPublicServer({
     root: join(dir, "current"),
     origin: "https://empact.cn",
-    deliver: async () => {
+    deliver: async (message, segments) => {
       deliveries++;
+      if (message.kind !== "recruitment")
+        lastInquiryMail = inquiryMailText(message, segments);
     },
   });
   server.listen(0, "127.0.0.1");
@@ -271,7 +274,18 @@ test("static server preserves real 404, blocks private files, switches release a
         },
         body,
       });
+    // Update the active release after the server has already delivered a message.
+    await writeFile(
+      join(dir, "one/release.json"),
+      JSON.stringify({
+        mode: "production",
+        contactEnabled: true,
+        inquirySegments: [{ value: "corporate", label: "企业合作新名称" }],
+      }),
+    );
     assert.equal((await sendDetailed(detailed)).status, 200);
+    assert.match(lastInquiryMail, /业务方向：企业合作新名称 \/ /);
+    assert.doesNotMatch(lastInquiryMail, /企业服务/);
     assert.equal(deliveries, 2);
     assert.equal((await sendDetailed("x".repeat(32_769))).status, 413);
   } finally {

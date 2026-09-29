@@ -1,9 +1,11 @@
 import type { APIRoute } from "astro";
-import { snapshot } from "@/lib/content";
+import { inquirySegmentsForPages } from "@empact/content/inquiry";
+import { snapshot, pages } from "@/lib/content";
 export const GET: APIRoute = () =>
   new Response(
     JSON.stringify({
       version: snapshot.version,
+      inquirySegments: inquirySegmentsForPages(pages),
       generatedAt: snapshot.generatedAt,
       mode: snapshot.mode,
       contactEnabled:

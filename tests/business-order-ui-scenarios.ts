@@ -23,7 +23,9 @@ export async function verifyBusinessOrderBoard({
       )
       .sort((a: any, b: any) => (a.order ?? 0) - (b.order ?? 0));
   const row = (id: string) => page.locator(`[data-business-id="${id}"]`);
-  const youth = page.getByRole("region", { name: "青少年与青年", exact: true });
+  const youth = page
+    .locator(".business-column")
+    .filter({ has: page.locator("#business-column-youth") });
   const ids = () =>
     youth
       .locator("[data-business-id]")
@@ -33,12 +35,115 @@ export async function verifyBusinessOrderBoard({
   const originalIds = group("youth").map((item: any) => item.id);
   const columns = page.locator(".business-column");
   await expect(columns).toHaveCount(4);
-  await expect(columns.locator("h3")).toHaveText([
-    "青少年与青年",
-    "企业服务",
-    "学校业务",
-    "社区业务",
-  ]);
+  for (const category of state.categories) {
+    await expect(
+      page.locator(`#business-column-${category.segment}`),
+    ).toHaveValue(category.title);
+  }
+  const school = page.locator("#business-column-school");
+  const originalSchool = state.categories.find(
+    (item: any) => item.segment === "school",
+  ).title;
+  const schoolColumn = columns.filter({ has: school });
+  const storedName = async () =>
+    (await request("/api/business-admin/state")).categories.find(
+      (item: any) => item.segment === "school",
+    ).title;
+  await school.fill("学校与教育服务");
+  await expect(schoolColumn.getByRole("status")).toHaveText("已保存到草稿");
+  assert.equal(await storedName(), "学校与教育服务");
+  await page.reload();
+  await expect(school).toHaveValue("学校与教育服务");
+  await school.fill("   ");
+  await school.press("Tab");
+  await expect(schoolColumn.getByRole("alert")).toContainText("名称不能为空");
+  assert.equal(await storedName(), "学校与教育服务");
+
+  // Failed saves keep the user's text and support an explicit retry.
+  await page.route("**/api/business-admin/rename-category", (route) =>
+    route.fulfill({
+      status: 500,
+      contentType: "application/json",
+      body: JSON.stringify({ error: "保存失败测试" }),
+    }),
+  );
+  await school.fill("教育合作");
+  await school.press("Enter");
+  await expect(schoolColumn.getByRole("alert")).toContainText("保存失败测试");
+  await expect(school).toHaveValue("教育合作");
+  assert.equal(await storedName(), "学校与教育服务");
+  await page.unroute("**/api/business-admin/rename-category");
+  await schoolColumn.getByRole("button", { name: "重试", exact: true }).click();
+  await expect(schoolColumn.getByRole("status")).toHaveText("已保存到草稿");
+
+  // A slow first request cannot overwrite a newer value typed during the save.
+  let release!: () => void;
+  let intercepted!: () => void;
+  const started = new Promise<void>((resolve) => {
+    intercepted = resolve;
+  });
+  const held = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  await page.route(
+    "**/api/business-admin/rename-category",
+    async (route) => {
+      intercepted();
+      await held;
+      await route.continue();
+    },
+    { times: 1 },
+  );
+  await school.fill("教育服务第一版");
+  await started;
+  await school.fill("教育服务最终版");
+  release();
+  await expect.poll(storedName).toBe("教育服务最终版");
+  await expect(school).toHaveValue("教育服务最终版");
+  await expect(schoolColumn.getByRole("status")).toHaveText("已保存到草稿");
+
+  const publicPage = await page.context().browser()!.newPage();
+  try {
+    const base = new URL(page.url()).origin;
+    await publicPage.goto(`${base}/school/`);
+    await expect(publicPage.locator("h1")).not.toHaveText("教育服务最终版");
+    await schoolColumn
+      .getByRole("button", { name: "发布名称", exact: true })
+      .click();
+    await expect(page.locator(".admin-notice")).toHaveText(
+      "大类名称已发布到官网。",
+      { timeout: 90_000 },
+    );
+    await publicPage.reload();
+    await expect(publicPage.locator("h1")).toHaveText("教育服务最终版");
+    await expect(publicPage.locator('.nav-parent[href="/school/"]')).toHaveText(
+      "教育服务最终版",
+    );
+    await publicPage.goto(base);
+    await expect(
+      publicPage.locator('.motion-pathway[href="/school/"]'),
+    ).toContainText("教育服务最终版");
+  } finally {
+    await publicPage.close();
+  }
+
+  // IME composition must not persist an unfinished candidate.
+  await school.dispatchEvent("compositionstart");
+  await school.fill("拼音候选");
+  await page.waitForTimeout(900);
+  assert.equal(await storedName(), "教育服务最终版");
+  await school.dispatchEvent("compositionend");
+  await expect.poll(storedName).toBe("拼音候选");
+  await school.fill(originalSchool);
+  await school.press("Enter");
+  await expect(schoolColumn.getByRole("status")).toHaveText("已保存到草稿");
+  await schoolColumn
+    .getByRole("button", { name: "发布名称", exact: true })
+    .click();
+  await expect(page.locator(".admin-notice")).toHaveText(
+    "大类名称已发布到官网。",
+    { timeout: 90_000 },
+  );
   const bounds = await columns.evaluateAll((entries) =>
     entries.map((entry) => ({
       x: entry.getBoundingClientRect().x,
@@ -56,8 +161,7 @@ export async function verifyBusinessOrderBoard({
   for (const segment of ["youth", "corporate", "school", "community"]) {
     const list = page
       .locator(`#business-column-${segment}`)
-      .locator("..")
-      .locator("..")
+      .locator("xpath=ancestor::section[1]")
       .locator("[data-business-id]");
     assert.deepEqual(
       await list.evaluateAll((rows) =>

@@ -7,12 +7,14 @@ export function CreateContentButton({
   segment,
   label,
   businesses = [],
+  categoryLabels,
 }: {
   kind: "business" | "case";
   parentId?: string;
   segment?: "corporate" | "youth" | "school" | "community";
   label: string;
   businesses?: { id: string; title: string }[];
+  categoryLabels?: Record<string, string>;
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
   const [busy, setBusy] = useState(false),
@@ -85,10 +87,18 @@ export function CreateContentButton({
                 required
                 defaultValue={segment || "corporate"}
               >
-                <option value="corporate">企业服务</option>
-                <option value="youth">青少年与青年</option>
-                <option value="school">学校业务</option>
-                <option value="community">社区业务</option>
+                <option value="corporate">
+                  {categoryLabels?.corporate ?? "企业服务"}
+                </option>
+                <option value="youth">
+                  {categoryLabels?.youth ?? "青少年与青年"}
+                </option>
+                <option value="school">
+                  {categoryLabels?.school ?? "学校业务"}
+                </option>
+                <option value="community">
+                  {categoryLabels?.community ?? "社区业务"}
+                </option>
               </select>
             </label>
           )}

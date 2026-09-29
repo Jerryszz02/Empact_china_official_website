@@ -11,6 +11,8 @@ import {
   type ContactMessage,
 } from "../scripts/contact.js";
 
+import { inquirySegmentsForPages } from "@empact/content/inquiry";
+
 const origin = "https://empact.cn";
 const inquiry = () => ({
   business: "企业服务",
@@ -48,6 +50,31 @@ const application = () => ({
   website: "",
   idempotencyKey: randomUUID(),
 });
+test("published category names reach inquiry mail while identifiers and fallbacks stay stable", () => {
+  const segments = inquirySegmentsForPages([
+    { slug: "school", title: "教育合作" },
+  ]);
+  assert.deepEqual(
+    segments.map((item) => item.value),
+    ["youth", "corporate", "school", "community", "other"],
+  );
+  assert.equal(
+    segments.find((item) => item.value === "corporate")?.label,
+    "企业服务",
+  );
+  assert.equal(
+    segments.find((item) => item.value === "other")?.label,
+    "其他／暂不确定",
+  );
+  const data = contactSchema.parse({ ...detailedInquiry(), segment: "school" });
+  assert.match(
+    inquiryMailText(data, segments),
+    /业务方向：教育合作 \/ 企业志愿者/,
+  );
+  assert.doesNotMatch(inquiryMailText(data, segments), /学校业务/);
+  assert.match(inquiryMailText(data), /业务方向：学校业务/);
+});
+
 test("new inquiry validates optional details and produces a complete readable email", () => {
   const data = contactSchema.parse(detailedInquiry());
   const mail = inquiryMailText(data);

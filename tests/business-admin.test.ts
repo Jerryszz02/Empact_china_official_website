@@ -1,3 +1,4 @@
+import { publishBusinessCategory } from "../apps/cms/src/business-category.js";
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
@@ -691,6 +692,55 @@ test("failed previews retain a private build log and remove incomplete pages", a
       /early build failure/,
     );
     assert.deepEqual(await readdir(join(f.options.runtimeDir, "previews")), []);
+  } finally {
+    await rm(f.root, { recursive: true, force: true });
+  }
+});
+
+test("category publication changes only the selected live title", async () => {
+  const f = await fixture();
+  try {
+    const before = await readLiveSnapshot(f.options.runtimeDir);
+    const page = f.docs.find(
+      (doc) => doc.kind === "page" && doc.slug === "school",
+    );
+    page.title = "学校合作";
+    page.summary = "不能顺带发布的摘要草稿";
+    page.approved = false;
+    const result = await publishBusinessCategory(
+      f.payload,
+      { id: String(page.id), title: page.title, expected: page.title },
+      f.options,
+    );
+    assert.equal(result.title, page.title);
+    const after = await readLiveSnapshot(f.options.runtimeDir);
+    assert.deepEqual(
+      after?.entries,
+      before?.entries.map((entry) =>
+        entry.id === String(page.id) ? { ...entry, title: page.title } : entry,
+      ),
+    );
+    assert.deepEqual(after?.media, before?.media);
+    assert.equal(page.approved, false);
+    await assert.rejects(
+      () =>
+        publishBusinessCategory(
+          f.payload,
+          { id: String(page.id), title: "过期名称", expected: page.title },
+          f.options,
+        ),
+      /名称已变化/,
+    );
+    assert.equal(
+      (await readLiveSnapshot(f.options.runtimeDir))?.version,
+      after?.version,
+    );
+    const state = await businessAdminState(f.payload, f.options.runtimeDir);
+    assert.equal(
+      state.categories.find((item) => item.segment === "school")
+        ?.publishedTitle,
+      page.title,
+    );
   } finally {
     await rm(f.root, { recursive: true, force: true });
   }

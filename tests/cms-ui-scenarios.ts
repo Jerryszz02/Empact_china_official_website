@@ -305,7 +305,7 @@ export async function verifyCmsUI({
       });
       await dialog.getByLabel("名称 / 标题").fill(`浏览器${label}创建验收`);
       await dialog.getByLabel("简短介绍 / 项目摘要").fill("隔离测试业务摘要。");
-      await dialog.getByLabel("业务分组").selectOption({ label });
+      await dialog.getByLabel("业务分组").selectOption(segment);
       await dialog
         .getByRole("button", { name: "创建并编辑", exact: true })
         .click();
@@ -615,7 +615,8 @@ export async function verifyCmsUI({
     await page.goto(base + "/admin#business-types");
     const mobileOrder = businessRow(youthFirst.title);
     const youthRows = page
-      .getByRole("region", { name: "青少年与青年", exact: true })
+      .locator(".business-column")
+      .filter({ has: page.locator("#business-column-youth") })
       .locator("[data-business-id]");
     const beforeMobileMove = await youthRows.evaluateAll((rows) =>
       rows.map((row) => row.getAttribute("data-business-id")),

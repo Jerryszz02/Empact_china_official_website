@@ -1,3 +1,4 @@
+import { renameBusinessCategory } from "../apps/cms/src/business-category.js";
 import { config, getPayload, env } from "./helpers/cms-runtime.js";
 import test from "node:test";
 import assert from "node:assert/strict";
@@ -356,6 +357,50 @@ test("SQLite commits a normalized group and rolls back a failed batch", async ()
       },
     );
     payload = await getPayload({ config });
+    const category = await payload.create({
+      collection: "content",
+      data: {
+        kind: "page",
+        slug: "school",
+        title: "学校业务",
+        summary: "保留摘要",
+        approved: true,
+        body: htmlToLexical("<p>保留正文</p>"),
+      },
+      overrideAccess: true,
+    });
+    const nameInput = {
+      id: String(category.id),
+      title: "  学校合作  ",
+      expected: "学校业务",
+    };
+    assert.equal(
+      (await renameBusinessCategory(payload, nameInput)).title,
+      "学校合作",
+    );
+    assert.equal(
+      (await renameBusinessCategory(payload, nameInput)).title,
+      "学校合作",
+      "retry after a lost response is idempotent",
+    );
+    const savedCategory = await payload.findByID({
+      collection: "content",
+      id: category.id,
+    });
+    assert.equal(savedCategory.slug, "school");
+    assert.equal(savedCategory.summary, category.summary);
+    assert.deepEqual(savedCategory.body, category.body);
+    assert.equal(savedCategory.approved, false);
+    await assert.rejects(
+      () =>
+        renameBusinessCategory(payload, { ...nameInput, title: "过期覆盖" }),
+      /名称已被其他操作修改/,
+    );
+    for (const title of ["", "   ", "长".repeat(41), null])
+      await assert.rejects(
+        () => renameBusinessCategory(payload, { ...nameInput, title }),
+        /1–40/,
+      );
     const create = async (slug: string, order: number, segment = "youth") =>
       payload.create({
         collection: "content",
@@ -376,6 +421,15 @@ test("SQLite commits a normalized group and rolls back a failed batch", async ()
       await create("reorder-c", 10),
       await create("reorder-other", 77, "school"),
     ];
+    await assert.rejects(
+      () =>
+        renameBusinessCategory(payload, {
+          id: String(a.id),
+          title: "错误类型",
+          expected: a.title,
+        }),
+      /只能修改四个业务大类/,
+    );
     const current = await payload.find({
       collection: "content",
       where: {

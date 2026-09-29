@@ -445,6 +445,33 @@ test(
         const html = load(await readFile(join(out, file), "utf8"));
         assert.ok(html('a[href="https://chatcircle.empact.cn"]').length >= 1);
         if (file === "contact/index.html") {
+          const release = JSON.parse(
+            await readFile(join(out, "release.json"), "utf8"),
+          );
+          for (const segment of ["youth", "corporate", "school", "community"]) {
+            assert.equal(
+              html(`#segment option[value="${segment}"]`).text(),
+              `验收-${segment}`,
+            );
+            assert.equal(
+              html(`#business optgroup[label="验收-${segment}"]`).length,
+              1,
+            );
+            assert.equal(
+              html(`.contact-paths a[href="/${segment}/"]`).text(),
+              `查看验收-${segment} ↗`,
+            );
+            assert.equal(
+              release.inquirySegments.find(
+                (item: { value: string }) => item.value === segment,
+              )?.label,
+              `验收-${segment}`,
+            );
+          }
+          assert.equal(
+            html('#segment option[value="other"]').text(),
+            "其他／暂不确定",
+          );
           assert.equal(
             html('.contact-intro a[href="https://chatcircle.empact.cn"]')
               .length,
