@@ -19,7 +19,7 @@
 
 ## 上线顺序
 
-须先确认月度备份任务与 Actions 部署空闲。备份任务维护 `backup.sh`、留存和月度定时器；本变更维护 `restore.sh`、运行身份、发布器和部署权限。合并两边的 `install-tools.sh` 时保留两边新增 helper，不用一方覆盖另一方。
+须先确认月度备份任务与 Actions 部署空闲。备份任务维护 `backup.sh`、留存和月度定时器；本变更维护 `restore.sh`、运行身份、发布器和部署权限。`install-tools.sh` 已同时保留 `backup-retention.py` 和 `secure-runtime.py`，不得用旧版本工具列表覆盖。
 
 1. 合并经过审查和 CI 的代码，等待 main `Website checks` 与 `Deploy production` 完成；公开 `release.json.codeRevision` 必须等于合并后的 main 提交。此阶段线上旧账号仍兼容新发布器。
 2. 按[自动部署](automatic-deployment.md)安装这一版本的受信工具。核对 `/usr/local/lib/empact/secure-runtime.py` 与 `deploy.sh` 同步；不要复制旧分支的备份脚本覆盖另一个任务的新版本。
