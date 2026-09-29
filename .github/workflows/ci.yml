@@ -56,8 +56,10 @@ jobs:
           python3 tests/deploy-schema.test.py
           python3 tests/deploy-artifact.test.py
           python3 tests/deploy-flow.test.py
+          python3 tests/deploy-isolation.test.py
           bash -n deploy/deploy.sh
           bash -n deploy/install-tools.sh
+          bash -n deploy/install-isolation.sh
           bash -n deploy/smoke-runtime.sh
       - name: Keep only production dependencies for the checked runtime
         run: npm prune --omit=dev --ignore-scripts

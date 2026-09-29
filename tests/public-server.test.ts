@@ -298,7 +298,7 @@ test("recruitment uses the current published snapshot and rejects a job closed a
       JSON.stringify({ mode: "production", contactEnabled: true }),
     );
     await writeFile(
-      join(dir, name, "snapshot.json"),
+      join(dir, name, "public", ".recruitment.json"),
       JSON.stringify({
         recruitment: {
           jobs: [

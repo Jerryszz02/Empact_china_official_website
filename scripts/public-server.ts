@@ -46,7 +46,7 @@ export function createPublicServer(options: {
       // before a publication change cannot apply to a removed or closed job.
       const current = await realpath(options.root);
       const snapshot: unknown = JSON.parse(
-        await readFile(join(dirname(current), "snapshot.json"), "utf8"),
+        await readFile(join(current, ".recruitment.json"), "utf8"),
       );
       if (
         !snapshot ||

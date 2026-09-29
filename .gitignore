@@ -5,6 +5,8 @@ node_modules/
 !.env.example
 .next/
 .astro/
+.astro-cache/
+.vite-cache/
 .cms-build-*/
 dist/
 .data/

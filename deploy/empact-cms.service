@@ -19,7 +19,7 @@ NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=strict
 ProtectHome=true
-ReadWritePaths=/srv/empact/data /srv/empact/code
+ReadWritePaths=/srv/empact/data /srv/empact/cache
 MemoryMax=2G
 
 [Install]
