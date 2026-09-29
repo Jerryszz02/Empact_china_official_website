@@ -12,8 +12,10 @@ timer_active=false
 if systemctl is-active --quiet empact-cms; then was_active=true; fi
 if systemctl is-active --quiet empact-expiry.timer; then timer_active=true; fi
 restart_cms() {
-  if $was_active; then systemctl start empact-cms; fi
-  if $timer_active; then systemctl start empact-expiry.timer; fi
+  local status=0
+  if $was_active; then systemctl start empact-cms || status=1; fi
+  if $timer_active; then systemctl start empact-expiry.timer || status=1; fi
+  return "$status"
 }
 trap restart_cms EXIT
 systemctl stop empact-expiry.timer empact-expiry.service
@@ -22,4 +24,11 @@ systemctl stop empact-cms
 tar -C /srv/empact --exclude=data/site/publish.lock -czf "$archive" data
 sha256sum "$archive" > "$archive.sha256"
 tar -tzf "$archive" >/dev/null
+# Restore services before the heavier integrity check and retention pass.
+restart_cms
+trap - EXIT
+# Only managed full archives participate in the one-recovery-point policy.
+if [[ "$backup_dir" == /srv/empact/backups || "$backup_dir" == /srv/empact/backups/* ]]; then
+  /usr/local/lib/empact/backup-retention.py "$archive"
+fi
 printf 'Backup completed: %s\n' "$archive"

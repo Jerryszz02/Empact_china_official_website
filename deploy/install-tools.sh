@@ -5,7 +5,7 @@ umask 077
 [[ $EUID == 0 ]] || { echo 'Run the reviewed installer as root.' >&2; exit 2; }
 source_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 destination=/usr/local/lib/empact
-files=(backup.sh restore.sh auto-update.py publication-lock.py prune-build-cache.py schema-plan.py runtime-artifact.py deploy.sh actions-command.py)
+files=(backup.sh backup-retention.py restore.sh auto-update.py publication-lock.py prune-build-cache.py schema-plan.py runtime-artifact.py deploy.sh actions-command.py)
 for file in "${files[@]}"; do
   [[ -f "$source_dir/$file" && ! -L "$source_dir/$file" ]] || exit 1
   if [[ $file == *.sh ]]; then bash -n "$source_dir/$file"; else
