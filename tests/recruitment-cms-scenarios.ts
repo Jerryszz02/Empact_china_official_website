@@ -30,7 +30,18 @@ async function verifyRecruitmentEditor(options: {
       }),
     );
     const page = await context.newPage();
-    await page.goto(base + "/admin/globals/recruitment");
+    await page.goto(base + "/admin");
+    const recruitmentEntry = page.getByRole("link", {
+      name: /招聘岗位管理/,
+    });
+    await expect(recruitmentEntry).toBeVisible();
+    await expect(recruitmentEntry).toHaveAttribute(
+      "href",
+      "/admin/globals/recruitment",
+    );
+    await expect(recruitmentEntry).toContainText("全职、实习岗位");
+    await recruitmentEntry.click();
+    await page.waitForURL(base + "/admin/globals/recruitment");
     const actions = page.getByRole("region", { name: "招聘管理操作" });
     await expect(actions).toBeVisible();
     const preview = actions.getByRole("button", { name: "生成预览" });

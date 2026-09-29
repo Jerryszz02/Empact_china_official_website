@@ -335,6 +335,17 @@ export function BusinessAdminDashboard() {
           编辑照片 ↗
         </span>
       </a>
+      <a className="recruitment-entry" href="/admin/globals/recruitment">
+        <span>
+          <strong>招聘岗位管理</strong>
+          <small>
+            新增和编辑全职、实习岗位，管理招聘状态，保存后可预览、发布。
+          </small>
+        </span>
+        <span className="home-gallery-entry__action" aria-hidden="true">
+          管理岗位 ↗
+        </span>
+      </a>
       {message && (
         <p className="admin-notice" role="status">
           {message}
