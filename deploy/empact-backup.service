@@ -1,0 +1,19 @@
+[Unit]
+Description=Verify and retain monthly Empact local backups
+After=network.target
+
+[Service]
+Type=oneshot
+User=root
+ExecStart=/usr/local/lib/empact/monthly-backup.py
+UMask=0077
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=full
+TimeoutStartSec=2h
+TimeoutStopSec=5min
+# Let Python restore services before terminating its child processes.
+KillMode=mixed

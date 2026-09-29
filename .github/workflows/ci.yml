@@ -47,6 +47,9 @@ jobs:
       - run: npm audit --omit=dev --audit-level=high
       - name: Check automatic deployment scripts
         run: |
+          python3 tests/backup.test.py
+          bash -n deploy/backup.sh
+          bash -n deploy/install-backup.sh
           python3 tests/deploy-auto.test.py
           python3 tests/deploy-actions.test.py
           python3 tests/deploy-download.test.py

@@ -40,6 +40,26 @@ Node.js 22.12+（22 系列）和 npm 10。在需要运行服务或检查的目�
 
 `sudo deploy/backup.sh /absolute/private/backups` 会暂停 **官网 CMS 和截止检查任务** 保持数据库/媒体一致性，官网静态服务继续运行；生成校验和并恢复原本启用的服务。先在后台确认没有进行中的发布，再执行维护。备份排除进程锁，避免恢复后继承旧进程状态。只在确认的 ECS 上执行。
 
+官网独立定时备份为每月 1 日北京时间 03:00，`empact-backup.timer` 使用明确的 `Asia/Shanghai` 时区，并通过 `Persistent=true` 在机器错过计划后补跑。月度任务先等待部署锁和发布锁，再暂停 CMS/截止任务；公开服务继续运行。先预留 3 GiB 加数据目录两倍大小的磁盘空间，失败时恢复原服务状态。月度归档保存在 `/srv/empact/backups/monthly/`，目录和文件仅 root 可读。
+
+**完整归档只保留最新一份**：月度和部署前备份都通过 `backup-retention.py` 检查 SHA-256、完整 gzip CRC，并提取 CMS 数据库副本执行 SQLite `integrity_check`；成功后才删除 `/srv/empact/backups/` 下更早且校验和匹配的标准 `empact-TIMESTAMP.tar.gz` 与对应校验文件。新备份失败不会删除上一份；未知、校验不符或无校验文件的归档留待检查。该规则不删除部署脚本回退副本、业务数据库单独快照或回执，也不触及 ChatCircle。部署仍会额外触发备份并替换旧完整归档。只保留一份意味着无法选择更早历史时间点。
+
+维护人从通过检查并审阅的任务目录执行 `sudo deploy/install-backup.sh`，单独安装月度脚本、完整备份校验/保留逻辑及两个 systemd unit；安装前保留旧脚本，失败回退。仅合并网站代码不会安装定时器。该安装器不更新其他部署工具。
+
+验收与排查：
+
+```bash
+systemctl list-timers empact-backup.timer --all
+systemctl start empact-backup.service
+systemctl show empact-backup.service -p Result -p ExecMainStatus
+journalctl -u empact-backup.service -n 60 --no-pager
+systemctl is-active empact-cms empact-public empact-expiry.timer
+```
+
+成功的月度任务写入本次目录的 `completed.json`，包含归档大小、SHA-256、数据库完整性、媒体文件数和代码版本。必须等待 service 完成并核对回执与服务健康，不能把 timer 已启用当作备份成功。测试不覆盖生产数据；整站恢复并启动的隔离演练仍需另行完成。
+
+待办：确定异地目的地、加密和访问权限，再配置传输与恢复演练。当前只有本机备份；同一服务器新增目录、分区或挂载同地域云盘都不等于异地备份。可另选异地域 OSS、跨地域快照或独立备份服务，目的地确认前不创建云资源或传输私有备份。
+
 `sudo deploy/restore.sh /absolute/private/backups/empact-TIMESTAMP.tar.gz --confirm-restore` 是显式恢复操作，会保留旧数据目录；健康失败回退旧数据。恢复需要短暂停止官网服务，且不改 ChatCircle。仍需由维护人在隔离环境实际演练数据库、图片、草稿、后台账号及发布版本一致性；本机 macOS 没有 systemd，不能把 shell 语法检查当作服务器恢复演练。
 
 新代码由自动部署先在不可变版本目录安装依赖/构建，再切换 `/srv/empact/code/current`，重启 **官网 CMS/官网 public** 并验证；失败按[自动部署恢复流程](automatic-deployment.md#日常诊断与恢复)处理。数据库结构变化须提交受保护文件指纹对应的精确增量计划，部署会备份、在副本试跑并核对后再应用；不能对生产 `dev / -1` 库重放原生迁移，也不能用代码回退处理不兼容数据变更。
