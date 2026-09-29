@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Empact · 四面体动效演示</title>
+    <title>Empact · 弧形与双色四面体</title>
     <style>
       :root {
         font-family:
@@ -185,7 +185,7 @@
         color: #125284;
       }
       .controls {
-        max-width: 870px;
+        max-width: 1000px;
         margin: auto;
         padding: 18px 24px;
         background: #fbfaf6ed;
@@ -239,7 +239,7 @@
         justify-content: space-between;
         gap: 15px;
         margin: 13px auto 0;
-        max-width: 870px;
+        max-width: 1000px;
         font-size: 10px;
         letter-spacing: 0.04em;
         opacity: 0.6;
@@ -249,6 +249,17 @@
       }
       main {
         transition: opacity 0.35s;
+      }
+      .scene:nth-child(2) {
+        justify-self: start;
+        text-align: left;
+        max-width: 620px;
+      }
+      .scene:nth-child(2) .copy {
+        margin-left: 0;
+      }
+      .scene:nth-child(2) .rule {
+        margin-left: 0;
       }
       @media (max-width: 700px) {
         header {
@@ -307,7 +318,7 @@
           flex-wrap: wrap;
         }
         .control {
-          flex-basis: 25%;
+          flex-basis: 40%;
         }
         .actions {
           width: 100%;
@@ -341,7 +352,7 @@
     <header>
       <div>
         <span class="brand">empact</span>
-        <span class="caption">首页动效试验</span>
+        <span class="caption">弧形 · 双色面 · 旋转连线</span>
       </div>
       <nav aria-label="演示场景">
         <button data-scene="0" aria-pressed="false">01 品牌</button
@@ -425,13 +436,26 @@
             value="1"
           />
         </div>
+        <div class="control">
+          <label for="beam"
+            >连线粗细 <output id="beam-value">2.4 px</output></label
+          >
+          <input
+            id="beam"
+            type="range"
+            min="1"
+            max="5"
+            step="0.2"
+            value="2.4"
+          />
+        </div>
         <div class="actions">
           <button id="pause" aria-pressed="false">暂停动效</button
           ><button id="copy" aria-pressed="false">只看动效</button>
         </div>
       </div>
       <div class="hint">
-        <span>滚轮 / 左右方向键切换场景 · 移动鼠标感受视差</span
+        <span>滚轮 / 方向键切屏 · 连线沿长轴自转</span
         ><span>独立视觉演示 · 尚未接入正式首页</span>
       </div>
     </footer>
@@ -446,7 +470,7 @@
           return;
         }
         const reduced = matchMedia("(prefers-reduced-motion: reduce)");
-        const settings = { speed: 1, drift: 26, size: 1 };
+        const settings = { speed: 1, drift: 26, size: 1, beam: 2.4 };
         let paused = reduced.matches,
           width = innerWidth,
           height = innerHeight,
@@ -469,30 +493,23 @@
           [0, 2, 3],
           [1, 3, 2],
         ];
-        const edges = [
-          [0, 1],
-          [0, 2],
-          [0, 3],
-          [1, 2],
-          [1, 3],
-          [2, 3],
-        ];
         const random = (n) => {
           const x = Math.sin(n * 127.1 + 311.7) * 43758.5453;
           return x - Math.floor(x);
         };
-        const nodes = Array.from({ length: 68 }, (_, i) => {
-          const y = 1 - (2 * (i + 0.5)) / 68,
-            r = Math.sqrt(1 - y * y),
-            a = i * 2.399963;
+        // An oversized, open circular band, with its upper portion outside
+        // the viewport, follows the silhouette of the existing homepage.
+        const nodes = Array.from({ length: 124 }, (_, i) => {
+          const angle = -3.65 + (i / 123) * 5.0;
+          const radius = 1 + (random(i + 19) - 0.5) * 0.24;
           return {
-            x: Math.cos(a) * r,
-            y: y * 0.76,
-            z: Math.sin(a) * r * 0.7,
+            x: Math.cos(angle) * radius,
+            y: Math.sin(angle) * radius,
+            z: (random(i + 31) - 0.5) * 0.22,
             phase: random(i + 3) * Math.PI * 2,
             size: 9 + random(i + 12) * 8,
             speed: 0.28 + random(i + 6) * 0.35,
-            color: i % 17 === 0 ? "red" : i % 11 === 0 ? "teal" : "blue",
+            color: i % 9 === 0 ? "red" : "blue",
           };
         });
         const links = [];
@@ -567,6 +584,17 @@
                   ];
           return `rgba(${rgb.join(",")},${a})`;
         }
+        const faceColor = (name, index) =>
+          index < 2 ? "#ffffff" : name === "red" ? "#fb394d" : "#125284";
+        const cross = (a, b) => [
+          a[1] * b[2] - a[2] * b[1],
+          a[2] * b[0] - a[0] * b[2],
+          a[0] * b[1] - a[1] * b[0],
+        ];
+        const normalize = (v) => {
+          const length = Math.hypot(...v) || 1;
+          return v.map((n) => n / length);
+        };
         function draw(dt) {
           const ease = reduced.matches ? 1 : 1 - Math.exp(-dt * 5);
           blend = mix(blend, scene, ease);
@@ -577,42 +605,43 @@
           ctx.fillStyle = `rgb(${mix(18, 243, light)},${mix(82, 240, light)},${mix(132, 231, light)})`;
           ctx.fillRect(0, 0, width, height);
           document.querySelector("header").style.color = color("blue", 1);
-          const narrow = width < 700,
-            centerY = height * (narrow ? 0.43 : 0.46);
-          const fieldW = width * (narrow ? 0.56 : 0.49),
-            fieldH = Math.min(height * 0.48, width * 0.43);
-          const projected = nodes.map((n, i) => {
+          const narrow = width < 700;
+          const radius = narrow ? width * 0.78 : width * 0.49;
+          const centerX = width * (narrow ? 0.24 : 0.46);
+          const centerY = height * (narrow ? 0.3 : 0.07);
+          const projected = nodes.map((n) => {
+            // Rock the arc a few degrees rather than turning it into a ring.
             const world = rotate(
               [n.x, n.y, n.z],
-              Math.sin(time * 0.075) * 0.18,
-              time * 0.085 + (blend - 1) * 0.23,
-              Math.sin(time * 0.055) * 0.09,
+              Math.sin(time * 0.09) * 0.035,
+              Math.sin(time * 0.075) * 0.045,
+              Math.sin(time * 0.08) * 0.045 + (blend - 1) * 0.045,
             );
             const phase = n.phase;
-            const perspective = 1 + world[2] * 0.19;
-            const angle = (i / 68) * Math.PI * 2;
             const x =
               mix(
-                width * 0.5 + world[0] * fieldW * perspective,
-                width * 0.5 + Math.cos(angle) * width * 0.21,
+                centerX + world[0] * radius,
+                width * 0.5 + n.x * width * 0.22,
                 open,
               ) +
               Math.sin(time * 0.34 + phase) * settings.drift * light +
               view.x * (12 + world[2] * 14);
             const y =
               mix(
-                centerY + world[1] * fieldH * perspective,
-                centerY + Math.sin(angle) * height * 0.14,
+                centerY + world[1] * radius,
+                height * 0.4 + n.y * width * 0.22,
                 open,
               ) +
               Math.cos(time * 0.29 + phase) * settings.drift * 0.7 * light +
               view.y * (10 + world[2] * 10);
+            const z = world[2] * radius;
             const size =
               n.size *
               settings.size *
-              (narrow ? 0.75 : 1) *
-              perspective *
-              (1 - open * 0.8);
+              (narrow ? 0.7 : 1) *
+              (1 + world[2] * 0.3) *
+              (1 - open * 0.75);
+            // Orthographic 3D projection: +z is toward the viewer.
             const verts = vertices.map((v) => {
               const p = rotate(
                 v,
@@ -620,76 +649,113 @@
                 time * n.speed * 0.7 + phase * 0.4,
                 time * n.speed * 0.32,
               );
-              const perspective = 1 + p[2] * 0.07;
               return {
-                x: x + p[0] * size * perspective,
-                y: y + p[1] * size * perspective,
-                z: p[2],
+                x: x + p[0] * size,
+                y: y + p[1] * size,
+                z: z + p[2] * size,
               };
             });
-            const copyVisible =
-              !document.body.classList.contains("hidden-copy");
-            const inCopy =
-              Math.abs(x - width * 0.5) < Math.min(width * 0.37, 360) &&
-              Math.abs(y - centerY) < (scene === 2 ? 150 : 125);
-            return {
-              x,
-              y,
-              z: world[2],
-              verts,
-              n,
-              alpha:
-                (0.48 + (world[2] + 0.7) * 0.3) *
-                (copyVisible && inCopy ? 0.14 : 1) *
-                (1 - open * 0.84),
-            };
+            return { x, y, z, verts, n };
           });
-          ctx.lineWidth = 0.8;
-          for (const [a, b] of links) {
+          const polygons = [];
+          const addFace = (points, fill, stroke) =>
+            polygons.push({
+              points,
+              fill,
+              stroke,
+              z: points.reduce((sum, p) => sum + p.z, 0) / points.length,
+            });
+          for (const [index, [a, b]] of links.entries()) {
             const p = projected[a],
               q = projected[b];
-            const len = Math.hypot(p.x - q.x, p.y - q.y);
-            const strength = Math.max(0.15, 1 - len / (width * 0.55));
-            ctx.strokeStyle = color(
-              "blue",
-              Math.min(p.alpha, q.alpha) * 0.33 * strength,
+            const axis = normalize([q.x - p.x, q.y - p.y, q.z - p.z]);
+            const basis = normalize(
+              cross(axis, Math.abs(axis[2]) < 0.9 ? [0, 0, 1] : [0, 1, 0]),
             );
-            ctx.beginPath();
-            ctx.moveTo(p.x, p.y);
-            ctx.lineTo(q.x, q.y);
-            ctx.stroke();
-          }
-          for (const p of [...projected].sort((a, b) => a.z - b.z)) {
-            const ordered = faces
-              .map((indices) => ({
-                indices,
-                z: indices.reduce((sum, i) => sum + p.verts[i].z, 0),
-              }))
-              .sort((a, b) => a.z - b.z);
-            for (const { indices } of ordered) {
-              ctx.beginPath();
-              indices.forEach((index, j) => {
-                const v = p.verts[index];
-                j ? ctx.lineTo(v.x, v.y) : ctx.moveTo(v.x, v.y);
-              });
-              ctx.closePath();
-              ctx.fillStyle = color(p.n.color, p.alpha * 0.045);
-              ctx.fill();
-            }
-            for (const [a, b] of edges) {
-              const v = p.verts[a],
-                w = p.verts[b];
-              ctx.beginPath();
-              ctx.moveTo(v.x, v.y);
-              ctx.lineTo(w.x, w.y);
-              ctx.lineWidth = v.z + w.z > 0 ? 1.15 : 0.65;
-              ctx.strokeStyle = color(
-                p.n.color,
-                p.alpha * (v.z + w.z > 0 ? 0.9 : 0.36),
+            const other = cross(axis, basis);
+            const twist =
+              time * (0.8 + random(index + 43) * 0.45) +
+              random(index + 71) * Math.PI * 2;
+            const half = settings.beam * (narrow ? 0.4 : 0.5);
+            // Rotate a square cross-section about the actual endpoint axis.
+            const corners = [
+              [-1, -1],
+              [1, -1],
+              [1, 1],
+              [-1, 1],
+            ].map(([u, v]) => {
+              const ru = (u * Math.cos(twist) - v * Math.sin(twist)) * half;
+              const rv = (u * Math.sin(twist) + v * Math.cos(twist)) * half;
+              return basis.map((n, i) => n * ru + other[i] * rv);
+            });
+            const at = (end, i) => ({
+              x: end.x + corners[i][0],
+              y: end.y + corners[i][1],
+              z: end.z + corners[i][2],
+            });
+            const name =
+              p.n.color === "red" || q.n.color === "red" ? "red" : "blue";
+            for (let i = 0; i < 4; i++) {
+              const j = (i + 1) % 4;
+              addFace(
+                [at(p, i), at(p, j), at(q, j), at(q, i)],
+                faceColor(name, i),
+                null,
               );
+            }
+            addFace(
+              corners.map((_, i) => at(p, i)),
+              "#ffffff",
+              null,
+            );
+            addFace(
+              corners.map((_, i) => at(q, i)),
+              faceColor(name, 2),
+              null,
+            );
+          }
+          for (const p of projected) {
+            faces.forEach((indices, i) =>
+              addFace(
+                indices.map((j) => p.verts[j]),
+                faceColor(p.n.color, i),
+                p.n.color === "red" ? "#bd253b30" : "#12528430",
+              ),
+            );
+          }
+          ctx.save();
+          // Leave the same clear copy area as the homepage, without making
+          // solid objects translucent or showing hidden rear edges through them.
+          if (!document.body.classList.contains("hidden-copy")) {
+            const box = document
+              .querySelector(".scene.active")
+              .getBoundingClientRect();
+            ctx.beginPath();
+            ctx.rect(0, 0, width, height);
+            ctx.rect(
+              box.left - 18,
+              box.top - 18,
+              box.width + 36,
+              box.height + 36,
+            );
+            ctx.clip("evenodd");
+          }
+          polygons.sort((a, b) => a.z - b.z);
+          for (const face of polygons) {
+            ctx.beginPath();
+            face.points.forEach((p, i) =>
+              i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y),
+            );
+            ctx.closePath();
+            ctx.fillStyle = face.fill;
+            ctx.fill();
+            if (face.stroke) {
+              ctx.strokeStyle = face.stroke;
+              ctx.lineWidth = 0.55;
               ctx.stroke();
             }
           }
+          ctx.restore();
         }
         function tick(now) {
           raf = 0;
@@ -718,13 +784,13 @@
               changeScene(Number(b.dataset.scene)),
             ),
           );
-        for (const name of ["speed", "drift", "size"])
+        for (const name of ["speed", "drift", "size", "beam"])
           document.getElementById(name).addEventListener("input", (e) => {
             settings[name] = Number(e.target.value);
             document.getElementById(name + "-value").textContent =
               name === "drift"
                 ? e.target.value
-                : settings[name].toFixed(1) + "×";
+                : settings[name].toFixed(1) + (name === "beam" ? " px" : "×");
             wake();
           });
         document.querySelector("#pause").addEventListener("click", () => {
