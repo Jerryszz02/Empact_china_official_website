@@ -705,3 +705,45 @@
     padding: 16px;
   }
 }
+
+.business-category-name {
+  flex: 1;
+  min-width: 0;
+}
+.business-category-name input {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  border: 1px solid var(--empact-line);
+  border-radius: 6px;
+  background: white;
+  padding: 6px 8px;
+  color: inherit;
+  font: inherit;
+  font-size: 16px;
+  font-weight: 700;
+}
+.business-category-name input:focus {
+  outline: 2px solid #125284;
+  outline-offset: 2px;
+}
+.business-category-name > span {
+  display: block;
+  min-height: 18px;
+  margin-top: 4px;
+  color: #64798a;
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+.business-category-name > [role="alert"] {
+  color: #a93232;
+}
+.business-category-name__retry {
+  border: 0;
+  background: transparent;
+  color: #125284;
+  font: inherit;
+  font-size: 12px;
+  text-decoration: underline;
+  cursor: pointer;
+}

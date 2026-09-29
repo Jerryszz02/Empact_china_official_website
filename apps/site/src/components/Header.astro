@@ -43,7 +43,7 @@ const groups = [
             aria-expanded={hasChildren ? "false" : undefined}
             aria-controls={hasChildren ? `nav-${group.segment}` : undefined}
           >
-            {group.title}
+            {group.page?.title ?? group.title}
           </a>
           {hasChildren && (
             <div id={`nav-${group.segment}`} class="nav-dropdown">

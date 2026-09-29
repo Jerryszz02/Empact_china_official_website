@@ -8,6 +8,9 @@ import {
   type ReactNode,
 } from "react";
 
+import type { BusinessCategory } from "../business-category.js";
+import { BusinessCategoryName } from "./BusinessCategoryName.js";
+
 export type AdminItem = {
   id: string;
   title: string;
@@ -53,7 +56,19 @@ export function BusinessTypeBoard({
   busy,
   onMove,
   renderActions,
+  categories,
+  onRename,
+  onNamePending,
+  onPublishCategory,
 }: {
+  categories: BusinessCategory[];
+  onRename: (
+    category: BusinessCategory,
+    title: string,
+    expected: string,
+  ) => Promise<string>;
+  onNamePending: (segment: string, pending: boolean) => void;
+  onPublishCategory: (category: BusinessCategory) => Promise<void>;
   items: AdminItem[];
   busy: boolean;
   onMove: (item: AdminItem, targetIndex: number) => Promise<void>;
@@ -106,17 +121,29 @@ export function BusinessTypeBoard({
 
   return (
     <div className="business-board" aria-label="业务分类排序">
-      {Object.entries(segmentLabels).map(([segment, label]) => {
+      {Object.entries(segmentLabels).map(([segment, fallback]) => {
+        const category = categories.find((item) => item.segment === segment);
+        const label = category?.title ?? fallback;
         const group = items.filter((item) => item.segment === segment);
         const fixedCount = segment === "youth" ? 1 : 0;
         return (
-          <section
-            key={segment}
-            className="business-column"
-            aria-labelledby={`business-column-${segment}`}
-          >
+          <section key={segment} className="business-column" aria-label={label}>
             <header className="business-column__heading">
-              <h3 id={`business-column-${segment}`}>{label}</h3>
+              {category ? (
+                <BusinessCategoryName
+                  segment={segment}
+                  title={category.title}
+                  publishedTitle={category.publishedTitle}
+                  disabled={busy}
+                  onSave={(title, expected) =>
+                    onRename(category, title, expected)
+                  }
+                  onPending={(pending) => onNamePending(segment, pending)}
+                  onPublish={() => onPublishCategory(category)}
+                />
+              ) : (
+                <h3 id={`business-column-${segment}`}>{label}</h3>
+              )}
               <span>{group.length + fixedCount} 项</span>
             </header>
             <ol className="business-column__list" aria-label={`${label}顺序`}>

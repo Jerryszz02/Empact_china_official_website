@@ -7,6 +7,11 @@ import {
 } from "../../../../business-admin.js";
 import { reorderBusiness } from "../../../../business-order.js";
 
+import {
+  renameBusinessCategory,
+  publishBusinessCategory,
+} from "../../../../business-category.js";
+
 export const dynamic = "force-dynamic";
 const headers = {
   "Cache-Control": "private, no-store",
@@ -41,9 +46,16 @@ export async function POST(
     return Response.json({ error: "请求来源无效。" }, { status: 403, headers });
   const { action } = await context.params;
   if (
-    !["preview", "publish", "sync", "unpublish", "delete", "reorder"].includes(
-      action,
-    )
+    ![
+      "preview",
+      "publish",
+      "sync",
+      "unpublish",
+      "delete",
+      "reorder",
+      "rename-category",
+      "publish-category",
+    ].includes(action)
   )
     return Response.json({ error: "操作不存在。" }, { status: 404, headers });
   try {
@@ -56,6 +68,16 @@ export async function POST(
     };
     if (typeof body.id !== "string" || !body.id)
       throw new Error("缺少内容 ID。");
+    if (action === "rename-category")
+      return Response.json(await renameBusinessCategory(payload, body), {
+        headers,
+      });
+    if (action === "publish-category") {
+      if (body.confirmed !== true) throw new Error("请先确认发布名称。");
+      return Response.json(await publishBusinessCategory(payload, body), {
+        headers,
+      });
+    }
     if (action === "reorder")
       return Response.json(await reorderBusiness(payload, body), { headers });
     if (action !== "preview" && body.confirmed !== true)

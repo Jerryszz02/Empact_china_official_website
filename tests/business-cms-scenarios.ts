@@ -29,6 +29,34 @@ export async function verifyBusinessWorkflow(options: {
   });
   assert.ok([401, 403].includes(forbidden.status));
 
+  for (const name of ["rename-category", "publish-category"]) {
+    assert.equal(
+      (await fetch(`${base}/api/business-admin/${name}`, { method: "POST" }))
+        .status,
+      401,
+    );
+    assert.ok(
+      [401, 403].includes(
+        (
+          await fetch(`${base}/api/business-admin/${name}`, {
+            method: "POST",
+            headers: {
+              Cookie: cookies,
+              Origin: "https://invalid.example",
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              id: businessId,
+              title: "不应保存",
+              expected: "旧名称",
+              confirmed: true,
+            }),
+          })
+        ).status,
+      ),
+    );
+  }
+
   const form = new FormData();
   form.set(
     "_payload",

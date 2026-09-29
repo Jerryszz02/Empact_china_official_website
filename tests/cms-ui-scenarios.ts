@@ -615,7 +615,8 @@ export async function verifyCmsUI({
     await page.goto(base + "/admin#business-types");
     const mobileOrder = businessRow(youthFirst.title);
     const youthRows = page
-      .getByRole("region", { name: "青少年与青年", exact: true })
+      .locator(".business-column")
+      .filter({ has: page.locator("#business-column-youth") })
       .locator("[data-business-id]");
     const beforeMobileMove = await youthRows.evaluateAll((rows) =>
       rows.map((row) => row.getAttribute("data-business-id")),
