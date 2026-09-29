@@ -43,6 +43,12 @@ mv /srv/empact/data "$previous"
 switched=true
 mv "$stage/data" /srv/empact/data
 chown -R empact:empact /srv/empact/data
+if [[ -f /etc/empact/runtime-isolation.enabled ]]; then
+  chgrp empact-public /srv/empact/data
+  chmod 0710 /srv/empact/data
+  (cd /srv/empact/code/current && runuser -u empact -- /usr/bin/node \
+    --env-file=/etc/empact/website.env --import tsx apps/cms/src/cli/repair-public-permissions.ts)
+fi
 systemctl start empact-cms empact-public
 curl --fail --silent --retry 10 --retry-connrefused --retry-delay 1 --max-time 15 http://127.0.0.1:4322/release.json
 curl --fail --silent --retry 10 --retry-connrefused --retry-delay 1 --max-time 15 http://127.0.0.1:3000/admin/login >/dev/null

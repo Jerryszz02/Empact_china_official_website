@@ -36,6 +36,7 @@
 - [自动部署](operations/automatic-deployment.md)
 - [依赖检查](operations/dependency-review.md)
 - [运行、发布与恢复](operations/operations.md)
+- [官网运行权限隔离](operations/runtime-isolation.md)
 
 ## 历史依据
 

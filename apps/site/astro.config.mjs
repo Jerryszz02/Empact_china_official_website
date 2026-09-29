@@ -3,6 +3,7 @@ import { cp } from "node:fs/promises";
 import { cmsDev } from "./cms-dev.mjs";
 export default defineConfig({
   output: "static",
+  cacheDir: "./.astro-cache",
   site: "https://empact.cn",
   compressHTML: true,
   integrations: [
@@ -27,6 +28,7 @@ export default defineConfig({
   ],
   server: { host: "127.0.0.1", port: 4321 },
   vite: {
+    cacheDir: "./.vite-cache",
     plugins: [cmsDev()],
     server: { strictPort: true },
     build: { assetsInlineLimit: 0 },

@@ -1,6 +1,6 @@
 import {
   mkdir,
-  mkdtemp,
+  chmod,
   cp,
   open,
   readFile,
@@ -20,6 +20,8 @@ import { execFile, spawn } from "node:child_process";
 import { promisify } from "node:util";
 import { validateSnapshot, type Snapshot } from "@empact/content/schema";
 import { checkOutput } from "../../../scripts/check-output.js";
+import { allowPublicRead } from "./public-permissions.js";
+import { createBuildWorkspace, buildEnvironment } from "./build-workspace.js";
 import { preservePublicAssets } from "../../../scripts/public-assets.js";
 
 export type ReceiptState =
@@ -268,6 +270,7 @@ async function switchCurrent(runtime: string, target?: string) {
     });
     return;
   }
+  await allowPublicRead(runtime, target);
   const next = join(runtime, `current-${randomUUID()}.next`);
   await symlink(target, next, "dir");
   await rename(next, join(runtime, "current"));
@@ -350,6 +353,28 @@ export function mergeSelectedLive(
     media: [...media.values()].filter((item) => used.has(item.id)),
   };
 }
+export async function writePublicRecruitment(
+  snapshot: Snapshot,
+  output: string,
+) {
+  // Only the fields needed to validate applications are visible to public.
+  await writeFile(
+    join(output, ".recruitment.json"),
+    JSON.stringify({
+      recruitment: {
+        jobs: (snapshot.recruitment?.jobs || []).map(
+          ({ id, title, status, isExample }) => ({
+            id,
+            title,
+            status,
+            isExample,
+          }),
+        ),
+      },
+    }),
+    { mode: 0o600 },
+  );
+}
 export async function buildSite(
   snapshot: Snapshot,
   release: string,
@@ -364,38 +389,46 @@ export async function buildSite(
     const log = await open(join(release, "build.log"), "w", 0o600);
     let staging: string | undefined;
     try {
-      // Astro moves prerender assets with rename(). Keep that build inside its
-      // cwd, then copy the finished files across the CMS code/data mounts.
-      staging = await mkdtemp(join(repository, "apps/site/.cms-build-"));
+      // All generated files live outside the immutable deployed code tree.
+      staging = await createBuildWorkspace(
+        repository,
+        join(resolve(options.runtimeDir || runtimeDir()), "build-work"),
+      );
       await new Promise<void>((done, fail) => {
         const child = spawn("npm", ["run", "build", "-w", "@empact/site"], {
-          cwd: repository,
+          cwd: staging,
+          detached: process.platform !== "win32",
           shell: false,
           stdio: ["ignore", log.fd, log.fd],
-          env: {
-            ...process.env,
-            SITE_MODE: snapshot.mode,
-            SNAPSHOT_PATH: snapshotPath,
-            BUILD_OUT_DIR: staging,
-            ASTRO_TELEMETRY_DISABLED: "1",
-          },
+          env: buildEnvironment(staging!, snapshotPath, snapshot.mode),
         });
+        let timedOut = false;
         const timeout = setTimeout(() => {
-          child.kill("SIGKILL");
-          fail(new Error("构建超过 3 分钟，请联系维护人。"));
+          timedOut = true;
+          if (process.platform !== "win32" && child.pid) {
+            try {
+              process.kill(-child.pid, "SIGKILL");
+            } catch {
+              child.kill("SIGKILL");
+            }
+          } else child.kill("SIGKILL");
         }, 180_000);
         child.once("error", (error) => {
           clearTimeout(timeout);
           fail(error);
         });
-        child.once("exit", (code) => {
+        child.once("close", (code) => {
           clearTimeout(timeout);
+          if (timedOut) {
+            fail(new Error("构建超过 3 分钟，请联系维护人。"));
+            return;
+          }
           code === 0
             ? done()
             : fail(new Error("页面构建失败，详情见受保护的构建日志。"));
         });
       });
-      await cp(staging, output, { recursive: true });
+      await cp(join(staging, "apps/site/dist"), output, { recursive: true });
     } finally {
       await log.close();
       if (staging) await rm(staging, { recursive: true, force: true });
@@ -432,6 +465,7 @@ export async function buildSite(
       snapshot.company.contactEnabled,
   };
   await writeFile(join(output, "release.json"), JSON.stringify(metadata));
+  await writePublicRecruitment(snapshot, output);
   return output;
 }
 async function health(
@@ -502,6 +536,13 @@ export async function publishSnapshot(
       });
     } catch (error) {
       if (switched) await switchCurrent(runtime, previous);
+      if (process.env.PUBLIC_READER_GID !== undefined && receipt.releasePath) {
+        await chmod(join(receipt.releasePath, "public"), 0o700).catch(
+          (error) => {
+            if (error.code !== "ENOENT") throw error;
+          },
+        );
+      }
       Object.assign(receipt, {
         state: "failed",
         error: error instanceof Error ? error.message : "发布失败。",
@@ -587,6 +628,13 @@ export async function rollback(
       Object.assign(receipt, { state: "rolled_back", releasePath: release });
     } catch (error) {
       if (switched) await switchCurrent(runtime, previous);
+      if (process.env.PUBLIC_READER_GID !== undefined && receipt.releasePath) {
+        await chmod(join(receipt.releasePath, "public"), 0o700).catch(
+          (error) => {
+            if (error.code !== "ENOENT") throw error;
+          },
+        );
+      }
       Object.assign(receipt, {
         state: "failed",
         error: error instanceof Error ? error.message : "恢复失败。",

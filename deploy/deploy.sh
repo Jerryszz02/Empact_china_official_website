@@ -180,9 +180,18 @@ check_disk_space
 install -d -o root -g root -m 700 "$tmp"
 phase=extract
 "$RUNTIME_ARTIFACT" extract "$sha" "$tmp"
-chown -R empact:empact "$tmp"
+if [[ -f /etc/empact/runtime-isolation.enabled ]]; then
+  # The separately installed helper is trusted; candidate code cannot run as root.
+  [[ -x /usr/local/lib/empact/secure-runtime.py ]] || exit 1
+  chown -R root:root "$tmp"
+else
+  chown -R empact:empact "$tmp"
+fi
 mv "$tmp" "$candidate"
 candidate_created=true
+if [[ -f /etc/empact/runtime-isolation.enabled ]]; then
+  /usr/local/lib/empact/secure-runtime.py "$candidate"
+fi
 check_disk_space
 # Load the actual native dependencies on ECS before stopping healthy services.
 phase=runtime

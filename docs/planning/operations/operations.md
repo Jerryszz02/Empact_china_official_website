@@ -85,3 +85,5 @@ CMS 与维护程序通过 `deploy/publication-lock.py` 使用同一把发布锁�
 ## 截止状态和告警
 
 安装并启用 `empact-expiry.timer`，每分钟检查当前已发布快照的截止状态。它不能把后台新草稿一起发布。失败应在发布记录和服务日志中可见；维护人须将 `systemctl --failed` / `journalctl -u empact-expiry.service` 接入现有告警渠道。当前没有已确认的告警接收人或外部监控配置，外部通知验收仍待完成。
+
+服务器权限整改与验收见[官网运行权限隔离](runtime-isolation.md)。
