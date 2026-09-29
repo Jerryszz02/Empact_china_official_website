@@ -19,6 +19,9 @@ with (root / 'commands').open('a') as log: log.write(name + ' ' + ' '.join(args)
 if name == 'readlink': print(p(args[-1]).resolve())
 elif name == 'systemctl':
     if args[:3] == ['is-active', '--quiet', 'empact-backup.service']: sys.exit(3)
+    if args[0] == 'stop' and os.environ.get('FAIL_STOP') and not (root / 'stop-failed').exists():
+        (root / 'stop-failed').touch()
+        sys.exit(5)
     if args[0] == 'show':
         print(str(root / 'etc/empact/public.env') + ' (ignore_errors=no)' if 'EnvironmentFiles' in args else 'empact-public')
 elif name == 'getent':
@@ -42,7 +45,7 @@ elif name == 'runuser':
 
 
 class IsolationInstallerTests(unittest.TestCase):
-    def execute(self, fail=False):
+    def execute(self, fail=False, stop=False):
         temp = tempfile.TemporaryDirectory()
         self.addCleanup(temp.cleanup)
         root = Path(temp.name).resolve()
@@ -85,6 +88,7 @@ class IsolationInstallerTests(unittest.TestCase):
         target.write_text(script)
         env = dict(os.environ, FIXTURE_ROOT=str(root), PATH=str(binary) + os.pathsep + os.environ['PATH'])
         if fail: env['FAIL_HEALTH'] = '1'
+        if stop: env['FAIL_STOP'] = '1'
         result = subprocess.run(['bash', str(target)], env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True, timeout=20)
         return root, result
 
@@ -96,6 +100,12 @@ class IsolationInstallerTests(unittest.TestCase):
         commands = (root / 'commands').read_text()
         self.assertIn('runuser -u empact-public -- test -r', commands)
         self.assertIn('runuser -u empact -- test -w', commands)
+
+    def test_partial_stop_failure_still_restores_running_services(self):
+        root, result = self.execute(stop=True)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('systemctl start empact-public.service empact-cms.service', (root / 'commands').read_text())
+        self.assertEqual((root / 'etc/systemd/system/empact-public.service').read_text(), 'old unit')
 
     def test_failed_health_restores_configuration_without_restoring_data(self):
         root, result = self.execute(True)

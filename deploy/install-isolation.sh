@@ -40,8 +40,9 @@ stopped=false
 recover() {
   status=$?
   trap - EXIT
+  set +e
   if (( status != 0 )); then
-    systemctl stop empact-cms.service empact-public.service empact-expiry.service || true
+    if $stopped; then systemctl stop empact-cms.service empact-public.service empact-expiry.service; fi
     cp -a "$record/website.env" /etc/empact/website.env
     if $had_public; then cp -a "$record/prior-public.env" /etc/empact/public.env; else rm -f /etc/empact/public.env; fi
     for unit in empact-cms.service empact-public.service empact-expiry.service; do cp -a "$record/$unit" "/etc/systemd/system/$unit"; done
@@ -64,8 +65,8 @@ recover() {
 trap recover EXIT
 trap 'exit 143' TERM
 trap 'exit 130' INT
-systemctl stop empact-expiry.timer empact-expiry.service empact-cms.service empact-public.service
 stopped=true
+systemctl stop empact-expiry.timer empact-expiry.service empact-cms.service empact-public.service
 getent group empact-public >/dev/null || groupadd --system empact-public
 if ! id empact-public >/dev/null 2>&1; then
   useradd --system --gid empact-public --no-create-home --home-dir /nonexistent --shell /sbin/nologin empact-public
