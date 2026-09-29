@@ -9,6 +9,7 @@ import {
   access,
   utimes,
   realpath,
+  stat,
 } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -175,6 +176,8 @@ test("build failure and post-switch failure preserve exact previous snapshot", a
 });
 test("first publication health failure removes the pointer and no content goes live", async () => {
   const runtimeDir = await mkdtemp(join(tmpdir(), "empact-first-"));
+  const oldGroup = process.env.PUBLIC_READER_GID;
+  process.env.PUBLIC_READER_GID = String(process.getgid!());
   try {
     const result = await publishSnapshot(fixture("one"), {
       runtimeDir,
@@ -183,7 +186,13 @@ test("first publication health failure removes the pointer and no content goes l
     });
     assert.equal(result.state, "failed");
     assert.equal(await readLiveSnapshot(runtimeDir), undefined);
+    assert.equal(
+      (await stat(join(result.releasePath!, "public"))).mode & 0o777,
+      0o700,
+    );
   } finally {
+    if (oldGroup === undefined) delete process.env.PUBLIC_READER_GID;
+    else process.env.PUBLIC_READER_GID = oldGroup;
     await rm(runtimeDir, { recursive: true, force: true });
   }
 });
