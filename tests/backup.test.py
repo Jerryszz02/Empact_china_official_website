@@ -3,6 +3,11 @@
 import hashlib
 import importlib.util
 import json
+import os
+import signal
+import subprocess
+import sys
+import time
 from pathlib import Path
 import sqlite3
 import tarfile
@@ -150,6 +155,139 @@ class BackupTests(unittest.TestCase):
                 backup.maintain(self.backups, helper)
         command.assert_not_called()
         helper.release.assert_not_called()
+
+
+class CancellationTests(unittest.TestCase):
+    def test_cancellation_kills_stubborn_child_and_restores_services(self):
+        with tempfile.TemporaryDirectory() as folder:
+            work = Path(folder)
+            worker = work / 'worker.py'
+            worker.write_text("""import os, signal, time
+from pathlib import Path
+signal.signal(signal.SIGTERM, signal.SIG_IGN)
+Path(__file__).with_suffix('.ready').write_text(str(os.getpid()))
+while True:
+    Path(__file__).with_suffix('.heartbeat').write_text(str(time.time()))
+    time.sleep(0.02)
+""")
+            harness = work / 'harness.py'
+            harness.write_text(r"""import importlib.util, signal, sys
+from pathlib import Path
+from unittest import mock
+spec = importlib.util.spec_from_file_location('backup', sys.argv[1])
+backup = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(backup)
+backup.CHILD_STOP_TIMEOUT = 0.2
+backup.active = lambda unit: True
+real_run = backup.run
+work = Path(sys.argv[2])
+def run(*args):
+    if str(args[0]).endswith('backup.sh'):
+        return real_run('bash', '-c', '"$1" "$2" & wait', 'fixture', sys.executable, str(work / 'worker.py'))
+    with (work / 'commands').open('a') as stream:
+        stream.write(' '.join(args) + '\n')
+backup.run = run
+helper = mock.Mock()
+signal.signal(signal.SIGTERM, backup.interrupted)
+try:
+    backup.maintain(work, helper)
+except InterruptedError:
+    assert helper.release.call_count == 1
+    (work / 'cleaned').write_text('yes')
+""")
+            process = subprocess.Popen([sys.executable, str(harness), str(ROOT / 'deploy/monthly-backup.py'), str(work)])
+            worker_pid = None
+            try:
+                deadline = time.monotonic() + 5
+                while not (work / 'worker.ready').exists():
+                    self.assertIsNone(process.poll(), 'harness exited before child started')
+                    self.assertLess(time.monotonic(), deadline, 'child startup timed out')
+                    time.sleep(0.02)
+                worker_pid = int((work / 'worker.ready').read_text())
+                process.send_signal(signal.SIGTERM)
+                self.assertEqual(process.wait(timeout=5), 0)
+                self.assertTrue((work / 'cleaned').exists())
+                commands = (work / 'commands').read_text()
+                for unit in ('empact-cms.service', 'empact-expiry.service', 'empact-expiry.timer'):
+                    self.assertIn('systemctl start ' + unit, commands)
+                heartbeat = (work / 'worker.heartbeat').read_text()
+                time.sleep(0.1)
+                self.assertEqual((work / 'worker.heartbeat').read_text(), heartbeat)
+                state = subprocess.run(['ps', '-o', 'stat=', '-p', str(worker_pid)],
+                                       stdout=subprocess.PIPE, universal_newlines=True).stdout.strip()
+                self.assertTrue(not state or state.startswith('Z'), 'descendant still running')
+            finally:
+                if process.poll() is None:
+                    process.kill()
+                    process.wait()
+                if worker_pid:
+                    try:
+                        os.kill(worker_pid, signal.SIGKILL)
+                    except ProcessLookupError:
+                        pass
+
+
+class InstallerManifestTests(unittest.TestCase):
+    def fixture(self, folder, drift=False):
+        root = Path(folder).resolve()
+        source, tools, bin_dir = root / 'source', root / 'tools', root / 'bin'
+        for directory in (source, tools, bin_dir, root / 'backups', root / 'systemd'):
+            directory.mkdir()
+        for name in ('monthly-backup.py', 'backup-retention.py', 'backup.sh', 'publication-lock.py',
+                     'empact-backup.service', 'empact-backup.timer'):
+            (source / name).write_bytes((ROOT / 'deploy' / name).read_bytes())
+        (tools / 'backup.sh').write_text('old backup')
+        (tools / 'deploy.sh').write_text('trusted deploy')
+        (tools / 'publication-lock.py').write_bytes((source / 'publication-lock.py').read_bytes())
+        manifest = ''.join(retention.digest(tools / name) + '  ' + name + '\n'
+                           for name in ('backup.sh', 'deploy.sh', 'publication-lock.py'))
+        (tools / 'installed.sha256').write_text(manifest)
+        if drift:
+            (tools / 'deploy.sh').write_text('unexpected drift')
+        script = (ROOT / 'deploy/install-backup.sh').read_text()
+        script = script.replace('[[ $EUID == 0 ]]', 'true')
+        for before, after in [('/usr/local/lib/empact', str(tools)),
+                              ('/run/lock/empact-deploy.lock', str(root / 'deploy.lock')),
+                              ('/srv/empact/backups', str(root / 'backups')),
+                              ('/etc/systemd/system', str(root / 'systemd'))]:
+            script = script.replace(before, after)
+        (source / 'install-backup.sh').write_text(script)
+        commands = {
+            'systemctl': '#!/bin/sh\ncase "$1" in is-active|is-enabled) exit 1;; esac\nexit 0\n',
+            'systemd-analyze': '#!/bin/sh\nexit 0\n',
+            'flock': '#!/bin/sh\nexit 0\n',
+            'install': '#!' + sys.executable + "\nimport shutil,sys\nshutil.copyfile(sys.argv[-2], sys.argv[-1])\n",
+        }
+        for name, content in commands.items():
+            (bin_dir / name).write_text(content)
+            (bin_dir / name).chmod(0o755)
+        env = dict(os.environ, PATH=str(bin_dir) + os.pathsep + os.environ['PATH'])
+        return root, source, tools, manifest, env
+
+    def test_drift_is_rejected_before_mutation(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root, source, tools, manifest, env = self.fixture(folder, drift=True)
+            result = subprocess.run(['bash', str(source / 'install-backup.sh')], env=env,
+                                    stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertEqual((tools / 'installed.sha256').read_text(), manifest)
+            self.assertEqual((tools / 'backup.sh').read_text(), 'old backup')
+            self.assertFalse(list((root / 'backups').iterdir()))
+            self.assertFalse((tools / 'monthly-backup.py').exists())
+
+    def test_only_replaced_entries_are_updated(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root, source, tools, manifest, env = self.fixture(folder)
+            result = subprocess.run(['bash', str(source / 'install-backup.sh')], env=env,
+                                    stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            self.assertEqual(result.returncode, 0, result.stderr.decode())
+            updated = (tools / 'installed.sha256').read_text()
+            for line in manifest.splitlines():
+                if not line.endswith('  backup.sh'):
+                    self.assertIn(line, updated.splitlines())
+            for name in ('backup.sh', 'backup-retention.py'):
+                self.assertIn(retention.digest(source / name) + '  ' + name, updated.splitlines())
+            self.assertEqual(len(updated.splitlines()), 4)
 
 
 if __name__ == '__main__':

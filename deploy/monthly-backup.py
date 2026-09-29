@@ -15,9 +15,35 @@ from datetime import datetime, timezone
 ROOT = Path('/srv/empact')
 TOOLS = Path('/usr/local/lib/empact')
 LOCK = Path('/run/lock/empact-deploy.lock')
+CHILD_STOP_TIMEOUT = 10
 
 def run(*args):
-    return subprocess.run(args, check=True)
+    # Isolate the complete child tree so cancellation reaches tar/gzip as well
+    # as the shell. Bound this wait well below systemd's cleanup deadline.
+    child = subprocess.Popen(args, start_new_session=True)
+    try:
+        status = child.wait()
+    except BaseException:
+        try:
+            try:
+                os.killpg(child.pid, signal.SIGTERM)
+            except ProcessLookupError:
+                pass
+            try:
+                child.wait(timeout=CHILD_STOP_TIMEOUT)
+            except subprocess.TimeoutExpired:
+                pass
+        finally:
+            # The group can outlive its leader; reap any remaining descendants.
+            try:
+                os.killpg(child.pid, signal.SIGKILL)
+            except ProcessLookupError:
+                pass
+            child.wait()
+        raise
+    if status:
+        raise subprocess.CalledProcessError(status, args)
+    return subprocess.CompletedProcess(args, status)
 
 def active(unit):
     return subprocess.run(['systemctl', 'is-active', '--quiet', unit]).returncode == 0
@@ -58,6 +84,8 @@ def maintain(directory, helper):
 
 
 def interrupted(*_):
+    # A repeated stop request must not interrupt service restoration.
+    signal.signal(signal.SIGTERM, signal.SIG_IGN)
     raise InterruptedError('Backup interrupted')
 
 

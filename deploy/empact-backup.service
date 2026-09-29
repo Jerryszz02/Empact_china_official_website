@@ -15,5 +15,5 @@ ProtectHome=true
 ProtectSystem=full
 TimeoutStartSec=2h
 TimeoutStopSec=5min
-# Let Python restore services before terminating its child processes.
+# Python terminates its child process group before restoring services.
 KillMode=mixed
