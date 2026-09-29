@@ -11,6 +11,8 @@ import {
 } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
+import { parseEnv } from "node:util";
+import { smtpDelivery } from "../scripts/contact.js";
 import { publicEnvironment } from "../deploy/public-environment.mjs";
 import { allowPublicRead } from "../apps/cms/src/public-permissions.js";
 
@@ -112,4 +114,26 @@ test("restore permission repair does not expose failed or preview output", async
   } finally {
     await rm(runtime, { recursive: true, force: true });
   }
+});
+
+test("filtered public configuration keeps consultation and recruitment delivery enabled", () => {
+  const env = parseEnv(
+    publicEnvironment(
+      [
+        "CONTACT_ENABLED=true",
+        "SMTP_HOST=smtp.example.invalid",
+        "SMTP_USER=test",
+        "SMTP_PASS=fixture",
+        "CONTACT_FROM=from@example.invalid",
+        "CONTACT_TO=to@example.invalid",
+        "CONTACT_RECEIVER_NAME=Empact receiver",
+        "PAYLOAD_SECRET=private",
+        "DATABASE_URL=file:/private",
+      ].join("\n"),
+    ),
+  );
+  assert.equal(typeof smtpDelivery(env), "function");
+  assert.equal(env.CONTACT_RECEIVER_NAME, "Empact receiver");
+  assert.equal(env.PAYLOAD_SECRET, undefined);
+  assert.equal(env.DATABASE_URL, undefined);
 });

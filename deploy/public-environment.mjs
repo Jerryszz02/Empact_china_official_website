@@ -15,6 +15,7 @@ export const publicKeys = [
   "SMTP_PASS",
   "CONTACT_FROM",
   "CONTACT_TO",
+  "CONTACT_RECEIVER_NAME",
 ];
 export function publicEnvironment(source) {
   const parsed = parseEnv(source);
