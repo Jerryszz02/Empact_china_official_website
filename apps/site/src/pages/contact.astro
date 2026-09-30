@@ -8,7 +8,7 @@ const enabled =
   snapshot.company.approved &&
   snapshot.company.privacyApproved &&
   snapshot.mode === "production";
-const fallback = snapshot.company.approved ? snapshot.company.email : "";
+const fallback = snapshot.company.approved ? "enquiries@empact.asia" : "";
 const entry = pageBySlug("contact");
 ---
 

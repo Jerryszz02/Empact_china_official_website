@@ -319,7 +319,107 @@ export async function verifyCmsUI({
     ).toBeVisible();
     await expect(
       page.getByRole("navigation", { name: "内容管理入口" }).getByRole("link"),
-    ).toHaveCount(8);
+    ).toHaveCount(9);
+    await expect
+      .poll(() =>
+        page
+          .locator(".admin-parts")
+          .evaluate(
+            (node) =>
+              getComputedStyle(node).gridTemplateColumns.split(" ").length,
+          ),
+      )
+      .toBe(3);
+    await page.getByRole("link", { name: /09 页面介绍/ }).click();
+    await expect(
+      page.getByRole("link", { name: "编辑介绍", exact: true }),
+    ).toHaveCount(4);
+    await page.screenshot({
+      path: "test-results/cms-page-intros-desktop.png",
+      fullPage: true,
+    });
+    await page
+      .getByRole("link", { name: "编辑介绍", exact: true })
+      .nth(1)
+      .click();
+    const introActions = page.getByRole("region", { name: "页面介绍操作" });
+    await expect(introActions).toBeVisible();
+    await expect(
+      introActions.getByRole("button", { name: "发布预览版本" }),
+    ).toBeDisabled();
+    const introId = page.url().split("/").pop()!;
+    const originalIntro = await request("/api/content/" + introId);
+    const beforeIntro = await request("/api/publication/state");
+    const liveTitle = beforeIntro.items.find(
+      (item: any) => item.id === introId,
+    ).title;
+    await page
+      .locator('[contenteditable="true"]')
+      .fill("浏览器验收：企业服务页面介绍文字。");
+    await expect(
+      introActions.getByRole("button", { name: "生成预览" }),
+    ).toBeDisabled();
+    await page.getByRole("button", { name: "保存", exact: true }).click();
+    await expect
+      .poll(
+        async () =>
+          (
+            await serializeLexicalBody(
+              (await request("/api/content/" + introId)).body,
+              [],
+            )
+          ).html,
+      )
+      .toContain("浏览器验收：企业服务页面介绍文字。");
+    const beforePublishHtml = await (
+      await page.request.get(base + "/corporate/")
+    ).text();
+    assert.ok(
+      !beforePublishHtml.includes("浏览器验收：企业服务页面介绍文字。"),
+    );
+    await expect(
+      introActions.getByRole("button", { name: "生成预览" }),
+    ).toBeEnabled();
+    await introActions.getByRole("button", { name: "生成预览" }).click();
+    const previewLink = introActions.getByRole("link", {
+      name: /打开页面介绍预览/,
+    });
+    await expect(previewLink).toBeVisible({ timeout: 60_000 });
+    const previewUrl = await previewLink.getAttribute("href");
+    assert.ok(previewUrl?.endsWith("/corporate/"));
+    const [introPopup] = await Promise.all([
+      page.context().waitForEvent("page"),
+      previewLink.click(),
+    ]);
+    await expect(introPopup.locator(".page-intro")).toHaveText(
+      "浏览器验收：企业服务页面介绍文字。",
+    );
+    await introPopup.close();
+    await introActions.getByRole("button", { name: "发布预览版本" }).click();
+    await expect(introActions.getByRole("status")).toContainText(
+      "当前版本已更新",
+      { timeout: 60_000 },
+    );
+    const publishedHtml = await (
+      await page.request.get(base + "/corporate/")
+    ).text();
+    assert.ok(publishedHtml.includes("浏览器验收：企业服务页面介绍文字。"));
+    assert.ok(publishedHtml.includes(liveTitle));
+    await request("/api/content/" + introId, "PATCH", {
+      body: originalIntro.body,
+    });
+    const restoredPreview = await request("/api/publication/preview", "POST", {
+      ids: [introId],
+      pageIntroOnly: true,
+    });
+    await request("/api/publication/publish", "POST", {
+      ids: [introId],
+      pageIntroOnly: true,
+      confirmed: true,
+      previewId: restoredPreview.previewUrl.split("/")[2],
+    });
+    await introActions.getByRole("link", { name: /返回页面介绍/ }).click();
+    await expect(page).toHaveURL(base + "/admin#page-intros");
     for (const [segment, label] of [
       ["school", "学校业务"],
       ["community", "社区业务"],

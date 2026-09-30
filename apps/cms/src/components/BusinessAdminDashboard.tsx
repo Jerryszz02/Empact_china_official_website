@@ -31,6 +31,11 @@ const parts = [
     description: "添加业务类型，维护业务介绍与子业务排序",
   },
   {
+    id: "page-intros",
+    title: "页面介绍",
+    description: "编辑四个业务大类页面顶部的介绍文字",
+  },
+  {
     id: "mail-settings",
     title: "收件设置",
     description: "分别设置咨询和招聘申请的收件邮箱",
@@ -384,7 +389,9 @@ export function BusinessAdminDashboard() {
       </header>
       <nav className="admin-parts" aria-label="内容管理入口">
         {parts
-          .filter((item) => item.id !== "mail-settings")
+          .filter(
+            (item) => item.id !== "mail-settings" && item.id !== "page-intros",
+          )
           .map((item, index) => (
             <a
               key={item.id}
@@ -427,6 +434,15 @@ export function BusinessAdminDashboard() {
           <span className="admin-part__number">08</span>
           <strong>收件设置</strong>
           <span>分别设置咨询和招聘申请的收件邮箱，保存后生效。</span>
+        </a>
+        <a
+          className={`admin-part ${part === "page-intros" ? "is-selected" : ""}`}
+          href="#page-intros"
+          aria-current={part === "page-intros" ? "page" : undefined}
+        >
+          <span className="admin-part__number">09</span>
+          <strong>页面介绍</strong>
+          <span>编辑四个业务大类页面顶部的介绍文字，保存后可预览、发布。</span>
         </a>
       </nav>
       {message && (
@@ -471,6 +487,33 @@ export function BusinessAdminDashboard() {
           <MailSettings />
         ) : loading ? (
           <p role="status">正在加载项目…</p>
+        ) : part === "page-intros" ? (
+          <div className="case-list">
+            {categories.map((category) => (
+              <article className="case-row" key={category.id}>
+                <div className="case-row__body">
+                  <h3>{category.title}</h3>
+                  <p>编辑页面标题区下方、业务列表上方的介绍文字。</p>
+                </div>
+                <div className="case-row__actions">
+                  <a
+                    className="button button--primary"
+                    href={`/admin/collections/content/${category.id}`}
+                  >
+                    编辑介绍
+                  </a>
+                  <a
+                    className="button button--quiet"
+                    href={`/${category.segment}/`}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    查看官网 ↗
+                  </a>
+                </div>
+              </article>
+            ))}
+          </div>
         ) : part === "new-project" ? (
           <div className="empty-state">
             <strong>先填写项目信息，再选择详情展示方式</strong>

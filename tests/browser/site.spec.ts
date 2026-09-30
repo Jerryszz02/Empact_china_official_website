@@ -80,10 +80,11 @@ test("ChatCircle is a community child and links directly to its website", async 
   if (testInfo.project.name === "mobile") await community.click();
   else await community.hover();
   const chatCircle = page.locator("#nav-community").getByRole("link", {
-    name: "ChatCircle",
+    name: "Chat Circles 心理韧性项目",
     exact: true,
   });
   await expect(chatCircle).toBeVisible();
+  await expect(chatCircle).toHaveCSS("color", "rgb(251, 57, 77)");
   await expect(chatCircle).toHaveAttribute(
     "href",
     "https://chatcircle.empact.cn",
@@ -689,4 +690,18 @@ test("directory business pages render supported cases without image placeholders
     await expect(page.locator("#cases")).toBeVisible();
     await expect(page.locator(".case-image-placeholder")).toHaveCount(0);
   }
+});
+
+test("contact introduction shows the enquiries email and mail link", async ({
+  page,
+}) => {
+  await page.goto("/contact/");
+  await expect(
+    page
+      .locator(".contact-intro")
+      .getByRole("link", { name: "enquiries@empact.asia", exact: true }),
+  ).toHaveAttribute("href", "mailto:enquiries@empact.asia");
+  await expect(page.locator(".contact-intro")).not.toContainText(
+    "empactsg@126.com",
+  );
 });

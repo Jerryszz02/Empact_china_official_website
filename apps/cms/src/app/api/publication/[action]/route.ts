@@ -17,6 +17,7 @@ import {
   removeFailedPreview,
   writePreviewOwner,
 } from "../../../../publisher.js";
+import { mergeBusinessCategoryIntro } from "../../../../business-category.js";
 import { readDraftSnapshot } from "../../../../cms-data.js";
 import {
   entryPath,
@@ -147,6 +148,7 @@ export async function POST(
   try {
     const body = (await request.json()) as {
       ids?: unknown;
+      pageIntroOnly?: boolean;
       includeCompany?: boolean;
       includeHomeGallery?: boolean;
       includeOfficeGallery?: boolean;
@@ -173,21 +175,32 @@ export async function POST(
       !body.includeRecruitment
     )
       throw new Error("请选择要预览或发布的内容。");
+    if (
+      body.pageIntroOnly &&
+      (ids.length !== 1 ||
+        body.includeCompany ||
+        body.includeHomeGallery ||
+        body.includeOfficeGallery ||
+        body.includeRecruitment)
+    )
+      throw new Error("页面介绍每次只能选择一个业务大类。");
     if (action !== "preview" && body.confirmed !== true)
       throw new Error("请先勾选确认本次操作。");
     if (action === "preview") {
       await cleanupExpiredPreviews();
       const draft = await readDraftSnapshot(payload),
         live = await readLiveSnapshot();
-      const merged = mergeSelectedLive(
-        live,
-        draft,
-        ids,
-        Boolean(body.includeCompany),
-        Boolean(body.includeHomeGallery),
-        Boolean(body.includeRecruitment),
-        Boolean(body.includeOfficeGallery),
-      );
+      const merged = body.pageIntroOnly
+        ? mergeBusinessCategoryIntro(live, draft, ids[0])
+        : mergeSelectedLive(
+            live,
+            draft,
+            ids,
+            Boolean(body.includeCompany),
+            Boolean(body.includeHomeGallery),
+            Boolean(body.includeRecruitment),
+            Boolean(body.includeOfficeGallery),
+          );
       const snapshot = validateSnapshot(
         { ...merged, mode: "preview" },
         { production: false },
@@ -210,6 +223,7 @@ export async function POST(
         join(building, "review.json"),
         JSON.stringify({
           ids,
+          pageIntroOnly: Boolean(body.pageIntroOnly),
           includeCompany: Boolean(body.includeCompany),
           includeHomeGallery: Boolean(body.includeHomeGallery),
           includeOfficeGallery: Boolean(body.includeOfficeGallery),
@@ -304,6 +318,7 @@ export async function POST(
           await readFile(join(directory, "review.json"), "utf8"),
         ) as {
           ids?: unknown;
+          pageIntroOnly?: unknown;
           includeCompany?: unknown;
           includeHomeGallery?: unknown;
           includeOfficeGallery?: unknown;
@@ -321,6 +336,7 @@ export async function POST(
         throw new Error("预览已过期，请重新生成。");
       if (
         JSON.stringify(review.ids) !== JSON.stringify(ids) ||
+        Boolean(review.pageIntroOnly) !== Boolean(body.pageIntroOnly) ||
         review.includeCompany !== Boolean(body.includeCompany) ||
         review.includeHomeGallery !== Boolean(body.includeHomeGallery) ||
         review.includeOfficeGallery !== Boolean(body.includeOfficeGallery) ||

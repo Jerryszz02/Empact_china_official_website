@@ -44,18 +44,20 @@ async function verifyRecruitmentEditor(options: {
     const cards = page
       .getByRole("navigation", { name: "内容管理入口" })
       .locator(":scope > a");
-    await expect(cards).toHaveCount(8);
+    await expect(cards).toHaveCount(9);
     await page.setViewportSize({ width: 1440, height: 1000 });
     const tops = await cards.evaluateAll((elements) =>
       elements.map((element) => (element as HTMLElement).offsetTop),
     );
-    assert.equal(
-      new Set(tops).size,
-      1,
-      "all eight entries share a desktop row",
+    assert.equal(new Set(tops).size, 3, "nine entries use three desktop rows");
+    assert.deepEqual(
+      [...new Set(tops)].map(
+        (top) => tops.filter((value) => value === top).length,
+      ),
+      [3, 3, 3],
     );
     await page.screenshot({
-      path: join(process.cwd(), "artifacts/admin-eight-entries.png"),
+      path: join(process.cwd(), "artifacts/admin-nine-entries.png"),
       fullPage: true,
     });
     await recruitmentEntry.click();

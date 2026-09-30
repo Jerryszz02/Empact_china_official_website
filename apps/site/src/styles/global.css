@@ -140,6 +140,9 @@ h3 {
 .nav-dropdown a {
   padding: 0.65rem;
 }
+.nav-dropdown a.nav-chatcircle {
+  color: var(--red);
+}
 .nav-contact {
   border-bottom: 2px solid var(--red);
 }
