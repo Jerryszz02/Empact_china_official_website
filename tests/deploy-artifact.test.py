@@ -15,7 +15,7 @@ spec = importlib.util.spec_from_file_location("runtime_artifact", ROOT / "deploy
 runtime = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(runtime)
 SHA = "a" * 40
-REPOSITORY = "Jerryszz02/Empact_china_official_website"
+REPOSITORY = "empactgit/Empact_china_official_website"
 
 
 def run(**changes):
