@@ -110,6 +110,19 @@ class RuntimeDownloadTests(unittest.TestCase):
                         self.assertEqual(client.download_runtime(SHA, target)["artifactId"], 7)
                         self.assertEqual(target.read_bytes(), data)
 
+    def test_canonical_repository_artifacts_are_accepted_by_runner_and_server(self):
+        data, _, artifact = self.fixture()
+        ci = run(repository={"full_name": "empactgit/Empact_china_official_website"})
+        with patch.object(client.gate, "approved_run", return_value=ci), patch.object(
+            client.gate, "github_json", return_value=dict(total_count=1, artifacts=[artifact])
+        ):
+            self.assertEqual(client.runtime_metadata(SHA)["artifactId"], 7)
+        with patch.object(command.gate, "github_json", return_value=artifact):
+            self.assertEqual(command.approved_metadata(SHA, 7, run=ci)["artifactId"], 7)
+            for untrusted in ["Jerryszz02/Empact_china_official_website", "other/Empact_china_official_website"]:
+                with self.subTest(repository=untrusted), self.assertRaisesRegex(ValueError, "this repository"):
+                    command.approved_metadata(SHA, 7, run=run(repository={"full_name": untrusted}))
+
     def test_missing_artifact_never_downloads(self):
         _, ci, _ = self.fixture()
         with patch.object(client.gate, "approved_run", return_value=ci), patch.object(

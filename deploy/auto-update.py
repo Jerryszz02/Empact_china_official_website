@@ -11,7 +11,7 @@ import urllib.request
 from pathlib import Path
 from typing import Dict, Optional
 
-REPOSITORY = "Jerryszz02/Empact_china_official_website"
+REPOSITORY = "empactgit/Empact_china_official_website"
 WORKFLOW = "ci.yml"
 SHA_RE = re.compile(r"^[0-9a-f]{40}$")
 API = "https://api.github.com"
