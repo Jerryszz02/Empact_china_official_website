@@ -120,7 +120,7 @@ test("minimal enquiry needs no optional details", async ({ page }) => {
   await page.locator('[name="consent"]').check();
   expect(
     await page
-      .locator("form")
+      .locator(".contact-form")
       .evaluate((form: HTMLFormElement) => form.checkValidity()),
   ).toBe(true);
 });
