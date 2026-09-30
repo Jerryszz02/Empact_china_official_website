@@ -1,5 +1,34 @@
 # 隐私政策与使用条款
 
+## 2026-09-30 双语版本
+
+用户确认以 Empact SG 的结构与资料分享原则为参考，按中国法律及官网实际咨询、招聘功能更新正文；隐私联系邮箱统一为 `maggie.yang@empact.sg`，信息存储于中国境内。保存期限确定方法和注明来源转载自有公开资料的许可沿用经确认的审阅稿。
+
+- 中文地址保持 `/privacy/`、`/terms/`；英文为 `/en/privacy/`、`/en/terms/`。顶部语言切换使用普通链接，无需 JavaScript、Cookie 或本地存储。
+- CMS 继续使用现有页面记录；中文 slug 为 `privacy`、`terms`，英文为 `privacy-en`、`terms-en`。四篇正文可分别编辑、审核、发布；代码部署不会自动覆盖 CMS。英文记录未发布时，不显示对应入口，也不构建英文页面。
+- `packages/content/src/legal.ts` 提供经确认的四篇初始正文，`LegalPage.astro` 负责语言链接、文档语言与招聘隐私锚点。统一导航和页脚保持中文，并显式标记语言。英文主体保留公司中文注册名称，避免虚构正式英文名称。
+- 新版将招聘告知并入个人信息清单；旧版快照仍保留原招聘补充说明，兼容先部署代码、后发布正文的过程。
+- 历史咨询迁移测试使用冻结的 2026-09-22 正文，不让旧迁移改写新版政策。
+
+已有 CMS 的四篇内容通过维护命令定向同步。在 `apps/cms` 目录、已加载正式环境变量（包括 `DATABASE_URL`、`RUNTIME_DIR` 和 `PAYLOAD_SECRET`）后执行：
+
+```sh
+NODE_ENV=production CMS_DEV_SCHEMA_PUSH=false node --import tsx src/cli/update-legal-content.ts --dry-run
+NODE_ENV=production CMS_DEV_SCHEMA_PUSH=false node --import tsx src/cli/update-legal-content.ts --apply --expected-hash=<dry-run 输出的 expectedHash>
+```
+
+预检输出四个目标、操作类型、当前发布版本和状态哈希；目标记录或发布版本变化时必须重新预检。执行前在运行数据目录的 `backups/legal-*` 私有备份目标记录与当前快照，只更新四篇 CMS 记录，再将其合并到最新已发布快照。命令输出发布回执；仅 `state: published` 表示内容发布成功。验证公开中英文页面、语言链接及 `release.json` 后再记录上线完成。
+
+内容依据：
+
+- [Empact SG 隐私政策](https://empact.sg/privacy-policy)及[使用条款](https://empact.sg/terms-of-use/)（2026-09-30 查阅）。
+- [《中华人民共和国个人信息保护法》](https://www.stats.gov.cn/gk/tjfg/xgfxfg/202503/t20250310_1958923.html)、[《网络数据安全管理条例》](https://www.cac.gov.cn/2024-09/30/c_1729384452307680.htm)及《民法典》第 496—498、506 条。
+- 当前咨询与招聘表单字段，以及用户对邮箱、境内存储、保存方法和资料分享许可的确认。未复制新加坡 PDPA、DNC、捐款税务减免、身份证件号码等特有内容；不使用浏览即概括同意、无限免责或不加限制的关联机构共享。
+
+具体上线状态应以发布回执和公开页面为准。以下内容为此前版本的历史记录。
+
+## 2026-09-20 初版记录
+
 2026-09-20 补齐 `/privacy/` 和 `/terms/` 的中文正文。内容源为 `packages/content/src/legal.ts`，由 `fixtures.ts` 提供给预览及初始内容。页面继续读取 CMS 快照，保留后台编辑与按条目发布流程。
 
 ## 内容依据

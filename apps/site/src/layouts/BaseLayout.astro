@@ -12,6 +12,8 @@ interface Props {
   noIndex?: boolean;
   type?: "website" | "article";
   bodyClass?: string;
+  lang?: "zh-CN" | "en";
+  alternateLanguages?: { language: string; href: string }[];
 }
 const {
   title,
@@ -21,6 +23,8 @@ const {
   noIndex = isPreviewMode(),
   type = "website",
   bodyClass,
+  lang = "zh-CN",
+  alternateLanguages = [],
 } = Astro.props;
 const canonicalUrl = new URL(
   canonical ?? Astro.url.pathname,
@@ -105,12 +109,19 @@ const jsonLd =
 ---
 
 <!doctype html>
-<html lang="zh-CN">
+<html lang={lang}>
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width" />
     <meta name="description" content={description} />
     <link rel="canonical" href={canonicalUrl} />
+    {alternateLanguages.map((item) => (
+      <link
+        rel="alternate"
+        hreflang={item.language}
+        href={new URL(item.href, "https://empact.cn").toString()}
+      />
+    ))}
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
     <meta property="og:type" content={type} />
@@ -129,7 +140,7 @@ const jsonLd =
   </head>
   <body class={bodyClass}>
     <a class="skip-link" href="#main-content">
-      跳转到正文
+      {lang === "en" ? "Skip to content" : "跳转到正文"}
     </a>
     <Header />
     <main id="main-content">
