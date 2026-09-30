@@ -12,6 +12,9 @@ export const aboutServicesNeedIntro =
 export const aboutServicesBusinessLinkHtml =
   '相关业务：<a href="/corporate/volunteering/">企业志愿者、CSR与公益咨询</a>。';
 
+export const maggieBiography =
+  "应用心理学博士、中欧国际工商学院EMBA、香港大学中国商学院客座讲师。曾任阿里巴巴用户体验总监、上汽大通品牌公关与用户运营总监、通用汽车经销商培训高级经理；长期担任青年公益导师与职业陪伴志愿者。";
+
 export const aboutBodyHtml =
   "<h2>让每一份善意，<br>被世界看见</h2><p>empact 是一家 2011 年成立于新加坡的社会企业。15 年来，我们已在亚太地区 为 2,000+ 家公益机构和企业赋能——让企业与社会组织的每一份善意， 都有可被世界看见的影响力。</p><ul><li>新加坡 · 全球总部</li><li>上海 · 徐汇</li><li>亚太地区 12 个地点</li></ul>\n\n<h2>Empact 概况</h2><h3>2011</h3><p>成立于新加坡<br>深耕亚太 15 年</p><h3>2,000<em>+</em></h3><p>累计赋能的<br>公益机构与企业</p><h3>12</h3><p>影响力覆盖的<br>亚太地区地点</p><h3>2</h3><p>新加坡总统级奖项<br>（2022 / 2023）</p>\n\n<h2>一家以能力建设为核心的社会企业</h2><p> Empact 是一家 2011 年在新加坡成立的社会企业。过去 15 年， 我们已为亚太地区 <strong>2,000+ 家公益机构和企业</strong>赋能。 最初，我们以「专业志愿者」的方式，为小型公益机构提供财务与会计共享服务； 此后逐步扩展到公益咨询、技能志愿服务、影响力评估与组织能力建设。 </p> <p> 我们的英文名 <strong>empact</strong> 取自 <strong>Empower + Impact</strong>—— 我们相信，真正的改变 = 赋能 × 影响力。决定一个公益项目能走多远的， 不是善意本身，而是它背后的组织有没有能力把这件事持续做下去。 </p> <p> 2023 年，Empact 通过 <strong>上海井畅企业管理咨询有限公司</strong>进入中国大陆， 目前在上海市徐汇区。上海井畅企业管理咨询有限公司是 Empact.sg 在中国大陆地区唯一的授权品牌使用方。 </p><blockquote><p>empact 的中国故事，刚刚开始。我们陪一批「想做好事的中国企业」， 走通从善意到影响力的全链路。</p></blockquote>\n\n<h2>企业服务为主，青少年项目独立运营</h2><p>" +
   aboutServicesNeedIntro +
@@ -23,4 +26,6 @@ export const aboutBodyHtml =
   businessBoundaryHtml +
   "\n\n<h2>可衡量的改变，才是影响力</h2><p>我们用前测—中期—结营—追踪的多次测评记录变化， 并区分「参加人数、满意度」与「真实改变」两类指标，不把前者混同为成效。</p><h3>152</h3><p>建立联系的社会组织（家）</p><h3>303</h3><p>动员的技能志愿者（人）</p><h3>23</h3><p>合作的政府／学校机构（家）</p><h3>12</h3><p>在亚太地区支持的地点（个）</p><blockquote><p>此外，我们与 5 家基金会建立了更深远、可持续的关系， 并通过跨部门的分享与学习支持了 578 人。</p></blockquote>\n\n<h2>从新加坡出发，走到上海徐汇</h2><h3>2011</h3><p>empact 在新加坡成立，最初做社会组织的财务外包。</p><h3>2014 — 2018</h3><p>拓展到技能志愿者与咨询服务，服务机构数突破 1,000 家。</p><h3>2022</h3><p>获新加坡总统志愿服务和慈善奖。</p><h3>2023</h3><p>获新加坡总统挑战社会企业奖；通过上海井畅企业管理咨询有限公司进入中国大陆，业务落地上海徐汇。</p><h3>2024 — 2026</h3><p>中国 To B 业务全面发力，与多家跨国企业建立长期合作。</p>\n\n<h2>来自外部的认可</h2>" +
   aboutAwardsHtml +
-  '<h2>创始人</h2><h3>Peter Yang</h3><p><strong>创始人 &amp; 集团 CEO</strong></p><p>毕业于上海交通大学，曾服务于普华永道咨询，在中国、英国、新加坡工作多年。 2011 年在新加坡创办社会企业 Empact，二十余年专注能力战略咨询与青年领导力开发。</p><h3>Maggie 杨祯慧</h3><p><strong>Empact 中国 CEO</strong></p><p>应用心理学博士、EMBA 管理学硕士。曾任阿里巴巴用户体验总监、 上汽大通品牌公关与用户运营总监；长期担任青年公益导师与职业陪伴志愿者。</p>\n\n<h2>如果你也在思考——<br>「我们做了很多好事，却没人知道」</h2><p>无论你是一家正在寻找公益落地方式的企业，还是一个希望把项目做得更扎实的公益机构， 欢迎与我们聊聊你真正想改变的事。</p><ul><li><a href="/contact/">咨询与合作 ↗</a></li><li><a href="/corporate/">查看企业服务</a></li><li><a href="/youth/">查看青少年项目</a></li><li><a href="/school/">查看学校业务</a></li><li><a href="/community/">查看社区业务</a></li></ul><p>maggie.yang@empact.sg</p><p>中国 · 上海 · 徐汇 🌐 www.empact.sg</p>';
+  "<h2>创始人</h2><h3>Peter Yang</h3><p><strong>创始人 &amp; 集团 CEO</strong></p><p>毕业于上海交通大学，曾服务于普华永道咨询，在中国、英国、新加坡工作多年。 2011 年在新加坡创办社会企业 Empact，二十余年专注能力战略咨询与青年领导力开发。</p><h3>Maggie 杨祯慧</h3><p><strong>Empact 中国 CEO</strong></p><p>" +
+  maggieBiography +
+  '</p>\n\n<h2>如果你也在思考——<br>「我们做了很多好事，却没人知道」</h2><p>无论你是一家正在寻找公益落地方式的企业，还是一个希望把项目做得更扎实的公益机构， 欢迎与我们聊聊你真正想改变的事。</p><ul><li><a href="/contact/">咨询与合作 ↗</a></li><li><a href="/corporate/">查看企业服务</a></li><li><a href="/youth/">查看青少年项目</a></li><li><a href="/school/">查看学校业务</a></li><li><a href="/community/">查看社区业务</a></li></ul><p>maggie.yang@empact.sg</p><p>中国 · 上海 · 徐汇 🌐 www.empact.sg</p>';

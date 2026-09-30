@@ -371,6 +371,10 @@
 .about-layout .person-2 .avatar {
   background: var(--green);
 }
+.about-layout img.avatar {
+  display: block;
+  object-fit: cover;
+}
 .about-layout .person h3 {
   font-size: 1.1rem;
   margin: 0 0 0.15rem;

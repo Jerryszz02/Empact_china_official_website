@@ -30,6 +30,8 @@
 
 模板二级标题依次为首屏、概况数据、我们是谁、中国业务、影响力、历程、荣誉、团队、咨询；首屏在页面显示为唯一 h1。三级标题组织卡片，引用块保留业务边界。咨询区只显示合作入口，邮箱和地址统一放页脚。
 
+页面展示时将创始人区块排在荣誉前，CMS 模板顺序不变。Peter Yang 和 Maggie 杨祯慧 的照片位于 `apps/site/src/assets/founders/`，按姓名匹配并由 Astro 构建优化；其他成员保留姓名缩写占位。
+
 荣誉卡片保留“年份三级标题 + 名称段落 + 说明段落”，可加说明和图片图注；旧两段卡片仍兼容。遇到陌生或不完整结构时显示完整普通正文，不能丢内容。调整区块结构时同步解析器与 `tests/about-parser.test.ts`、`tests/browser/about.spec.ts`。
 
 奖项媒体在 `packages/content/src/about-awards.ts`。亚太地点 12、2023 进入中国和各奖项归属依据见来源索引。定向草稿工具见[CMS 内容维护](../content/business-content-migration.md#定向文案工具)。
