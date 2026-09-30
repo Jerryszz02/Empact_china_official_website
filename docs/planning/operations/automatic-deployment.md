@@ -4,6 +4,8 @@
 
 目标入口为 GitHub Actions 的 **Deploy production**（`.github/workflows/deploy.yml`）。`main` 的 **Website checks** 成功后触发，也可从 Actions 的 Run workflow 手动重试；手动运行只允许选择 `main`。PR 检查、其他分支以及其他仓库的事件不能触发生产部署。
 
+受信仓库固定为 `empactgit/Empact_china_official_website`。仓库转移时，须通过检查后的 PR 更新 `deploy/auto-update.py` 的固定身份，并按下文安装流程更新 ECS 的受信脚本；Actions 与 ECS 均须验证同一仓库，不能跳过来源校验。
+
 生产只有 GitHub Actions 一个主动部署入口。旧 `empact-deploy.timer` 必须保持 disabled/inactive；受信安装器升级时再次停用它。ECS 的 `empact-release@<SHA>.service` 是 Actions 调用的执行器，不独立轮询或重复部署。仅合并代码不表示服务器上的受信安装器已升级。
 
 Actions 展示目标提交、对应 CI、服务器部署日志、公网验收和最终结果。工作流通过 GitHub Deployments API 显式记录实际目标 SHA，避免把 `workflow_run` 事件的默认分支 SHA 误当成已部署版本。部署成功需要服务器健康检查及 Actions 独立公网验收均通过；主分支检查成功不等于已上线。
