@@ -12,7 +12,7 @@
 - 奖项图片来自 `奖项物料整理`，对应 P14–16；2025 年用典礼照，不用带 2024 年背景的人像。媒体登记于 `packages/content/src/about-awards.ts`。参考入口：[Empact 官方 About Us](https://empact.sg/about-us)。
 - 真实 Logo 来自用户提供的 AI / PNG，蓝色标识只做忠实栅格化。当前颜色依据用户提供的[品牌颜色图](../../../assets/品牌与设计/motion-brand-reference.png)，设计约定见[页面维护](../features/page-maintenance.md)。
 - 创始人照片由用户于 2026-09-30 提供并指定用于关于页：Peter Yang 对应蓝色西装演讲照，Maggie 杨祯慧 对应灰色背景肖像；原图保存在 `apps/site/src/assets/founders/`。
-- 同日用户提供 ECI 奖杯与活动海报组合图用于 ECI 奖项卡片，保存在 `packages/content/fixtures/media/about-eci-2025.webp`；Maggie 的新版介绍也以用户提供文字为准。
+- 同日用户提供 ECI 奖杯横向照片，替换此前奖杯与活动海报组合图，用于 ECI 奖项卡片，保存在 `packages/content/fixtures/media/about-eci-2025.webp`；Maggie 的新版介绍也以用户提供文字为准。
 
 ## 业务原件查找
 
