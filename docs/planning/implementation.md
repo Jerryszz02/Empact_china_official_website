@@ -11,7 +11,7 @@
 | 管理员与权限 | `apps/cms/payload.config.ts`、`collections.ts`、`src/cli/create-admin.ts` | `tests/cms-live.ts` |
 | 内容契约、校验与种子 | `packages/content/src/schema.ts`、`fixtures.ts`、`business-directory*.ts` | `tests/content.test.ts`、`tests/content-migration.test.ts` |
 | 预览、发布、回滚 | `apps/cms/src/publisher.ts`、`cms-data.ts`、`build-workspace.ts`、`preview-html.ts` | `tests/publisher.test.ts`、`tests/cms-live.ts`、`tests/dev-publication.ts` |
-| 静态服务、咨询和招聘邮件 | `scripts/public-server.ts`、`contact.ts`、`apps/site/src/lib/*form*.ts` | `tests/public-server.test.ts`、`tests/contact.test.ts`、`tests/browser/contact.spec.ts` |
+| 静态服务、咨询和招聘邮件 | `scripts/public-server.ts`、`contact.ts`、`mail-settings.ts`、`apps/cms/src/app/api/mail-settings/route.ts`、`apps/site/src/lib/*form*.ts` | `tests/public-server.test.ts`、`tests/contact.test.ts`、`tests/mail-settings.test.ts`、`tests/browser/contact.spec.ts` |
 | 构建产物与 SEO | `scripts/check-output.ts`、`apps/site/src/layouts/BaseLayout.astro`、`pages/sitemap.xml.ts` | `npm run build:preview`、`SITE_MODE=preview npm run check:output` |
 | 自动部署、备份和权限 | `.github/workflows/`、`deploy/` | `tests/deploy-*.test.py`、`tests/backup.test.py` |
 

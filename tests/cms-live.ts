@@ -234,6 +234,7 @@ try {
     .map((value) => value.split(";")[0])
     .join("; ");
   for (const path of [
+    "/api/mail-settings",
     "/api/business-admin/publish",
     "/api/business-admin/reorder",
     "/api/publication/publish",
@@ -307,6 +308,59 @@ try {
       },
       body: JSON.stringify(data),
     });
+  for (const method of ["GET", "POST"]) {
+    const response = await fetch(base + "/api/mail-settings", {
+      method,
+      headers: { Origin: base, "Content-Type": "application/json" },
+      ...(method === "POST"
+        ? {
+            body: JSON.stringify({
+              inquiryEmail: "attacker@example.com",
+              recruitmentEmail: "attacker@example.com",
+            }),
+          }
+        : {}),
+    });
+    assert.equal(response.status, 401, "mail settings require admin login");
+  }
+  const defaults = {
+    inquiryEmail: "enquiries@empact.asia",
+    recruitmentEmail: "enquiries@empact.asia",
+  };
+  assert.deepEqual(await request("/api/mail-settings"), defaults);
+  assert.equal(
+    (
+      await responseFor("/api/mail-settings", {
+        ...defaults,
+        inquiryEmail: "invalid",
+      })
+    ).status,
+    400,
+  );
+  assert.equal(
+    (await responseFor("/api/mail-settings", { inquiryEmail: "a@example.com" }))
+      .status,
+    400,
+  );
+  assert.deepEqual(
+    await request("/api/mail-settings"),
+    defaults,
+    "invalid edits preserve recipients",
+  );
+  const recipients = {
+    inquiryEmail: "inquiry@example.com",
+    recruitmentEmail: "jobs@example.com",
+  };
+  assert.equal(
+    (await responseFor("/api/mail-settings", recipients)).status,
+    200,
+  );
+  assert.deepEqual(await request("/api/mail-settings"), recipients);
+  assert.deepEqual(
+    JSON.parse(await readFile(join(runtime, "mail-settings.json"), "utf8")),
+    recipients,
+  );
+  assert.equal((await responseFor("/api/mail-settings", defaults)).status, 200);
   const seeded = await request("/api/content?limit=100");
   const seededMedia = await request("/api/media?limit=1000");
   const about = seeded.docs.find(

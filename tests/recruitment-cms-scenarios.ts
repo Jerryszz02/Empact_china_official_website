@@ -44,7 +44,7 @@ async function verifyRecruitmentEditor(options: {
     const cards = page
       .getByRole("navigation", { name: "内容管理入口" })
       .locator(":scope > a");
-    await expect(cards).toHaveCount(7);
+    await expect(cards).toHaveCount(8);
     await page.setViewportSize({ width: 1440, height: 1000 });
     const tops = await cards.evaluateAll((elements) =>
       elements.map((element) => (element as HTMLElement).offsetTop),
@@ -52,10 +52,10 @@ async function verifyRecruitmentEditor(options: {
     assert.equal(
       new Set(tops).size,
       1,
-      "all seven entries share a desktop row",
+      "all eight entries share a desktop row",
     );
     await page.screenshot({
-      path: join(process.cwd(), "artifacts/admin-seven-entries.png"),
+      path: join(process.cwd(), "artifacts/admin-eight-entries.png"),
       fullPage: true,
     });
     await recruitmentEntry.click();
