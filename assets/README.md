@@ -15,4 +15,6 @@
 
 网站直接使用的文件有各自的位置：`apps/site/src/assets/` 是 Astro 引用的图片，`apps/site/public/brand/` 是固定品牌文件，`packages/content/fixtures/media/` 是预览及首次导入媒体。CMS 上传原图和数据库位于私有 `.data/` 或服务器数据目录。移动本目录素材不会自动更新网站，也不能把这些运行数据当临时文件删除。
 
-素材下载与发布流程见[内容维护清单](../docs/planning/content/content-checklist.md)和[案例上传说明](../docs/planning/content/case-upload-guide.md)。现有素材工具按文件所在位置读写关联资料，整理目录时需一起核对；不要为整理而重新运行下载、导入或发布命令。
+素材下载与发布流程见[内容维护清单](../docs/planning/content/content-checklist.md)和[后台操作指南](../docs/planning/content/cms-guide.md)。现有素材工具按文件所在位置读写关联资料，整理目录时需一起核对；不要为整理而重新运行下载、导入或发布命令。
+
+本目录的活动清单、日历交叉分析和配图汇总保留为素材查找依据，分组与数量可能早于现行网站；以 CMS 发布内容为准。检索未命中不能证明活动未举办，历史清单中的推断须结合执行材料重新核实。
