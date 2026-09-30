@@ -124,6 +124,10 @@ test("static server preserves real 404, blocks private files, switches release a
     await writeFile(join(dir, "one/about/index.html"), "<h1>about</h1>");
     await writeFile(join(dir, "one/404.html"), "<h1>页面不存在</h1>");
     await writeFile(join(dir, "one/.env"), "must never leak");
+    await writeFile(
+      join(dir, "one/mail-settings.json"),
+      '{"inquiryEmail":"private@example.com"}',
+    );
     await writeFile(join(dir, "private.txt"), "must never leak");
     await symlink(join(dir, "private.txt"), join(dir, "one/leak.txt"));
     await symlink(join(dir, "one"), join(dir, "current"));
@@ -216,6 +220,7 @@ test("static server preserves real 404, blocks private files, switches release a
     );
     assert.equal((await fetch(url + "/missing")).status, 404);
     assert.equal((await fetch(url + "/.env")).status, 404);
+    assert.equal((await fetch(url + "/mail-settings.json")).status, 404);
     assert.equal((await fetch(url + "/leak.txt")).status, 404);
     assert.equal((await fetch(url, { method: "DELETE" })).status, 405);
     const body = JSON.stringify({

@@ -1,4 +1,6 @@
 /** Operator-only repair after restoring content or enabling runtime isolation. */
+import { readMailSettings } from "../../../../scripts/mail-settings.js";
+import { saveMailSettings } from "../mail-settings.js";
 import { readFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import {
@@ -11,6 +13,7 @@ import { allowPublicRead } from "../public-permissions.js";
 if (!process.env.PUBLIC_READER_GID)
   throw new Error("Public reader group is not configured");
 const runtime = runtimeDir();
+await saveMailSettings(await readMailSettings(runtime), runtime);
 // Failed builds and previews remain private, even if they contain valid files.
 const outputs = new Set(
   (await listReceipts(runtime))

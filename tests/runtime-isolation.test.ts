@@ -67,6 +67,15 @@ test("restore permission repair does not expose failed or preview output", async
   const runtime = await mkdtemp(join(tmpdir(), "empact-repair-"));
   try {
     await mkdir(join(runtime, "receipts"));
+    const recipients = {
+      inquiryEmail: "inquiry@example.com",
+      recruitmentEmail: "jobs@example.com",
+    };
+    await writeFile(
+      join(runtime, "mail-settings.json"),
+      JSON.stringify(recipients),
+      { mode: 0o600 },
+    );
     for (const state of ["published", "failed"]) {
       const release = join(runtime, "releases", state);
       await mkdir(join(release, "public"), { recursive: true, mode: 0o700 });
@@ -98,6 +107,14 @@ test("restore permission repair does not expose failed or preview output", async
           PUBLIC_READER_GID: String(process.getgid!()),
         },
       },
+    );
+    assert.equal(
+      (await stat(join(runtime, "mail-settings.json"))).mode & 0o777,
+      0o640,
+    );
+    assert.deepEqual(
+      JSON.parse(await readFile(join(runtime, "mail-settings.json"), "utf8")),
+      recipients,
     );
     assert.equal(
       (await stat(join(runtime, "releases/published/public"))).mode & 0o777,

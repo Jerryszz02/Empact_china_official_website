@@ -18,6 +18,8 @@ import {
   type RecruitmentJobForApplication,
 } from "./contact.js";
 
+import { mailRecipient } from "./mail-settings.js";
+
 const mime: Record<string, string> = {
   ".html": "text/html; charset=utf-8",
   ".css": "text/css; charset=utf-8",
@@ -283,7 +285,9 @@ if (
   const server = createPublicServer({
     root,
     origin,
-    deliver: smtpDelivery(process.env),
+    deliver: smtpDelivery(process.env, (message) =>
+      mailRecipient(message.kind, dirname(root)),
+    ),
     trustProxy: process.env.TRUST_PROXY === "true",
   });
   server.requestTimeout = 20_000;

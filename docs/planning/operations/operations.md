@@ -87,3 +87,9 @@ CMS 与维护程序通过 `deploy/publication-lock.py` 使用同一把发布锁�
 安装并启用 `empact-expiry.timer`，每分钟检查当前已发布快照的截止状态。它不能把后台新草稿一起发布。失败应在发布记录和服务日志中可见；维护人须将 `systemctl --failed` / `journalctl -u empact-expiry.service` 接入现有告警渠道。当前没有已确认的告警接收人或外部监控配置，外部通知验收仍待完成。
 
 服务器权限整改与验收见[官网运行权限隔离](runtime-isolation.md)。
+
+### 收件邮箱设置
+
+后台「收件设置」分别管理咨询与招聘收件邮箱，初始均为 `enquiries@empact.asia`。实际公开服务每次投递读取 `RUNTIME_DIR/mail-settings.json`，未保存时使用上述初始值，不再使用 `CONTACT_TO` 或 `CONTACT_RECEIVER_NAME` 决定收件人。SMTP 登录和发信配置、`CONTACT_ENABLED` 及已批准快照的收件开关仍按原流程管理。
+
+该文件独立于内容快照，管理员保存后原子替换；无需发布或重启，页面发布和内容回滚不会覆盖它。文件在公开目录之外，只允许管理员 API 修改，启用运行隔离时仅额外允许公开服务组读取，随整个 runtime 数据目录备份恢复。文件损坏或无法读取时提交失败，不回退到其他邮箱。保存成功只证明配置生效，不证明真实邮件送达，实际收件仍须验证。

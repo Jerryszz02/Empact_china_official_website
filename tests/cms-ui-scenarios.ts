@@ -196,6 +196,33 @@ export async function verifyCmsUI({
     await page.locator('input[name="password"]').fill(password);
     await page.locator('button[type="submit"]').click();
     await page.waitForURL(base + "/admin");
+    await page
+      .getByRole("navigation", { name: "内容管理入口" })
+      .getByRole("link", { name: /收件设置/ })
+      .click();
+    const mailSettings = page.getByRole("form", { name: "收件邮箱设置" });
+    await expect(mailSettings.getByLabel("咨询收件邮箱")).toHaveValue(
+      "enquiries@empact.asia",
+    );
+    await expect(mailSettings.getByLabel("招聘收件邮箱")).toHaveValue(
+      "enquiries@empact.asia",
+    );
+    await mailSettings.getByLabel("咨询收件邮箱").fill("inquiry@example.com");
+    await mailSettings.getByLabel("招聘收件邮箱").fill("jobs@example.com");
+    await mailSettings.getByRole("button", { name: "保存收件设置" }).click();
+    await expect(mailSettings.getByRole("status")).toContainText("已保存");
+    await page.reload();
+    await expect(mailSettings.getByLabel("咨询收件邮箱")).toHaveValue(
+      "inquiry@example.com",
+    );
+    await expect(mailSettings.getByLabel("招聘收件邮箱")).toHaveValue(
+      "jobs@example.com",
+    );
+    await mailSettings.getByLabel("咨询收件邮箱").fill("enquiries@empact.asia");
+    await mailSettings.getByLabel("招聘收件邮箱").fill("enquiries@empact.asia");
+    await mailSettings.getByRole("button", { name: "保存收件设置" }).click();
+    await expect(mailSettings.getByRole("status")).toContainText("已保存");
+    await page.goto(base + "/admin");
     const homepage = page
       .getByRole("navigation", { name: "官网入口" })
       .getByRole("link", { name: "返回官网首页" });
@@ -292,7 +319,7 @@ export async function verifyCmsUI({
     ).toBeVisible();
     await expect(
       page.getByRole("navigation", { name: "内容管理入口" }).getByRole("link"),
-    ).toHaveCount(7);
+    ).toHaveCount(8);
     for (const [segment, label] of [
       ["school", "学校业务"],
       ["community", "社区业务"],
