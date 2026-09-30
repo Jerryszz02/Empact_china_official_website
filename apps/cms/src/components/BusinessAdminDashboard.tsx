@@ -1,5 +1,6 @@
 "use client";
 
+import { MailSettings } from "./MailSettings.js";
 import { CreateContentButton } from "./CreateContentButton.js";
 import { isFixedYouthModel } from "@empact/content/business";
 import { useEffect, useRef, useState } from "react";
@@ -28,6 +29,11 @@ const parts = [
     id: "business-types",
     title: "新增业务类型",
     description: "添加业务类型，维护业务介绍与子业务排序",
+  },
+  {
+    id: "mail-settings",
+    title: "收件设置",
+    description: "分别设置咨询和招聘申请的收件邮箱",
   },
 ] as const;
 type Part = (typeof parts)[number]["id"];
@@ -377,24 +383,27 @@ export function BusinessAdminDashboard() {
         </div>
       </header>
       <nav className="admin-parts" aria-label="内容管理入口">
-        {parts.map((item, index) => (
-          <a
-            key={item.id}
-            href={`#${item.id}`}
-            className={`admin-part ${part === item.id ? "is-selected" : ""}`}
-            aria-current={part === item.id ? "page" : undefined}
-          >
-            <span className="admin-part__number">0{index + 1}</span>
-            <strong>{item.title}</strong>
-            <span>{item.description}</span>
-            {!loading && (item.id === "published" || item.id === "drafts") && (
-              <span>
-                {item.id === "published" ? published.length : drafts.length}{" "}
-                个项目
-              </span>
-            )}
-          </a>
-        ))}
+        {parts
+          .filter((item) => item.id !== "mail-settings")
+          .map((item, index) => (
+            <a
+              key={item.id}
+              href={`#${item.id}`}
+              className={`admin-part ${part === item.id ? "is-selected" : ""}`}
+              aria-current={part === item.id ? "page" : undefined}
+            >
+              <span className="admin-part__number">0{index + 1}</span>
+              <strong>{item.title}</strong>
+              <span>{item.description}</span>
+              {!loading &&
+                (item.id === "published" || item.id === "drafts") && (
+                  <span>
+                    {item.id === "published" ? published.length : drafts.length}{" "}
+                    个项目
+                  </span>
+                )}
+            </a>
+          ))}
         <a className="admin-part" href="/admin/globals/home-gallery">
           <span className="admin-part__number">05</span>
           <strong>首页照片</strong>
@@ -409,6 +418,15 @@ export function BusinessAdminDashboard() {
           <span className="admin-part__number">07</span>
           <strong>招聘岗位管理</strong>
           <span>新增和编辑全职、实习岗位，保存后可预览、发布。</span>
+        </a>
+        <a
+          className={`admin-part ${part === "mail-settings" ? "is-selected" : ""}`}
+          href="#mail-settings"
+          aria-current={part === "mail-settings" ? "page" : undefined}
+        >
+          <span className="admin-part__number">08</span>
+          <strong>收件设置</strong>
+          <span>分别设置咨询和招聘申请的收件邮箱，保存后生效。</span>
         </a>
       </nav>
       {message && (
@@ -439,15 +457,19 @@ export function BusinessAdminDashboard() {
             <h2 id="workspace-title">{currentPart.title}</h2>
             <p>{currentPart.description}</p>
           </div>
-          <button
-            className="button button--quiet"
-            onClick={() => void refresh()}
-            disabled={busy || loading || namesPending}
-          >
-            刷新
-          </button>
+          {part !== "mail-settings" && (
+            <button
+              className="button button--quiet"
+              onClick={() => void refresh()}
+              disabled={busy || loading || namesPending}
+            >
+              刷新
+            </button>
+          )}
         </div>
-        {loading ? (
+        {part === "mail-settings" ? (
+          <MailSettings />
+        ) : loading ? (
           <p role="status">正在加载项目…</p>
         ) : part === "new-project" ? (
           <div className="empty-state">

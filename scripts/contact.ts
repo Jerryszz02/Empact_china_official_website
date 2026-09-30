@@ -191,20 +191,20 @@ export function recruitmentMailText(application: RecruitmentApplication) {
 
 export function smtpDelivery(
   env: Partial<NodeJS.ProcessEnv>,
+  getRecipient?: (message: ContactMessage) => Promise<string>,
 ): Delivery | undefined {
   const required = [
     "SMTP_HOST",
     "SMTP_USER",
     "SMTP_PASS",
     "CONTACT_FROM",
-    "CONTACT_TO",
-    "CONTACT_RECEIVER_NAME",
+    ...(getRecipient ? [] : ["CONTACT_TO", "CONTACT_RECEIVER_NAME"]),
   ];
   if (env.CONTACT_ENABLED !== "true" || required.some((name) => !env[name]))
     return undefined;
   const email = z.email();
   email.parse(env.CONTACT_FROM);
-  email.parse(env.CONTACT_TO);
+  if (!getRecipient) email.parse(env.CONTACT_TO);
   const port = Number(env.SMTP_PORT || 465);
   if (!Number.isInteger(port) || port < 1 || port > 65535)
     throw new Error("SMTP_PORT invalid");
@@ -223,7 +223,9 @@ export function smtpDelivery(
   return async (message, segments) => {
     const result = await transport.sendMail({
       from: env.CONTACT_FROM,
-      to: env.CONTACT_TO,
+      to: email.parse(
+        getRecipient ? await getRecipient(message) : env.CONTACT_TO,
+      ),
       subject:
         message.kind === "recruitment"
           ? `Empact 官网招聘申请：${message.jobTitle}`
