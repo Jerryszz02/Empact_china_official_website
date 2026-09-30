@@ -1,11 +1,6 @@
 import { aboutBodyHtml, aboutSummary } from "./about.js";
 import { aboutMedia } from "./about-awards.js";
-import {
-  privacyBodyHtml,
-  privacySummary,
-  termsBodyHtml,
-  termsSummary,
-} from "./legal.js";
+import { legalPages } from "./legal.js";
 import type { Snapshot, Entry } from "./schema.js";
 import {
   directoryBusinesses,
@@ -74,24 +69,12 @@ const pages: Entry[] = [
     bodyMediaIds: aboutMedia.map((item) => item.id),
     approved: false,
   },
-  {
-    id: "privacy",
-    kind: "page",
-    slug: "privacy",
-    title: "隐私政策",
-    summary: privacySummary,
-    bodyHtml: privacyBodyHtml,
+  ...legalPages.map((page) => ({
+    ...page,
+    id: page.slug,
+    kind: "page" as const,
     approved: false,
-  },
-  {
-    id: "terms",
-    kind: "page",
-    slug: "terms",
-    title: "使用条款",
-    summary: termsSummary,
-    bodyHtml: termsBodyHtml,
-    approved: false,
-  },
+  })),
   {
     id: "contact",
     kind: "page",

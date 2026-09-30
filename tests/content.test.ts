@@ -9,6 +9,22 @@ import {
   entryUrl,
 } from "@empact/content/schema";
 
+test("English legal entries keep canonical routes through validation and CMS previews", () => {
+  const data = validateSnapshot(structuredClone(previewSnapshot));
+  for (const name of ["privacy", "terms"]) {
+    const chinese = data.entries.find((entry) => entry.slug === name)!;
+    const english = data.entries.find((entry) => entry.slug === `${name}-en`)!;
+    assert.equal(entryPath(chinese), `/${name}/`);
+    assert.equal(entryPath(english), `/en/${name}/`);
+    assert.equal(entryUrl(english), `/en/${name}/`);
+    assert.match(english.bodyHtml, /maggie.yang@empact.sg/);
+    assert.doesNotMatch(
+      chinese.bodyHtml + english.bodyHtml,
+      /empactsg@126.com/,
+    );
+  }
+});
+
 test("unapproved preview cannot enter production publication", () => {
   assert.throws(() => validateSnapshot(previewSnapshot, { production: true }));
   const promoted = structuredClone(previewSnapshot);

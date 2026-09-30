@@ -16,6 +16,8 @@ export function getStaticPaths() {
           "contact",
           "privacy",
           "terms",
+          "privacy-en",
+          "terms-en",
         ].includes(entry.slug),
     )
     .map((entry) => ({ params: { slug: entry.slug }, props: { entry } }));

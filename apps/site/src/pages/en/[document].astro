@@ -1,0 +1,14 @@
+---
+import LegalPage from "@/components/LegalPage.astro";
+import { pageBySlug } from "@/lib/content";
+
+export function getStaticPaths() {
+  return (["privacy", "terms"] as const).flatMap((document) => {
+    const entry = pageBySlug(`${document}-en`);
+    return entry ? [{ params: { document }, props: { document, entry } }] : [];
+  });
+}
+const { document, entry } = Astro.props;
+---
+
+<LegalPage document={document} language="en" entry={entry} />
