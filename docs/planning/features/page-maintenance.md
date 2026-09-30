@@ -48,7 +48,11 @@
 
 ## 隐私、条款与 SEO
 
-`/privacy/`、`/terms/` 读取 CMS；`packages/content/src/legal.ts` 只用于默认内容。变更时核对真实运营主体、联系方式和当前数据处理方式，在目标 CMS 只修改两条对应记录、审核发布，再验证两页、互链及页脚。程序导入用 `htmlToLexical()` 保留富文本结构，不把 HTML 粘贴成纯文本。
+中文地址为 `/privacy/`、`/terms/`，英文为 `/en/privacy/`、`/en/terms/`；CMS 对应 slug 为 `privacy`、`terms`、`privacy-en`、`terms-en`，四篇可独立编辑、审核和发布。英文记录未发布时，不显示对应入口，也不构建英文页面。代码部署不会覆盖已有 CMS 正文；`packages/content/src/legal.ts` 只提供经确认的默认内容。
+
+`LegalPage.astro` 负责语言链接、文档语言和招聘隐私锚点；语言切换使用普通链接，无需 JavaScript、Cookie 或本地存储。导航和页脚保持中文并标记语言，英文正文保留公司中文注册名称。新版将招聘告知并入个人信息清单，旧快照仍保留原补充说明。隐私联系邮箱为 `maggie.yang@empact.sg`，信息存储于中国境内；变更时核对真实运营主体和实际处理流程，正文依据见[来源索引](../content/sources.md#法律页面)。
+
+目标环境的定向同步流程见[CMS 内容维护](../content/business-content-migration.md#法律页面定向同步)。人工修改同样只处理目标记录，审核发布后核对中英文正文、语言互链及页脚。程序导入用 `htmlToLexical()` 保留富文本结构，不把 HTML 粘贴成纯文本。历史咨询迁移使用冻结的旧版政策，不改写新版正文。
 
 当前表单不接附件；SMTP 接受不等于收件人阅读，`retentionDays` 不实现邮箱自动删除。新增统计、支付、报名等功能时，同步审核告知内容和实际处理流程，不照搬旧说明。
 

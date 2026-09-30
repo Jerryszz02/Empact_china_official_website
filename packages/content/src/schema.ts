@@ -278,8 +278,11 @@ export function effectiveProjectStatus(
 }
 
 export function entryPath(entry: Entry): string {
-  if (entry.kind === "page")
+  if (entry.kind === "page") {
+    if (entry.slug === "privacy-en") return "/en/privacy/";
+    if (entry.slug === "terms-en") return "/en/terms/";
     return entry.slug === "home" ? "/" : `/${entry.slug}/`;
+  }
   if (entry.kind === "business")
     return `/${entry.segment ?? "youth"}/${entry.slug}/`;
   if (entry.kind === "project") return `/projects/${entry.slug}/`;

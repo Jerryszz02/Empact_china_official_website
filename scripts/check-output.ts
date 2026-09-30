@@ -1,5 +1,5 @@
 import { readFile, readdir, stat } from "node:fs/promises";
-import { resolve, join, extname } from "node:path";
+import { resolve, join, extname, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { load } from "cheerio";
 
@@ -63,8 +63,12 @@ export async function checkOutput(
     if (!title || titles.has(title))
       errors.push(`Missing/duplicate title: ${file}`);
     titles.add(title);
-    if (!$("html").attr("lang")?.startsWith("zh"))
-      errors.push(`Chinese lang missing: ${file}`);
+    const englishLegalPage = /^en\/(privacy|terms)\/index\.html$/.test(
+      relative(directory, file).replaceAll("\\", "/"),
+    );
+    const expectedLanguage = englishLegalPage ? "en" : "zh-CN";
+    if ($("html").attr("lang") !== expectedLanguage)
+      errors.push(`Expected ${expectedLanguage} document language: ${file}`);
     if ($("h1").length !== 1) errors.push(`Expected one h1: ${file}`);
     const is404 = file.endsWith("/404.html");
     if (!is404) {

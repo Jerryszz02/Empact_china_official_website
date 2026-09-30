@@ -89,3 +89,16 @@ npm run initialize:publication -w @empact/cms -- --snapshot /absolute/reviewed-b
 `npm run reset:business-framework -w @empact/cms` 默认只读预演；显式 `-- --apply` 会清空 `case` 及其 `coverage` 子内容、清理 related 引用、移除旧青少年业务并同步预设框架。企业、公司、无关页面及媒体保留。它不能同步完整新目录，不用于正常运维。
 
 只有明确授权重置、停止写入、确认没有当前发布版本且备份完成时才可执行。参数为 `--database`、`--media-dir`、`--runtime-dir` 及 `--backup-database`、`--backup-media-dir`、`--backup-runtime-dir`；均用实际绝对路径，备份目标须不存在且位于源目录外。CLI 在存在当前发布、非 coverage 子内容或存活 parent 依赖时拒绝写入；不会自动启动结构迁移。日常新增内容使用后台或本页增量导入。
+
+## 法律页面定向同步
+
+`apps/cms/src/cli/update-legal-content.ts` 仅同步中文和英文隐私政策、使用条款四篇已确认正文。代码部署不自动发布 CMS；日常编辑流程见[页面维护约定](../features/page-maintenance.md#隐私条款与-seo)。
+
+在 `apps/cms` 目录加载目标正式环境变量（包括 `DATABASE_URL`、`RUNTIME_DIR` 和 `PAYLOAD_SECRET`）后，先预检：
+
+```sh
+NODE_ENV=production CMS_DEV_SCHEMA_PUSH=false node --import tsx src/cli/update-legal-content.ts --dry-run
+NODE_ENV=production CMS_DEV_SCHEMA_PUSH=false node --import tsx src/cli/update-legal-content.ts --apply --expected-hash=<dry-run 输出的 expectedHash>
+```
+
+预检输出四个目标、操作类型、当前发布版本和状态哈希；目标记录或发布版本变化时必须重新预检。执行前在运行目录的 `backups/legal-*` 私有备份目标记录与当前快照，只更新四篇 CMS 记录，再将其合并到最新已发布快照。命令输出发布回执，仅 `state: published` 表示内容发布成功。随后核对公开四篇页面、语言链接和 `release.json`，不能用代码合并代替内容验收。

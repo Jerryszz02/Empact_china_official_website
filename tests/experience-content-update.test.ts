@@ -7,7 +7,7 @@ import {
   businessBoundaryHtml,
   businessBoundaryText,
 } from "../packages/content/src/about-awards.js";
-import { privacyBodyHtml } from "../packages/content/src/legal.js";
+import { privacyBodyHtml } from "./helpers/legacy-privacy.js";
 import { htmlToLexical } from "../apps/cms/src/content-migration.js";
 import { serializeLexicalBody } from "../apps/cms/src/cms-data.js";
 import { updateExperienceBody } from "../apps/cms/src/experience-content-update.js";

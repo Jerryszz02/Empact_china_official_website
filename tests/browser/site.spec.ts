@@ -1,5 +1,71 @@
 import { test, expect } from "@playwright/test";
 
+test("legal documents switch languages and preserve translated policy links", async ({
+  page,
+}) => {
+  for (const document of ["privacy", "terms"]) {
+    await page.goto(`/${document}/`);
+    const languages = page.getByRole("navigation", { name: "正文语言" });
+    await expect(languages.getByRole("link", { name: "中文" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+    await languages.getByRole("link", { name: "English" }).click();
+    await expect(page).toHaveURL(`/en/${document}/`);
+    await expect(page.locator("html")).toHaveAttribute("lang", "en");
+    await expect(page.locator("h1")).toHaveText(
+      document === "privacy" ? "Privacy Policy" : "Terms of Use",
+    );
+    await expect(page.locator(".legal-copy")).toContainText(
+      "maggie.yang@empact.sg",
+    );
+    await expect(page.locator(".legal-copy")).not.toContainText(
+      "empactsg@126.com",
+    );
+    expect(
+      await page.evaluate(
+        () => globalThis.document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
+    const sibling = document === "privacy" ? "terms" : "privacy";
+    await page.locator(`.legal-copy a[href="/en/${sibling}/"]`).click();
+    await expect(page).toHaveURL(`/en/${sibling}/`);
+    await page
+      .getByRole("navigation", { name: "Document language" })
+      .getByRole("link", { name: "中文" })
+      .click();
+    await expect(page).toHaveURL(`/${sibling}/`);
+    await expect(page.locator("html")).toHaveAttribute("lang", "zh-CN");
+  }
+  await page.goto("/privacy/#recruitment-privacy");
+  await expect(page.locator("#recruitment-privacy")).toHaveCount(1);
+  await expect(page.locator(".legal-copy")).toContainText(
+    "存储于中华人民共和国境内",
+  );
+  await expect(page.locator(".legal-copy")).toContainText("招聘申请");
+});
+
+test("legal language links work without JavaScript", async ({
+  browser,
+  baseURL,
+}) => {
+  const context = await browser.newContext({ javaScriptEnabled: false });
+  try {
+    const page = await context.newPage();
+    await page.goto(`${baseURL}/privacy/`);
+    await page
+      .getByRole("navigation", { name: "正文语言" })
+      .getByRole("link", { name: "English" })
+      .click();
+    await expect(page).toHaveURL(`${baseURL}/en/privacy/`);
+    await expect(page.locator(".legal-copy")).toContainText(
+      "stored within the People's Republic of China",
+    );
+  } finally {
+    await context.close();
+  }
+});
+
 test("ChatCircle is a community child and links directly to its website", async ({
   page,
 }, testInfo) => {

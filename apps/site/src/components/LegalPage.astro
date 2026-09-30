@@ -1,0 +1,112 @@
+---
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import { pageBySlug, pathFor, type SitePage } from "@/lib/content";
+
+interface Props {
+  document: "privacy" | "terms";
+  language?: "zh-CN" | "en";
+  entry?: SitePage;
+}
+const { document, language = "zh-CN", entry: providedEntry } = Astro.props;
+const entry = providedEntry ?? pageBySlug(document);
+const english = language === "en";
+const translations = [
+  { language: "zh-CN", label: "中文", entry: pageBySlug(document) },
+  { language: "en", label: "English", entry: pageBySlug(`${document}-en`) },
+].flatMap(({ entry, ...item }) =>
+  entry ? [{ ...item, href: pathFor(entry) }] : [],
+);
+const title =
+  entry?.title ?? (document === "privacy" ? "隐私政策" : "使用条款");
+// Keep the recruitment form's existing deep link after integrating its notice.
+const collectionHeading = english
+  ? "<h2>3. Information We Collect and How We Use It</h2>"
+  : "<h2>三、我们收集哪些信息，以及如何使用</h2>";
+const hasCollectionHeading = entry?.bodyHtml.includes(collectionHeading);
+const hasRecruitmentNotice = english || entry?.bodyHtml.includes("招聘");
+const body = entry?.bodyHtml.replace(
+  collectionHeading,
+  collectionHeading.replace("<h2>", '<h2 id="recruitment-privacy">'),
+);
+---
+
+<BaseLayout
+  title={title}
+  description={entry?.summary}
+  lang={language}
+  alternateLanguages={translations}
+>
+  <section class="page-hero" lang={language}>
+    <span class="eyebrow">{document === "privacy" ? "Privacy" : "Terms"}</span>
+    <h1>{title}</h1>
+    <nav
+      class="legal-languages"
+      aria-label={english ? "Document language" : "正文语言"}
+    >
+      {translations.map((translation) => (
+        <a
+          href={translation.href}
+          lang={translation.language}
+          hreflang={translation.language}
+          aria-current={translation.language === language ? "page" : undefined}
+        >
+          {translation.label}
+        </a>
+      ))}
+    </nav>
+  </section>
+  <section class="content-wrap" lang={language}>
+    <article
+      class="prose legal-copy"
+      id={
+        document === "privacy" && hasRecruitmentNotice && !hasCollectionHeading
+          ? "recruitment-privacy"
+          : undefined
+      }
+      set:html={body ?? ""}
+    />
+    {document === "privacy" && !hasRecruitmentNotice && (
+      <article class="prose" id="recruitment-privacy">
+        <h2>招聘申请信息</h2>
+        <p>
+          提交招聘申请时，我们会接收你选择的岗位、姓名、联系邮箱、相关经历、可到岗时间，以及你提供的其他联系方式和简历或作品链接。这些信息通过邮件交给
+          Empact 招聘负责人，用于评估本次岗位申请和联系你。
+        </p>
+        <p>
+          简历或作品链接至少填写一项；请只提供与应聘有关的信息。信息处理、保存及查阅、更正、删除等权利的行使方式，适用本页的其他说明。
+        </p>
+      </article>
+    )}
+  </section>
+</BaseLayout>
+
+<style>
+  .legal-languages {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 1.5rem;
+    flex-wrap: wrap;
+  }
+  .legal-languages a {
+    border: 1px solid currentColor;
+    border-radius: 999px;
+    padding: 0.5rem 1rem;
+    text-decoration: none;
+    font-size: 0.95rem;
+  }
+  .legal-languages a[aria-current="page"] {
+    background: var(--paper);
+    border-color: var(--paper);
+    color: var(--blue);
+  }
+  .legal-languages a:focus-visible {
+    outline: 3px solid currentColor;
+    outline-offset: 4px;
+  }
+  .legal-copy {
+    overflow-wrap: anywhere;
+  }
+  .legal-copy :global(#recruitment-privacy) {
+    scroll-margin-top: 8rem;
+  }
+</style>
