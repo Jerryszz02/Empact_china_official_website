@@ -5,13 +5,44 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
-import { load } from "cheerio";
+import { load, type CheerioAPI } from "cheerio";
 import { frameworkSnapshot as previewSnapshot } from "./helpers/content-fixture.js";
 import { previewSnapshot as directorySnapshot } from "@empact/content/fixtures";
 import type { Entry } from "@empact/content/schema";
 import { checkOutput } from "../scripts/check-output.js";
 
 const exec = promisify(execFile);
+
+function assertWechatChannel(html: CheerioAPI, segment: string) {
+  const youth = segment === "youth";
+  const dialogId = youth ? "wechat-youth" : "wechat-china";
+  const name = youth ? "Empact AI 社创营" : "Empact中国";
+  const trigger = html(".content-channels button");
+  assert.equal(trigger.length, 1);
+  assert.equal(trigger.attr("type"), "button");
+  assert.equal(trigger.attr("aria-label"), `微信公众号：${name}`);
+  assert.equal(trigger.attr("aria-haspopup"), "dialog");
+  assert.equal(trigger.attr("aria-controls"), dialogId);
+  assert.equal(trigger.attr("data-wechat-dialog"), dialogId);
+  assert.equal(trigger.attr("href"), undefined);
+  const dialog = html(`dialog#${dialogId}`);
+  assert.equal(dialog.length, 1);
+  assert.equal(dialog.attr("aria-labelledby"), `${dialogId}-title`);
+  assert.equal(dialog.find("h2").text(), name);
+  if (youth) {
+    assert.equal(dialog.find("img").length, 1);
+    assert.equal(
+      dialog.find("img").attr("src"),
+      "/brand/empact-ai-wechat-qr.jpg",
+    );
+    assert.equal(dialog.find("img").attr("alt"), `${name}公众号关注二维码`);
+  } else {
+    assert.equal(dialog.find("img").length, 0);
+    assert.match(dialog.text(), /公众号二维码待更新/);
+  }
+  assert.equal(html('a[href^="https://weixin.qq.com/r/mp/"]').length, 0);
+}
+
 test(
   "production static HTML includes selected projects, embedded evidence, media and safe metadata",
   { timeout: 60_000 },
@@ -218,11 +249,11 @@ test(
         );
         assert.equal(html(`main a[href="${contactHref}"]`).length, 1);
         assert.ok(!html("#cases").text().includes("相关案例"));
+        assertWechatChannel(html, business.segment!);
         const channels = html(".content-channels a");
         assert.deepEqual(
           channels.toArray().map((link) => html(link).attr("href")),
           [
-            "https://weixin.qq.com/r/mp/YBDv99XEyYi2rZGU90Vy",
             business.segment === "youth" || business.segment === "school"
               ? "https://xhslink.cn/o/A6Nv4ftO0Td"
               : "https://xhslink.cn/o/30HZaQmiwlS",
@@ -249,14 +280,12 @@ test(
         model(".business-consultation a").attr("href"),
         "/contact/?business=youth",
       );
+      assertWechatChannel(model, "youth");
       assert.deepEqual(
         model(".content-channels a")
           .toArray()
           .map((link) => model(link).attr("href")),
-        [
-          "https://weixin.qq.com/r/mp/YBDv99XEyYi2rZGU90Vy",
-          "https://xhslink.cn/o/A6Nv4ftO0Td",
-        ],
+        ["https://xhslink.cn/o/A6Nv4ftO0Td"],
       );
       const legacyModel = load(
         await readFile(join(out, "youth/development-model/index.html"), "utf8"),

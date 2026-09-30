@@ -10,7 +10,7 @@ interface Props {
 
 const { businessId, segment, consultationLabel = "提交咨询需求" } = Astro.props;
 const channels = [
-  socialLinks.wechatChina,
+  segment === "youth" ? socialLinks.wechatYouth : socialLinks.wechatChina,
   segment === "youth" || segment === "school"
     ? socialLinks.xiaohongshuYouth
     : socialLinks.xiaohongshuChina,
@@ -33,55 +33,68 @@ const channels = [
     <h2 id="channels-title">更多内容与案例</h2>
     <p>关注我们的公众号与小红书，了解项目故事与活动动态。</p>
     <nav class="content-channels" aria-label="更多内容与案例">
-      {channels.map((channel) => (
-        <a
-          class="channel-link"
-          href={channel.href}
-          target="_blank"
-          rel="noopener noreferrer"
-          aria-label={`${channel.platform}：${channel.name}（在新窗口打开）`}
-        >
-          {channel.platform === "小红书" ? (
-            <img
-              class="channel-icon"
-              src="/brand/xiaohongshu.svg"
-              alt=""
-              aria-hidden="true"
-              width="28"
-              height="28"
-            />
-          ) : (
-            <svg
-              class="channel-icon"
-              viewBox="0 0 24 24"
-              aria-hidden="true"
-              focusable="false"
-            >
-              <path
-                d="M10 3C5.58 3 2 5.91 2 9.5c0 2.08 1.2 3.94 3.09 5.13L4.3 17l2.83-1.42c.91.27 1.87.42 2.87.42 4.42 0 8-2.91 8-6.5S14.42 3 10 3Z"
-                fill="currentColor"
+      {channels.map((channel) => {
+        const isWechat = "dialogId" in channel;
+        const Tag = isWechat ? "button" : "a";
+        return (
+          <Tag
+            class="channel-link"
+            type={isWechat ? "button" : undefined}
+            href={"href" in channel ? channel.href : undefined}
+            target={isWechat ? undefined : "_blank"}
+            rel={isWechat ? undefined : "noopener noreferrer"}
+            data-wechat-dialog={isWechat ? channel.dialogId : undefined}
+            aria-haspopup={isWechat ? "dialog" : undefined}
+            aria-controls={isWechat ? channel.dialogId : undefined}
+            aria-label={`${channel.platform}：${channel.name}${isWechat ? "" : "（在新窗口打开）"}`}
+          >
+            {channel.platform === "小红书" ? (
+              <img
+                class="channel-icon"
+                src="/brand/xiaohongshu.svg"
+                alt=""
+                aria-hidden="true"
+                width="28"
+                height="28"
               />
-              <circle cx="7" cy="8" r="1" fill="var(--channel-surface)" />
-              <circle cx="12" cy="8" r="1" fill="var(--channel-surface)" />
-              <path
-                d="M16 10c-3.6 0-6.5 2.35-6.5 5.25S12.4 20.5 16 20.5c.8 0 1.58-.12 2.3-.33l2.3 1.13-.65-1.9c1.55-.96 2.55-2.48 2.55-4.15C22.5 12.35 19.6 10 16 10Z"
-                fill="currentColor"
-                stroke="var(--channel-surface)"
-                stroke-width="1"
-              />
-              <circle cx="13.5" cy="14" r=".85" fill="var(--channel-surface)" />
-              <circle cx="18" cy="14" r=".85" fill="var(--channel-surface)" />
-            </svg>
-          )}
-          <span class="channel-copy">
-            <span class="channel-platform">{channel.platform}</span>
-            <strong>{channel.name}</strong>
-          </span>
-          <span class="channel-arrow" aria-hidden="true">
-            ↗
-          </span>
-        </a>
-      ))}
+            ) : (
+              <svg
+                class="channel-icon"
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+                focusable="false"
+              >
+                <path
+                  d="M10 3C5.58 3 2 5.91 2 9.5c0 2.08 1.2 3.94 3.09 5.13L4.3 17l2.83-1.42c.91.27 1.87.42 2.87.42 4.42 0 8-2.91 8-6.5S14.42 3 10 3Z"
+                  fill="currentColor"
+                />
+                <circle cx="7" cy="8" r="1" fill="var(--channel-surface)" />
+                <circle cx="12" cy="8" r="1" fill="var(--channel-surface)" />
+                <path
+                  d="M16 10c-3.6 0-6.5 2.35-6.5 5.25S12.4 20.5 16 20.5c.8 0 1.58-.12 2.3-.33l2.3 1.13-.65-1.9c1.55-.96 2.55-2.48 2.55-4.15C22.5 12.35 19.6 10 16 10Z"
+                  fill="currentColor"
+                  stroke="var(--channel-surface)"
+                  stroke-width="1"
+                />
+                <circle
+                  cx="13.5"
+                  cy="14"
+                  r=".85"
+                  fill="var(--channel-surface)"
+                />
+                <circle cx="18" cy="14" r=".85" fill="var(--channel-surface)" />
+              </svg>
+            )}
+            <span class="channel-copy">
+              <span class="channel-platform">{channel.platform}</span>
+              <strong>{channel.name}</strong>
+            </span>
+            <span class="channel-arrow" aria-hidden="true">
+              {isWechat ? "+" : "↗"}
+            </span>
+          </Tag>
+        );
+      })}
     </nav>
   </section>
 </div>
@@ -129,6 +142,9 @@ const channels = [
     border: 1px solid var(--dark-line);
     background: var(--channel-surface);
     text-decoration: none;
+    color: inherit;
+    text-align: left;
+    line-height: inherit;
   }
   .channel-link:hover,
   .channel-link:focus-visible {
