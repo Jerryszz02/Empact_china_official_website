@@ -396,6 +396,7 @@ export function BusinessAdminDashboard() {
             <a
               key={item.id}
               href={`#${item.id}`}
+              onClick={() => setPart(item.id)}
               className={`admin-part ${part === item.id ? "is-selected" : ""}`}
               aria-current={part === item.id ? "page" : undefined}
             >
@@ -429,6 +430,7 @@ export function BusinessAdminDashboard() {
         <a
           className={`admin-part ${part === "mail-settings" ? "is-selected" : ""}`}
           href="#mail-settings"
+          onClick={() => setPart("mail-settings")}
           aria-current={part === "mail-settings" ? "page" : undefined}
         >
           <span className="admin-part__number">08</span>
@@ -438,6 +440,7 @@ export function BusinessAdminDashboard() {
         <a
           className={`admin-part ${part === "page-intros" ? "is-selected" : ""}`}
           href="#page-intros"
+          onClick={() => setPart("page-intros")}
           aria-current={part === "page-intros" ? "page" : undefined}
         >
           <span className="admin-part__number">09</span>

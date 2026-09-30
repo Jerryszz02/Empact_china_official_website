@@ -420,11 +420,21 @@ export async function verifyCmsUI({
     });
     await introActions.getByRole("link", { name: /返回页面介绍/ }).click();
     await expect(page).toHaveURL(base + "/admin#page-intros");
+    await expect(page.locator("#workspace-title")).toHaveText("页面介绍");
+    await expect(page.locator(".admin-workspace")).toHaveAttribute(
+      "aria-busy",
+      "false",
+    );
     for (const [segment, label] of [
       ["school", "学校业务"],
       ["community", "社区业务"],
     ]) {
-      await page.getByRole("link", { name: /新增业务类型/ }).click();
+      const businessTypesTab = page.locator(
+        '.admin-parts a[href="#business-types"]',
+      );
+      await businessTypesTab.click();
+      await expect(businessTypesTab).toHaveAttribute("aria-current", "page");
+      await expect(page.locator("#workspace-title")).toHaveText("新增业务类型");
       await page
         .getByRole("button", { name: "新增业务类型", exact: true })
         .click();
