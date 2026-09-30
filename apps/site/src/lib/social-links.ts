@@ -9,10 +9,17 @@ export const socialLinks = {
     name: "Empact中国",
     href: "https://xhslink.cn/o/30HZaQmiwlS",
   },
+  wechatYouth: {
+    platform: "微信公众号",
+    name: "Empact AI 社创营",
+    dialogId: "wechat-youth",
+    qrCode: "/brand/empact-ai-wechat-qr.jpg",
+  },
   wechatChina: {
     platform: "微信公众号",
     name: "Empact中国",
-    href: "https://weixin.qq.com/r/mp/YBDv99XEyYi2rZGU90Vy",
+    dialogId: "wechat-china",
+    qrCode: null,
   },
   linkedin: {
     platform: "LinkedIn",

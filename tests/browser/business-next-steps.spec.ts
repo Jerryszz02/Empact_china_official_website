@@ -13,13 +13,25 @@ test("every business offers its social accounts and keeps consultation preselect
     const channels = nextSteps.getByRole("navigation", {
       name: "更多内容与案例",
     });
-    await expect(channels.getByRole("link")).toHaveCount(2);
-    await expect(
-      channels.getByRole("link", { name: /微信公众号：Empact中国/ }),
-    ).toHaveAttribute(
-      "href",
-      "https://weixin.qq.com/r/mp/YBDv99XEyYi2rZGU90Vy",
-    );
+    await expect(channels.getByRole("link")).toHaveCount(1);
+    await expect(channels.getByRole("button")).toHaveCount(1);
+    const wechatName =
+      business.segment === "youth" ? "Empact AI 社创营" : "Empact中国";
+    const wechat = channels.getByRole("button", {
+      name: `微信公众号：${wechatName}`,
+      exact: true,
+    });
+    await wechat.click();
+    const dialog = page.getByRole("dialog", { name: wechatName, exact: true });
+    await expect(dialog).toBeVisible();
+    if (business.segment === "youth")
+      await expect(dialog.getByRole("img")).toHaveAttribute(
+        "src",
+        "/brand/empact-ai-wechat-qr.jpg",
+      );
+    else await expect(dialog.getByRole("img")).toHaveCount(0);
+    await page.keyboard.press("Escape");
+    await expect(wechat).toBeFocused();
     const youthAccount =
       business.segment === "youth" || business.segment === "school";
     await expect(
@@ -53,6 +65,19 @@ test("social links open separately and remain accessible from the consultation b
   const originalURL = page.url();
   const nextSteps = page.locator(".business-next-steps");
   await nextSteps.locator(".business-consultation a").focus();
+  const wechat = nextSteps.getByRole("button", {
+    name: "微信公众号：Empact AI 社创营",
+    exact: true,
+  });
+  await page.keyboard.press("Tab");
+  await expect(wechat).toBeFocused();
+  await expect(wechat).toHaveCSS("outline-style", "solid");
+  await page.keyboard.press("Enter");
+  await expect(
+    page.getByRole("dialog", { name: "Empact AI 社创营", exact: true }),
+  ).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(wechat).toBeFocused();
   const links = nextSteps.getByRole("navigation").getByRole("link");
   for (const link of await links.all()) {
     await page.keyboard.press("Tab");
@@ -103,7 +128,7 @@ test("business next steps stay readable beside consultation and stack on narrow 
         () => document.documentElement.scrollWidth <= innerWidth,
       ),
     ).toBe(true);
-    for (const link of await nextSteps.getByRole("link").all()) {
+    for (const link of await nextSteps.locator("a, button").all()) {
       const bounds = await link.boundingBox();
       expect(bounds!.height).toBeGreaterThanOrEqual(44);
       expect(
@@ -117,4 +142,23 @@ test("business next steps stay readable beside consultation and stack on narrow 
         path: testInfo.outputPath(`business-next-steps-${width}.png`),
       });
   }
+});
+
+test("international talent model also uses the youth WeChat QR dialog", async ({
+  page,
+}) => {
+  await page.goto("/youth/international-talent-model/");
+  await page
+    .locator(".business-next-steps")
+    .getByRole("button", { name: "微信公众号：Empact AI 社创营", exact: true })
+    .click();
+  const dialog = page.getByRole("dialog", {
+    name: "Empact AI 社创营",
+    exact: true,
+  });
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByRole("img")).toHaveAttribute(
+    "src",
+    "/brand/empact-ai-wechat-qr.jpg",
+  );
 });

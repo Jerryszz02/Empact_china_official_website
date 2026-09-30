@@ -497,14 +497,10 @@ test("footer is compact and uses the transparent white logo", async ({
     footer.getByRole("link", { name: "沪公网安备31010402337130号" }),
   ).toHaveAttribute("href", "https://beian.mps.gov.cn/");
 
-  // China and Singapore social links open the official accounts in a safe new tab.
+  // External social links still open in a safe new tab.
   for (const [name, href] of [
     ["小红书：Empact AI 社创营", "https://xhslink.cn/o/A6Nv4ftO0Td"],
     ["小红书：Empact中国", "https://xhslink.cn/o/30HZaQmiwlS"],
-    [
-      "微信公众号：Empact中国",
-      "https://weixin.qq.com/r/mp/YBDv99XEyYi2rZGU90Vy",
-    ],
     [
       "Empact SG · LinkedIn",
       "https://www.linkedin.com/company/empactsg/posts/?feedView=all",
@@ -517,6 +513,19 @@ test("footer is compact and uses the transparent white logo", async ({
     await expect(link).toHaveAttribute("target", "_blank");
     await expect(link).toHaveAttribute("rel", /noopener noreferrer/);
     await expect(link.locator(".footer-social-icon")).toHaveAttribute(
+      "aria-hidden",
+      "true",
+    );
+  }
+
+  for (const name of ["Empact AI 社创营", "Empact中国"]) {
+    const trigger = footer.getByRole("button", {
+      name: `微信公众号：${name}`,
+      exact: true,
+    });
+    await expect(trigger).toBeVisible();
+    await expect(trigger).toHaveAttribute("aria-haspopup", "dialog");
+    await expect(trigger.locator(".footer-social-icon")).toHaveAttribute(
       "aria-hidden",
       "true",
     );
@@ -659,9 +668,9 @@ test("four homepage entrances preserve row order and open their framework pages"
       href === "/school/" ? "学校业务" : "社区业务",
     );
     await expect(page.locator(".case-card")).toHaveCount(0);
-    await expect(
-      page.locator('.content-wrap a[href="/contact/"]'),
-    ).toHaveCount(0);
+    await expect(page.locator('.content-wrap a[href="/contact/"]')).toHaveCount(
+      0,
+    );
   }
 });
 
@@ -683,5 +692,81 @@ test("directory business pages render supported cases without image placeholders
     expect(response?.status(), path).toBe(200);
     await expect(page.locator("#cases")).toBeVisible();
     await expect(page.locator(".case-image-placeholder")).toHaveCount(0);
+  }
+});
+
+test("WeChat QR dialogs show the supplied image or empty slot and restore focus", async ({
+  page,
+}) => {
+  await page.goto("/");
+  const footer = page.locator(".site-footer");
+  const youth = footer.getByRole("button", {
+    name: "微信公众号：Empact AI 社创营",
+    exact: true,
+  });
+  const china = footer.getByRole("button", {
+    name: "微信公众号：Empact中国",
+    exact: true,
+  });
+  const originalURL = page.url();
+  await youth.focus();
+  await page.keyboard.press("Enter");
+  const dialog = page.getByRole("dialog", {
+    name: "Empact AI 社创营",
+    exact: true,
+  });
+  await expect(dialog).toBeVisible();
+  await expect(
+    dialog.getByRole("button", { name: "关闭公众号二维码" }),
+  ).toBeFocused();
+  await expect(dialog.getByRole("img")).toHaveAttribute(
+    "src",
+    "/brand/empact-ai-wechat-qr.jpg",
+  );
+  expect(
+    await dialog
+      .getByRole("img")
+      .evaluate(
+        (image: HTMLImageElement) =>
+          image.complete && image.naturalWidth === 258,
+      ),
+  ).toBe(true);
+  await expect(dialog).toContainText("使用微信扫一扫，关注公众号");
+  await expect(page.locator("html")).toHaveClass(/wechat-dialog-open/);
+  const scrollBefore = await page.evaluate(() => scrollY);
+  await dialog.hover();
+  await page.mouse.wheel(0, -600);
+  await page.waitForTimeout(350);
+  expect(await page.evaluate(() => scrollY)).toBe(scrollBefore);
+  await page.keyboard.press("Escape");
+  await expect(dialog).not.toBeVisible();
+  await expect(youth).toBeFocused();
+  await expect(page.locator("html")).not.toHaveClass(/wechat-dialog-open/);
+  await china.click();
+  const placeholder = page.getByRole("dialog", {
+    name: "Empact中国",
+    exact: true,
+  });
+  await expect(placeholder).toContainText("公众号二维码待更新");
+  await expect(placeholder.getByRole("img")).toHaveCount(0);
+  await placeholder.getByRole("button", { name: "关闭公众号二维码" }).click();
+  await expect(placeholder).not.toBeVisible();
+  await expect(china).toBeFocused();
+  await youth.click();
+  await page.mouse.click(5, 5);
+  await expect(dialog).not.toBeVisible();
+  await expect(youth).toBeFocused();
+  await expect(page).toHaveURL(originalURL);
+  expect(page.context().pages()).toHaveLength(1);
+  for (const width of [320, 390, 1440]) {
+    await page.setViewportSize({ width, height: 740 });
+    await youth.click();
+    const bounds = await dialog.boundingBox();
+    expect(bounds!.x).toBeGreaterThanOrEqual(0);
+    expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(width);
+    expect(bounds!.y + bounds!.height).toBeLessThanOrEqual(740);
+    if (width === 390)
+      await page.screenshot({ path: "test-results/wechat-dialog.png" });
+    await page.keyboard.press("Escape");
   }
 });
