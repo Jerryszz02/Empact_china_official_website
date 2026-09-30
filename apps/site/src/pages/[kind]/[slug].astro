@@ -106,7 +106,9 @@ const media = mediaById(entry.imageId);
     )}
     <span class="eyebrow">
       {entry.kind === "business"
-        ? "Empact service"
+        ? entry.slug === "student-stories"
+          ? "Empact Impact Story"
+          : "Empact service"
         : entry.kind === "project"
           ? "Project"
           : "News"}
