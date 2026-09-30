@@ -327,7 +327,7 @@ try {
       seededMedia.docs.find((item: any) => String(item.id) === id)?.approved,
       false,
     );
-  for (const slug of ["privacy", "terms"]) {
+  for (const slug of ["privacy", "terms", "privacy-en", "terms-en"]) {
     const source = directorySnapshot.entries.find(
       (entry) => entry.kind === "page" && entry.slug === slug,
     );
@@ -831,6 +831,106 @@ try {
     imageId: uploaded.doc.id,
     request,
   });
+  // The maintenance CLI must replace only the four legal pages in a real
+  // Payload database and merge them onto the current release.
+  const legalCommand = async (...args: string[]) =>
+    execute(
+      process.execPath,
+      ["--import", "tsx", "src/cli/update-legal-content.ts", ...args],
+      { cwd: cms, env, timeout: 120_000 },
+    );
+  const legalOutput = (stdout: string, mode: "dry-run" | "apply") => {
+    const marker = `{\n  "mode": "${mode}"`;
+    const start = stdout.lastIndexOf(marker);
+    assert.notEqual(start, -1, `${mode} JSON output missing: ${stdout}`);
+    return JSON.parse(stdout.slice(start));
+  };
+  const initialLegalPlan = legalOutput(
+    (await legalCommand()).stdout,
+    "dry-run",
+  );
+  assert.equal(initialLegalPlan.targets.length, 4);
+  assert.equal(initialLegalPlan.published, false);
+  const privacyDocument = (await request("/api/content?limit=100")).docs.find(
+    (doc: { slug: string }) => doc.slug === "privacy",
+  );
+  await request(`/api/content/${privacyDocument.id}`, "PATCH", {
+    body: lexical("过期预检哈希测试草稿。"),
+  });
+  const beforeRejected = await request("/api/content?limit=100");
+  const liveBeforeRejected = await readLiveSnapshot(runtime);
+  await assert.rejects(
+    legalCommand("--apply", `--expected-hash=${initialLegalPlan.expectedHash}`),
+    /已变化/,
+  );
+  assert.deepEqual(await request("/api/content?limit=100"), beforeRejected);
+  assert.deepEqual(await readLiveSnapshot(runtime), liveBeforeRejected);
+
+  const currentLegalPlan = legalOutput(
+    (await legalCommand("--dry-run")).stdout,
+    "dry-run",
+  );
+  assert.notEqual(currentLegalPlan.expectedHash, initialLegalPlan.expectedHash);
+  const unrelatedDraft = beforeRejected.docs.find(
+    (doc: { slug: string }) => doc.slug === "operations-news",
+  );
+  const publishedBeforeLegal = await readLiveSnapshot(runtime);
+  const appliedLegal = legalOutput(
+    (
+      await legalCommand(
+        "--apply",
+        `--expected-hash=${currentLegalPlan.expectedHash}`,
+      )
+    ).stdout,
+    "apply",
+  );
+  assert.equal(appliedLegal.published, true);
+  assert.equal(appliedLegal.receipt.state, "published");
+  assert.equal(appliedLegal.receipt.baseVersion, publishedBeforeLegal?.version);
+  assert.equal(appliedLegal.receipt.selectedIds.length, 4);
+  assert.ok(appliedLegal.backup.startsWith(join(runtime, "backups") + "/"));
+  assert.deepEqual(
+    JSON.parse(
+      await readFile(join(appliedLegal.backup, "live-snapshot.json"), "utf8"),
+    ),
+    publishedBeforeLegal,
+  );
+  assert.equal(
+    JSON.parse(
+      await readFile(join(appliedLegal.backup, "documents.json"), "utf8"),
+    ).length,
+    4,
+  );
+  const publishedAfterLegal = await readLiveSnapshot(runtime);
+  assert.equal(publishedAfterLegal?.version, appliedLegal.receipt.version);
+  const legalSlugs = new Set(["privacy", "terms", "privacy-en", "terms-en"]);
+  assert.deepEqual(
+    publishedAfterLegal?.entries.filter((entry) => !legalSlugs.has(entry.slug)),
+    publishedBeforeLegal?.entries.filter(
+      (entry) => !legalSlugs.has(entry.slug),
+    ),
+  );
+  assert.deepEqual(publishedAfterLegal?.company, publishedBeforeLegal?.company);
+  assert.deepEqual(publishedAfterLegal?.media, publishedBeforeLegal?.media);
+  assert.deepEqual(
+    (await request("/api/content?limit=100")).docs.find(
+      (doc: { slug: string }) => doc.slug === "operations-news",
+    ),
+    unrelatedDraft,
+  );
+  for (const slug of legalSlugs) {
+    const entry = publishedAfterLegal?.entries.find(
+      (item) => item.slug === slug,
+    );
+    const source = directorySnapshot.entries.find((item) => item.slug === slug);
+    assert.ok(entry && source);
+    assert.equal(entry.title, source.title);
+    assert.equal(
+      load(entry.bodyHtml).text().replace(/\s/g, ""),
+      load(source.bodyHtml).text().replace(/\s/g, ""),
+      `published ${slug} keeps the approved text`,
+    );
+  }
   console.log(
     "PASS: migrated fresh SQLite, login, private drafts/media, image upload, protected preview, publish, edit isolation, project association, unpublish, and exact rollback.",
   );
