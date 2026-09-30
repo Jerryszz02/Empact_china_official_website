@@ -71,7 +71,7 @@ test("awards retain all details and figures while legacy two-paragraph cards sti
     groups[6].items.filter((item) =>
       item.content.some((html) => html.startsWith("<figure>")),
     ).length,
-    3,
+    4,
   );
   assert.match(groups[6].html, /新加坡总统尚达曼/);
   assert.match(groups[6].html, /Empact 中国区荣誉/);

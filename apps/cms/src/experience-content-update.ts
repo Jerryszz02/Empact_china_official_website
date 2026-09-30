@@ -7,8 +7,10 @@ import {
   aboutMedia,
   businessBoundaryHtml,
   businessBoundaryText,
+  eciFigureHtml,
 } from "@empact/content/about-awards";
 import { privacyInquiryHtml, privacyDeliveryHtml } from "@empact/content/legal";
+import { maggieBiography } from "@empact/content/about";
 import { htmlToLexical } from "./content-migration.js";
 
 type Node = {
@@ -196,8 +198,94 @@ export function updateExperienceBody(
   return { body, changed: !isDeepStrictEqual(source, body) };
 }
 
+/** Only update Maggie's known biography and add the ECI image to its own card. */
+export function updateAboutProfilesBody(
+  source: unknown,
+  mediaBySrc: ReadonlyMap<string, string | number>,
+) {
+  const body = structuredClone(source) as Body;
+  if (!Array.isArray(body?.root?.children))
+    throw new Error("about: 无有效正文，未更新。");
+  const children = body.root.children;
+  const section = (heading: string) => {
+    const starts = children.flatMap((node, index) =>
+      node.type === "heading" && node.tag === "h2" && plain(node) === heading
+        ? [index]
+        : [],
+    );
+    if (starts.length !== 1)
+      throw new Error(`about: ${heading}区块不唯一或缺失，需人工核对。`);
+    const start = starts[0];
+    const next = children.findIndex(
+      (node, index) =>
+        index > start && node.type === "heading" && node.tag === "h2",
+    );
+    return { start, end: next < 0 ? children.length : next };
+  };
+  const team = section("创始人");
+  const candidates = children.flatMap((node, index) =>
+    index > team.start &&
+    index < team.end &&
+    node.type === "heading" &&
+    node.tag === "h3" &&
+    plain(node) === "Maggie 杨祯慧"
+      ? [index]
+      : [],
+  );
+  if (candidates.length !== 1)
+    throw new Error("about: Maggie 条目不唯一或缺失，需人工核对。");
+  const biographyIndex = candidates[0] + 2;
+  const biography = children[biographyIndex];
+  const previous =
+    "应用心理学博士、EMBA 管理学硕士。曾任阿里巴巴用户体验总监、 上汽大通品牌公关与用户运营总监；长期担任青年公益导师与职业陪伴志愿者。";
+  const compact = (text: string) => text.replace(/\s+/g, "");
+  if (
+    biographyIndex >= team.end ||
+    biography?.type !== "paragraph" ||
+    ![previous, maggieBiography].some(
+      (text) => compact(plain(biography)) === compact(text),
+    )
+  )
+    throw new Error("about: Maggie 介绍已变更，需人工核对。");
+  if (compact(plain(biography)) !== compact(maggieBiography))
+    children[biographyIndex] = nodesFrom(`<p>${maggieBiography}</p>`)[0];
+
+  const awards = section("来自外部的认可");
+  const eci = children.flatMap((node, index) =>
+    index > awards.start &&
+    index < awards.end &&
+    node.type === "heading" &&
+    node.tag === "h3" &&
+    /ECI/.test(plain(children[index + 1] ?? { type: "" }))
+      ? [index]
+      : [],
+  );
+  if (eci.length !== 1)
+    throw new Error("about: ECI 奖项不唯一或缺失，需人工核对。");
+  const next = children.findIndex(
+    (node, index) => index > eci[0] && node.type === "heading",
+  );
+  const end = next < 0 ? children.length : next;
+  const image = aboutMedia.find((item) => item.id === "about-eci-2025")!;
+  const src = `/media/${image.filename}`;
+  const mediaID = mediaBySrc.get(src);
+  if (mediaID === undefined)
+    throw new Error("about: 未提供 ECI 图片媒体映射。");
+  const card = children.slice(eci[0] + 1, end);
+  const uploads = card.filter((node) => node.type === "upload");
+  if (uploads.some((node) => String(node.value) !== String(mediaID)))
+    throw new Error("about: ECI 已有其他图片，需人工核对。");
+  if (!uploads.length)
+    children.splice(end, 0, ...nodesFrom(eciFigureHtml, mediaBySrc));
+  return { body, changed: !isDeepStrictEqual(source, body) };
+}
+
 /** Shared by fresh local seeding and the explicit, targeted content update. */
-export async function importAboutMedia(payload: Payload, mediaDir: string) {
+export async function importAboutMedia(
+  payload: Payload,
+  mediaDir: string,
+  images = aboutMedia,
+) {
   const existing = await payload.find({
     collection: "media",
     pagination: false,
@@ -205,7 +293,7 @@ export async function importAboutMedia(payload: Payload, mediaDir: string) {
     overrideAccess: true,
   });
   const mapping = new Map<string, string | number>();
-  for (const image of aboutMedia) {
+  for (const image of images) {
     const marker = `experience-source:${image.id}`;
     let document = existing.docs.find((item) => item.usageApproval === marker);
     if (!document) {

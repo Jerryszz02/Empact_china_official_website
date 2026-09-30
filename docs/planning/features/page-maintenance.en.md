@@ -30,6 +30,8 @@ After changes, check `tests/site-output.test.ts`, `tests/browser/youth-model.spe
 
 The template's second-level headings are, in order: opening screen, key figures, who we are, China business, impact, history, awards, team, and inquiry. The opening screen is rendered as the page's only h1. Third-level headings organize cards; blockquotes retain the boundaries of the business scope. The inquiry section shows only the cooperation entry; email and address are kept together in the footer.
 
+The page displays founders before awards while preserving the CMS template order. Portraits for Peter Yang and Maggie 杨祯慧 are stored in `apps/site/src/assets/founders/`, matched by name, and optimized by Astro. Other members retain their initials as placeholders.
+
 Award cards retain “year as a third-level heading + name paragraph + description paragraph,” with optional additional explanations and image captions. Older two-paragraph cards remain compatible. Unfamiliar or incomplete structures display the full ordinary body rather than dropping content. When changing section structures, update the parser together with `tests/about-parser.test.ts` and `tests/browser/about.spec.ts`.
 
 Award media is defined in `packages/content/src/about-awards.ts`. The source index records the basis for 12 Asia-Pacific locations, entry into China in 2023, and award attribution. For targeted draft tools, see [CMS content maintenance](../content/business-content-migration.md#定向文案工具) (Chinese).

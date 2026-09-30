@@ -23,11 +23,15 @@ test("about demo keeps grouped content and usable links across screen sizes", as
       .filter({ has: page.getByText("2023", { exact: true }) }),
   ).toContainText("进入中国大陆");
   await expect(page.locator(".award")).toHaveCount(4);
-  await expect(page.locator(".award img")).toHaveCount(3);
+  await expect(page.locator(".award img")).toHaveCount(4);
   await expect(page.locator(".award").first()).toContainText("新加坡");
   await expect(page.locator(".award").nth(1)).toContainText("Organisation");
   await expect(page.locator(".award").nth(2)).toContainText("3 Hearts");
   await expect(page.locator(".award").last()).toContainText("Empact 中国区");
+  await expect(page.locator(".award").last().locator("img")).toHaveAttribute(
+    "src",
+    "/media/about-eci-2025.webp",
+  );
   await expect(page.locator(".business-boundary strong")).toHaveCount(2);
   for (const picture of await page.locator(".award img").all()) {
     await picture.scrollIntoViewIfNeeded();
@@ -41,6 +45,35 @@ test("about demo keeps grouped content and usable links across screen sizes", as
     await expect(picture).toHaveAttribute("alt", /.+/);
   }
   await expect(page.locator(".person")).toHaveCount(2);
+  await expect(page.locator(".person").nth(1)).toContainText(
+    "应用心理学博士、中欧国际工商学院EMBA、香港大学中国商学院客座讲师。曾任阿里巴巴用户体验总监、上汽大通品牌公关与用户运营总监、通用汽车经销商培训高级经理；长期担任青年公益导师与职业陪伴志愿者。",
+  );
+  await expect(page.locator(".about-layout .section h2").nth(4)).toHaveText(
+    "创始人",
+  );
+  await expect(page.locator(".about-layout .section h2").nth(5)).toHaveText(
+    "来自外部的认可",
+  );
+  await expect(page.locator(".section .eyebrow").nth(4)).toHaveText(
+    "05 / 创始人",
+  );
+  await expect(page.locator(".section .eyebrow").nth(5)).toHaveText(
+    "06 / 荣誉与认可",
+  );
+  for (const [index, name] of ["Peter Yang", "Maggie 杨祯慧"].entries()) {
+    const person = page.locator(".person").nth(index);
+    await expect(person.locator("h3")).toHaveText(name);
+    const portrait = person.locator("img.avatar");
+    await expect(portrait).toHaveAttribute("alt", `${name} 肖像`);
+    await portrait.scrollIntoViewIfNeeded();
+    await expect
+      .poll(() =>
+        portrait.evaluate(
+          (image: HTMLImageElement) => image.complete && image.naturalWidth > 0,
+        ),
+      )
+      .toBe(true);
+  }
   await expect(page.locator("main")).not.toContainText(/DEMO 预览|文案细节待/);
   await expect(page.locator('main a[href="#"]')).toHaveCount(0);
   await expect(page.locator(".cta-contact")).toHaveCount(0);
