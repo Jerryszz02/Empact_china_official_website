@@ -1,5 +1,7 @@
 # 页面维护约定
 
+中文 | [English](page-maintenance.en.md)
+
 本页描述仓库实现及持续维护要求。公开内容仍以 CMS 发布快照为准；本文不记录“目前已上线”的提交号。操作步骤见[后台指南](../content/cms-guide.md)，事实与图片出处见[来源索引](../content/sources.md)。
 
 ## 首页与品牌
