@@ -7,17 +7,38 @@ import { aboutMedia } from "@empact/content/about-awards";
 import {
   importAboutMedia,
   updateExperienceBody,
+  updateAboutProfilesBody,
 } from "../experience-content-update.js";
 import type { Content } from "../payload-types.js";
 
 const repository = fileURLToPath(new URL("../../../../", import.meta.url));
 const args = process.argv.slice(2);
 if (
-  args.some((arg) => !["--apply", "--dry-run"].includes(arg)) ||
-  args.length > 1
+  args.some(
+    (arg) => !["--apply", "--dry-run", "--about-profiles"].includes(arg),
+  ) ||
+  new Set(args).size !== args.length ||
+  (args.includes("--apply") && args.includes("--dry-run"))
 )
-  throw new Error("使用 --dry-run（默认）或 --apply。");
+  throw new Error(
+    "使用 --dry-run（默认）或 --apply；可加 --about-profiles 仅更新 Maggie 介绍与 ECI 图片。",
+  );
 const apply = args.includes("--apply");
+const profilesOnly = args.includes("--about-profiles");
+const slugs = profilesOnly
+  ? (["about"] as const)
+  : (["about", "privacy"] as const);
+const images = profilesOnly
+  ? aboutMedia.filter((image) => image.id === "about-eci-2025")
+  : aboutMedia;
+const runUpdate = (
+  slug: "about" | "privacy",
+  body: unknown,
+  mapping: ReadonlyMap<string, string | number>,
+) =>
+  profilesOnly
+    ? updateAboutProfilesBody(body, mapping)
+    : updateExperienceBody(slug, body, mapping);
 // Read-only inspection must not trigger development schema changes.
 process.env.CMS_DEV_SCHEMA_PUSH = "false";
 const { default: config } = await import("../../payload.config.js");
@@ -41,27 +62,38 @@ try {
   const result = await payload.find({
     collection: "content",
     where: {
-      and: [
-        { kind: { equals: "page" } },
-        { slug: { in: ["about", "privacy"] } },
-      ],
+      and: [{ kind: { equals: "page" } }, { slug: { in: [...slugs] } }],
     },
     pagination: false,
     depth: 0,
     overrideAccess: true,
   });
-  const pages = (["about", "privacy"] as const).map((slug) => {
+  const pages = slugs.map((slug) => {
     const candidates = result.docs.filter((doc) => doc.slug === slug);
     if (candidates.length !== 1)
       throw new Error(`${slug}: 需且仅需一条页面记录，未执行更新。`);
     return { slug, doc: candidates[0] };
   });
-  const previewMapping = new Map(
-    aboutMedia.map((image, index) => [`/media/${image.filename}`, index + 1]),
+  const previewMapping = new Map<string, string | number>(
+    images.map((image) => [`/media/${image.filename}`, `pending:${image.id}`]),
   );
-  // Validate both pages before creating assets or changing either record.
-  for (const { slug, doc } of pages)
-    updateExperienceBody(slug, doc.body, previewMapping);
+  // Resolve real IDs so repeated profile preflight recognizes its own upload.
+  if (profilesOnly) {
+    const existing = await payload.find({
+      collection: "media",
+      pagination: false,
+      depth: 0,
+      overrideAccess: true,
+    });
+    for (const image of images) {
+      const document = existing.docs.find(
+        (item) => item.usageApproval === `experience-source:${image.id}`,
+      );
+      if (document) previewMapping.set(`/media/${image.filename}`, document.id);
+    }
+  }
+  // Validate target pages before creating assets or changing records.
+  for (const { slug, doc } of pages) runUpdate(slug, doc.body, previewMapping);
   if (!apply) {
     console.log(
       JSON.stringify(
@@ -72,7 +104,7 @@ try {
             id: doc.id,
             updatedAt: doc.updatedAt,
           })),
-          media: aboutMedia.map((item) => item.filename),
+          media: images.map((item) => item.filename),
           published: false,
         },
         null,
@@ -95,6 +127,7 @@ try {
     const mapping = await importAboutMedia(
       payload,
       resolve(repository, "packages/content/fixtures/media"),
+      images,
     );
     const transactionID = await payload.db.beginTransaction();
     if (transactionID === null)
@@ -111,7 +144,7 @@ try {
         });
         if (fresh.updatedAt !== doc.updatedAt)
           throw new Error(`${slug}: 正文已被修改，请重新预检。`);
-        const update = updateExperienceBody(slug, fresh.body, mapping);
+        const update = runUpdate(slug, fresh.body, mapping);
         if (update.changed)
           await payload.update({
             collection: "content",
@@ -127,7 +160,7 @@ try {
           overrideAccess: true,
           req,
         });
-        if (updateExperienceBody(slug, stored.body, mapping).changed)
+        if (runUpdate(slug, stored.body, mapping).changed)
           throw new Error(`${slug}: 保存后核对失败，撤回本次正文更新。`);
       }
       await payload.db.commitTransaction(transactionID);
@@ -135,7 +168,11 @@ try {
       await payload.db.rollbackTransaction(transactionID);
       throw error;
     }
-    console.log("关于页与隐私页草稿已更新；图片和正文需审核。未发布官网。");
+    console.log(
+      profilesOnly
+        ? "关于页 Maggie 介绍与 ECI 图片草稿已更新；图片和正文需审核。未发布官网。"
+        : "关于页与隐私页草稿已更新；图片和正文需审核。未发布官网。",
+    );
   }
 } finally {
   await payload.destroy();

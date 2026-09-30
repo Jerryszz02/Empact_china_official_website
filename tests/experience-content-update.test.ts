@@ -1,16 +1,23 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { aboutBodyHtml } from "../packages/content/src/about.js";
+import {
+  aboutBodyHtml,
+  maggieBiography,
+} from "../packages/content/src/about.js";
 import {
   aboutAwardsHtml,
   aboutMedia,
   businessBoundaryHtml,
   businessBoundaryText,
+  eciFigureHtml,
 } from "../packages/content/src/about-awards.js";
 import { privacyBodyHtml } from "./helpers/legacy-privacy.js";
 import { htmlToLexical } from "../apps/cms/src/content-migration.js";
 import { serializeLexicalBody } from "../apps/cms/src/cms-data.js";
-import { updateExperienceBody } from "../apps/cms/src/experience-content-update.js";
+import {
+  updateExperienceBody,
+  updateAboutProfilesBody,
+} from "../apps/cms/src/experience-content-update.js";
 import { parseAboutBodyHtml } from "../apps/site/src/lib/about.js";
 
 const mapping = new Map(
@@ -41,7 +48,7 @@ test("targeted update preserves unrelated CMS nodes and custom awards; media sur
   assert.deepEqual(source, original, "source is not mutated");
   assert.deepEqual(updated.body.root.children[0], source.root.children[0]);
   const result = await serializeLexicalBody(updated.body, media);
-  assert.equal(result.mediaIds.length, 3);
+  assert.equal(result.mediaIds.length, 4);
   assert.match(result.html, /153/);
   assert.match(result.html, /保留我的说明/);
   assert.match(result.html, /<strong>我们不做大额捐赠/);
@@ -134,6 +141,59 @@ test("privacy update rejects missing, duplicate or unrefreshable revision dates 
       () => updateExperienceBody("privacy", source, mapping),
       /更新日期.*需人工核对/,
     );
+    assert.deepEqual(source, original);
+  }
+});
+
+const oldMaggieBiography =
+  "应用心理学博士、EMBA 管理学硕士。曾任阿里巴巴用户体验总监、 上汽大通品牌公关与用户运营总监；长期担任青年公益导师与职业陪伴志愿者。";
+test("profile update only changes Maggie biography and ECI image and is idempotent", async () => {
+  const source = htmlToLexical(
+    aboutBodyHtml
+      .replace(maggieBiography, oldMaggieBiography)
+      .replace(eciFigureHtml, ""),
+    mapping,
+  ) as any;
+  source.root.children[0].customMetadata = "preserve";
+  const original = structuredClone(source);
+  const update = updateAboutProfilesBody(source, mapping);
+  const result = await serializeLexicalBody(update.body, media);
+  assert.equal(update.changed, true);
+  assert.deepEqual(source, original);
+  assert.deepEqual(update.body.root.children[0], source.root.children[0]);
+  assert.match(result.html, /香港大学中国商学院客座讲师/);
+  assert.match(result.html, /通用汽车经销商培训高级经理/);
+  assert.match(result.html, /about-eci-2025.webp/);
+  assert.match(result.html, /2025 年 · Empact 中国区 ECI 公益创新奖/);
+  assert.equal(result.mediaIds.length, 4);
+  assert.equal(parseAboutBodyHtml(result.html)?.[7].items.length, 2);
+  const changedNodes = update.body.root.children.filter(
+    (node) =>
+      !source.root.children.some(
+        (old: unknown) => JSON.stringify(old) === JSON.stringify(node),
+      ),
+  );
+  assert.equal(changedNodes.length, 2);
+  assert.equal(updateAboutProfilesBody(update.body, mapping).changed, false);
+});
+test("profile update preserves authored changes by rejecting ambiguous or changed targets", () => {
+  for (const html of [
+    aboutBodyHtml.replace(maggieBiography, "作者新写的介绍"),
+    aboutBodyHtml.replace("Maggie 杨祯慧", "其他成员"),
+    aboutBodyHtml + "<h2>创始人</h2>",
+    aboutBodyHtml.replace(
+      "<h3>Maggie 杨祯慧</h3>",
+      "<h3>Maggie 杨祯慧</h3><h3>Maggie 杨祯慧</h3>",
+    ),
+    aboutBodyHtml.replace("ECI 公益创新奖</strong>", "其他奖项</strong>"),
+    aboutBodyHtml.replace(
+      eciFigureHtml,
+      eciFigureHtml.replaceAll("about-eci-2025", "about-pvpa-2022"),
+    ),
+  ]) {
+    const source = htmlToLexical(html, mapping);
+    const original = structuredClone(source);
+    assert.throws(() => updateAboutProfilesBody(source, mapping), /需人工核对/);
     assert.deepEqual(source, original);
   }
 });

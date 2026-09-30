@@ -1,5 +1,8 @@
 ---
 import BaseLayout from "@/layouts/BaseLayout.astro";
+import { Image } from "astro:assets";
+import peterPortrait from "@/assets/founders/peter-yang.png";
+import maggiePortrait from "@/assets/founders/maggie-yang.png";
 import { pageBySlug } from "@/lib/content";
 import {
   parseAboutBodyHtml,
@@ -10,14 +13,25 @@ import {
 import "@/styles/about.css";
 const entry = pageBySlug("about");
 const groups = entry ? parseAboutBodyHtml(entry.bodyHtml) : undefined;
-const labels = [
-  "我们是谁",
-  "我们在中国做什么",
-  "我们的影响力",
-  "发展历程",
-  "荣誉与认可",
-  "团队",
+// Keep the CMS template order intact; arrange sections only for presentation.
+const sections = [
+  { groupIndex: 2, label: "我们是谁" },
+  { groupIndex: 3, label: "我们在中国做什么" },
+  { groupIndex: 4, label: "我们的影响力" },
+  { groupIndex: 5, label: "发展历程" },
+  { groupIndex: 7, label: "创始人" },
+  { groupIndex: 6, label: "荣誉与认可" },
 ];
+const displayGroups = groups
+  ? sections.map(({ groupIndex, label }) => ({
+      group: groups[groupIndex],
+      label,
+    }))
+  : [];
+const portraits = new Map([
+  ["Peter Yang", peterPortrait],
+  ["Maggie 杨祯慧", maggiePortrait],
+]);
 ---
 
 <BaseLayout
@@ -54,10 +68,10 @@ const labels = [
       </section>
       <div class="content-wrap">
         <div class="wrap">
-          {groups.slice(2, 8).map((group, index) => (
+          {displayGroups.map(({ group, label }, index) => (
             <section class="section" aria-labelledby={`about-section-${index}`}>
               <div class="section-head">
-                <span class="eyebrow">{`0${index + 1} / ${labels[index]}`}</span>
+                <span class="eyebrow">{`0${index + 1} / ${label}`}</span>
                 <h2
                   id={`about-section-${index}`}
                   set:html={group.headingHtml}
@@ -116,26 +130,41 @@ const labels = [
               )}
               {group.kind === "team" && (
                 <div class="team">
-                  {group.items.map((item, i) => (
-                    <div class={`person person-${i + 1}`}>
-                      <div class="avatar" aria-hidden="true">
-                        {aboutPlainText(item.headingHtml)
-                          .split(/\s+/)
-                          .map((name) => name[0])
-                          .join("")
-                          .slice(0, 2)
-                          .replace("M杨", "MY")}
+                  {group.items.map((item, i) => {
+                    const name = aboutPlainText(item.headingHtml);
+                    const portrait = portraits.get(name);
+                    return (
+                      <div class={`person person-${i + 1}`}>
+                        {portrait ? (
+                          <Image
+                            class="avatar"
+                            src={portrait}
+                            alt={`${name} 肖像`}
+                            width={144}
+                            height={144}
+                            loading="lazy"
+                          />
+                        ) : (
+                          <div class="avatar" aria-hidden="true">
+                            {name
+                              .split(/\s+/)
+                              .map((name) => name[0])
+                              .join("")
+                              .slice(0, 2)
+                              .replace("M杨", "MY")}
+                          </div>
+                        )}
+                        <div>
+                          <h3 set:html={item.headingHtml} />
+                          <span
+                            class="person-role"
+                            set:html={aboutInnerHtml(item.content[0])}
+                          />
+                          <Fragment set:html={item.content[1]} />
+                        </div>
                       </div>
-                      <div>
-                        <h3 set:html={item.headingHtml} />
-                        <span
-                          class="person-role"
-                          set:html={aboutInnerHtml(item.content[0])}
-                        />
-                        <Fragment set:html={item.content[1]} />
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
               {group.notes.map((html) => (

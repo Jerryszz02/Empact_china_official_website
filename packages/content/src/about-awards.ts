@@ -29,12 +29,24 @@ export const aboutMedia: Media[] = [
     mimeType: "image/webp",
     approved: false,
   },
+  {
+    id: "about-eci-2025",
+    filename: "about-eci-2025.webp",
+    alt: "Empact 中国区 2025 年 ECI 公益创新奖奖杯与活动海报",
+    width: 1242,
+    height: 1660,
+    mimeType: "image/webp",
+    approved: false,
+  },
 ];
 
 export const businessBoundaryText =
   "业务边界：我们不做大额捐赠、不做品牌赞助置换——我们是企业的 ESG 战略合作伙伴。";
 export const businessBoundaryHtml =
   "<blockquote><p>业务边界：<strong>我们不做大额捐赠、不做品牌赞助置换</strong>——我们是<strong>企业的 ESG 战略合作伙伴</strong>。</p></blockquote>";
+
+export const eciFigureHtml =
+  '<figure><img src="/media/about-eci-2025.webp" alt="Empact 中国区 2025 年 ECI 公益创新奖奖杯与活动海报" width="1242" height="1660" loading="lazy" /><figcaption>2025 年 · Empact 中国区 ECI 公益创新奖</figcaption></figure>';
 
 export const aboutAwardsHtml = `
 <h3>2022</h3>
@@ -56,4 +68,5 @@ export const aboutAwardsHtml = `
 <h3>2025</h3>
 <p><strong>ECI 公益创新奖</strong></p>
 <p>Empact 中国区荣誉 · 公益创新方向</p>
+${eciFigureHtml}
 `;

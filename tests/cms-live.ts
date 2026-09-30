@@ -372,10 +372,24 @@ try {
   );
   assert.equal(
     aboutBody.mediaIds.length,
-    3,
-    "about seed retains three award photos",
+    4,
+    "about seed retains four award photos",
   );
-  assert.equal(load(aboutBody.html)("figure img").length, 3);
+  assert.equal(load(aboutBody.html)("figure img").length, 4);
+  // Preflight must resolve stored upload IDs rather than compare placeholder IDs.
+  const profilePreflight = await execute(
+    process.execPath,
+    [
+      "--import",
+      "tsx",
+      join(cms, "src/cli/update-experience-content.ts"),
+      "--about-profiles",
+      "--dry-run",
+    ],
+    { cwd: cms, env, timeout: 30_000 },
+  );
+  assert.match(profilePreflight.stdout, /"mode": "dry-run"/);
+  assert.match(profilePreflight.stdout, /about-eci-2025.webp/);
   for (const id of aboutBody.mediaIds)
     assert.equal(
       seededMedia.docs.find((item: any) => String(item.id) === id)?.approved,
