@@ -319,7 +319,7 @@ export async function verifyCmsUI({
     ).toBeVisible();
     await expect(
       page.getByRole("navigation", { name: "内容管理入口" }).getByRole("link"),
-    ).toHaveCount(7);
+    ).toHaveCount(8);
     for (const [segment, label] of [
       ["school", "学校业务"],
       ["community", "社区业务"],
