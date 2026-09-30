@@ -402,7 +402,8 @@ try {
     { cwd: cms, env, timeout: 30_000 },
   );
   const profileBackup = profileApply.stdout.match(/正文备份：(.+)/)?.[1];
-  assert.ok(profileBackup?.startsWith(join(runtime, "backups", "experience-")));
+  assert.ok(profileBackup);
+  assert.ok(profileBackup.startsWith(join(runtime, "backups", "experience-")));
   const backedUpPages = JSON.parse(
     await readFile(join(profileBackup, "pages.json"), "utf8"),
   );
