@@ -1,32 +1,39 @@
-# 官网实施与验收计划
+# 架构与代码地图
 
-依据[《Empact China 官网建设计划 v1.1》](history/Empact_China_官网建设计划_v1.1.md)形成早期方案。本页于 2026-09-24 同步当前架构和长期约定；部署与公开版本见[交付验收状态](readiness.md)，首次实施阶段见[历史部署记录](history/deployment-2026-09-20.md)。
+官网采用 Astro 静态输出，后台为 Payload CMS 3 / Next.js 16 / SQLite。依赖精确版本见各 workspace 的 `package.json` 和根 lockfile。开发入口与命令见[项目 README](../../README.md)。
 
-## 已确定的实施决策
+## 从修改目标找代码
 
-- Astro 静态生成，Payload CMS 3 + Next.js + SQLite 独立运行；CMS 是运营内容唯一编辑来源。
-- 单一可信运营账号；初始账号由本机命令初始化，禁止 HTTP 公开注册；内容、原始媒体和预览均鉴权。
-- 导航模板由代码维护，正式业务导航由已发布内容生成。业务、项目、新闻、案例与报道统一建模；业务详情展示案例卡片，站内案例有独立图文页，也可配置详情外链，报道保留来源引用。
-- 发布时冻结可公开快照，构建检查通过后原子切换静态目录；旧站与草稿隔离，失败保留旧站。发布记录只在验证后报告成功。
-- CI 验证代码和构建模板；成功的主分支检查触发 [Deploy production](operations/automatic-deployment.md)，服务器重建已批准快照并核对公开版本。运营内容在官网服务账号下的受控子进程构建，不把后台草稿或媒体传进公开 GitHub 工作流。代码部署与 CMS 内容发布分别验收。
-- 青少年项目、企业服务、学校业务和社区业务为四个业务入口，当前业务目录共有 17 个细分业务；名称、顺序及已发布案例以业务目录源码和正式快照为准。ChatCircle 位于社区入口，链接到独立平台。内容更新仍需逐项审核，不能以模板存在推断已发布。
-- 首页现为四屏：品牌与照片图库、我们是谁、四大业务、咨询。设计依据见[动效设计规范](design/frontend-motion-design.md)，阶段验证见[历史动效验收](history/frontend-motion-acceptance.md)，业务框架见[业务框架说明](content/business-framework-reset.md)。实机手感仍需验收。
-- 「加入我们」和招聘申请页面已实现；岗位由正式快照控制，当前公开页面显示暂无开放岗位。案例新增活动时间、地点字段，展示以对应记录数据为准。
-- 静态服务、CMS 均监听回环地址，复用现有 Caddy HTTPS 网关，不占用或重置 ChatCircle 的监听端口、数据和域名。
-- 咨询由同域服务端收件，经 SMTP 成功交付后才显示成功；无有效收件配置时明确不可用。
+| 目标 | 主要入口 | 相关验证 |
+| --- | --- | --- |
+| 页面、导航、样式 | `apps/site/src/pages/`、`components/`、`styles/` | `tests/site-output.test.ts`、`tests/browser/` |
+| CMS 字段和后台界面 | `apps/cms/src/collections.ts`、`components/`、`business-admin.ts` | `tests/cms-live.ts`、`npm run check` |
+| 管理员与权限 | `apps/cms/payload.config.ts`、`collections.ts`、`src/cli/create-admin.ts` | `tests/cms-live.ts` |
+| 内容契约、校验与种子 | `packages/content/src/schema.ts`、`fixtures.ts`、`business-directory*.ts` | `tests/content.test.ts`、`tests/content-migration.test.ts` |
+| 预览、发布、回滚 | `apps/cms/src/publisher.ts`、`cms-data.ts`、`build-workspace.ts`、`preview-html.ts` | `tests/publisher.test.ts`、`tests/cms-live.ts`、`tests/dev-publication.ts` |
+| 静态服务、咨询和招聘邮件 | `scripts/public-server.ts`、`contact.ts`、`apps/site/src/lib/*form*.ts` | `tests/public-server.test.ts`、`tests/contact.test.ts`、`tests/browser/contact.spec.ts` |
+| 构建产物与 SEO | `scripts/check-output.ts`、`apps/site/src/layouts/BaseLayout.astro`、`pages/sitemap.xml.ts` | `npm run build:preview`、`SITE_MODE=preview npm run check:output` |
+| 自动部署、备份和权限 | `.github/workflows/`、`deploy/` | `tests/deploy-*.test.py`、`tests/backup.test.py` |
 
-## 历史实施顺序
+`assets/` 保存业务原件和素材索引；`apps/site/src/assets/`、`apps/site/public/brand/`、`packages/content/fixtures/media/` 是代码使用的资源。`.data/` 是私有运行数据，`artifacts/` 才是临时验收产物。二者均忽略提交，不能因此都当作垃圾删除。
 
-1. 建立仓库基线、分支与数据契约。
-2. 并行实现前台模板、CMS 与发布流程；补齐公开服务、咨询与部署脚本。
-3. 类型检查、内容/链接/SEO 检查、鉴权/发布/回退/咨询集成测试和浏览器桌面移动端检查。
-4. 核对依赖与生产构建，形成发布阻塞清单、运营说明和恢复操作。
-5. 限定范围提交、推送并创建 ready PR；合并、自动检查、生产部署与公开页面分别核对。
+## 内容与发布
 
-## 放行规则
+1. CMS 数据库保存草稿、审批状态、媒体关系和发布记录；运营内容以 CMS 为编辑来源。本机与生产数据库独立。
+2. 预览需要管理员登录，站内条目的预览有效期为一小时。媒体位于私有目录，不能通过静态目录绕过权限。
+3. 发布器冻结本次选择的内容，与其他已发布内容组合成快照，校验正文、依赖和媒体后，在私有构建工作区生成完整静态站。
+4. 通过输出和健康检查后原子切换 `RUNTIME_DIR/current`；失败保留或恢复旧站。发布锁和基础版本校验防止旧任务覆盖新发布。
+5. 代码部署只重建已批准的线上快照，不覆盖 CMS 数据库，也不自动批准或发布草稿。`release.json.codeRevision` 是代码提交，`version` 是内容版本。
 
-技术检查不能替代素材授权、主体/备案和实际接收人确认。缺少生产输入时生产构建必须失败；本机预览使用显式 preview 模式并 noindex。不得填入虚构客户、统计、新闻或活动排期。
+业务分为青少年、企业、学校、社区；名称、排序和案例以目标环境的快照为准。业务与案例通过父级关系关联；站内案例有正文，外链案例由 `detailUrl` 跳转，`sourceUrl` 只标注来源。无直属案例的普通业务显示「项目计划中」。人才培养模型是固定方法论页面，不接案例。
 
-## 持续验收
+首页、业务、关于、加入我们、咨询、隐私与条款的具体维护约定见[页面维护](features/page-maintenance.md)。ChatCircle 从社区入口进入独立系统，不复用其数据库、账号或私有接口。
 
-新内容、图片与招聘岗位仍需公司审核；真实咨询和招聘收件、非技术运营操作、实机浏览器体验、服务器恢复与告警还需人工验证。当前边界见[交付验收状态](readiness.md)。
+## 必须保留的边界
+
+- 管理员由受信 CLI 创建或恢复；远程首用户注册、忘记/重置密码接口关闭，权限检查在 Payload 端点层完成，不能只用原始 URL 字符串拦截。
+- CMS 写入检查身份和 Origin；预览、原图、发布记录保持鉴权。正文按 HTML 白名单清理，不执行任意 HTML/MDX；链接仅允许受支持的 HTTP(S) 地址。
+- 内容发布、预览、后台状态同步和代码部署是独立结果，不能只看一个 200 或成功提示。发布已提交但后台标记失败时只重试状态同步。
+- 生产脚本显式设 `NODE_ENV=production`、`CMS_DEV_SCHEMA_PUSH=false`。生产库保留 `dev / -1` 历史，不直接重放 Payload 原生迁移；结构变化遵循[精确增量计划](operations/automatic-deployment.md)。
+- 公开服务只读代码和正式输出；CMS 构建使用私有可写工作区，详见[运行权限隔离](operations/runtime-isolation.md)。
+- 不从旧审计结论推断当前安全性，也不以测试通过代替公司事实、素材授权、真实收件、实机体验或完整恢复验收。

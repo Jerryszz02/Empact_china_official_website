@@ -4,11 +4,11 @@
 
 主目录 `/Users/jerryszz/Desktop/实习/Empact/empactchinaOfficialWeb` 用于同步 `main` 和日常预览。实现任务须先更新远端引用，再从最新 `origin/main` 创建自己的分支和 worktree，编辑、检查和提交均在该 worktree 内完成；已有本任务 worktree 时继续使用。合并后先核对主目录的在途改动和服务，再安全同步最新 `main`。完整约定见 [项目协作规则](../../../AGENTS.md)。
 
-Node.js 22.12+（22 系列）和 npm 10。在需要运行服务或检查的目录先执行 `npm ci`、`npm run setup:local`。该命令只首次生成权限为 600 的本地 `.env`，不打印密钥；已有文件不会被覆盖。
+Node.js 22.12+（22 系列）和 npm 10。在需要运行服务或检查的目录先执行 `npm ci`、`npm run setup:local`。该命令首次生成权限为 600 的本地 `.env`，不打印密钥；已有配置保留，仅将旧本地端口 4322 迁为 4321。
 
 - `npm run dev`：日常从主目录根目录启动后台运行的开发预览，固定使用 127.0.0.1:4321；官网与 `/admin` 共用入口，首次访问后台时加载 CMS。首次发布前显示设计内容，之后读取 `RUNTIME_DIR/current` 对应的已发布内容，保存草稿不会改变前台。页面与样式修改由 Astro 热更新。
 - `npm run dev:status`、`npm run dev:logs`、`npm run dev:stop`：只管理上述 Astro 开发预览。启动前核对端口进程及所属目录；符合约定可复用，不自动换端口。
-- `CMS_URL=http://127.0.0.1:4321 npm run dev -w @empact/cms -- --port 4321`：单独启动内容管理后台前，先停止占用 4321 的本项目服务；初始账号通过本机初始化命令建立，不能在公网抢注。其他服务的切换及完整发布演练限制见 [README 本机启动](../../../README.md#本机启动)。
+- `CMS_URL=http://127.0.0.1:4321 npm run dev -w @empact/cms -- --port 4321`：单独启动内容管理后台前，先停止占用 4321 的本项目服务；初始账号通过本机初始化命令建立，不能在公网抢注。其他服务的切换及完整发布演练限制见 [README 启动开发预览](../../../README.md#启动开发预览)。
 - `npm run build:preview`：明确生成不可索引的结构预览；不要上传到公开托管。
 - `npm run build`：生产构建，必须提供 `SNAPSHOT_PATH` 指向审批快照。无输入时失败是预期行为。
 - `npm run verify`：类型、业务测试、预览构建、HTML/链接/SEO 检查、CMS 生产构建、隔离数据库的 CMS 发布流程、开发预览发布刷新及桌面/移动端浏览器验收。
@@ -20,17 +20,36 @@ Node.js 22.12+（22 系列）和 npm 10。在需要运行服务或检查的目�
 
 ## 服务器边界
 
-目标 ECS 为 106.15.44.81，域名 empact.cn。2026-09-24 公开 `release.json` 显示代码版本 `c32b89900ba86597d0099857454773ba671f2e2e`，详见[交付验收状态](../readiness.md)。现有 Caddy 位于 `chatcircle-caddy-1` 容器，配置源文件为 `/opt/chatcircle/deploy/Caddyfile`；修改前须备份、验证，再 reload。首次安装见[历史记录](../history/deployment-2026-09-20.md)，当前发布流程见[自动部署](automatic-deployment.md)。SSH 用户和密钥应以维护人确认的连接方式为准。
+仓库部署模板使用 ECS `106.15.44.81` 和域名 `empact.cn`。当前服务器状态、SSH 用户及密钥须通过维护人确认的连接方式读取，本次文档整理不代表实时服务器验收。优先使用 SSH、CLI 或官方 OpenAPI；root SSH、现有认证与 TCP 22 在确认替代访问路径前保持不变。
 
-以下是首次安装步骤，已部署站点的日常代码更新按[自动部署](automatic-deployment.md)执行：
+| 位置 / 服务 | 用途 |
+| --- | --- |
+| `/srv/empact/code/<SHA>`、`code/current` | 不可变应用版本与当前代码指针 |
+| `/srv/empact/data/cms.db`、`media/`、`site/` | 数据库、原图、快照及发布产物 |
+| `/etc/empact/website.env` | CMS/expiry 配置，root:empact 640 |
+| `/etc/empact/public.env` | public 服务白名单配置，含必要发信配置 |
+| `empact-public`、`empact-cms` | 分别以 empact-public / empact 用户运行，回环端口 4322 / 3000 |
+| `empact-expiry.timer`、`empact-backup.timer` | 截止检查、月度备份 |
+| `/usr/local/lib/empact/`、`/srv/empact/receipts/` | root 管理的受信工具及部署回执 |
 
-1. 核对资源、系统版本、现有 ChatCircle 服务与唯一网关配置维护位置，留存其健康基线。
-2. 建立专用 `empact` 用户和 `/srv/empact/code`、`/srv/empact/data`；官网完全不复用 ChatCircle 的目录、数据库或凭据。
-3. 安装 Node.js 22 和版本固定的代码依赖，构建 CMS；环境放 `/etc/empact/website.env`，权限 root:empact 640。参考 deploy/website.env.example。
-4. 安装 deploy/empact-public.service 与 deploy/empact-cms.service。仅启动这两个官网服务，不执行 ChatCircle 的整栈 down。
-5. 将 deploy/Caddyfile.empact.snippet 的根域/www 规则合并到现有统一网关。根据网关部署方式调整回环上游；容器内 127.0.0.1 不是宿主机，须明确接入已有网络后配置，不能直接照抄。运行 `caddy validate --config <实际配置路径>` 后才 reload。
-6. 内容批准和备案核实完成后由后台正式发布，检查公开 HTML、证书、www/HTTP 跳转、未知页 404、管理鉴权和咨询实际收件。
-7. 回归 ChatCircle 既有登录、活动、报名、扫码、问卷与后台，记录真实版本与结果。
+新主机先核对资源与 ChatCircle 健康基线，建立官网专用目录和用户、安装 Node 22，并准备独立配置和获审批的初始快照；受信工具、受限部署账号、CI 构件接收与安装顺序见[自动部署](automatic-deployment.md)，服务身份与权限按[运行隔离](runtime-isolation.md)安装。`deploy/*.service` 和 `*.env.example` 是模板，不能覆盖现有私有配置。
+
+### 共用网关与宿主机转发
+
+现有交接记录中的 Caddy 为 `chatcircle-caddy-1` 容器，唯一配置源 `/opt/chatcircle/deploy/Caddyfile`；操作前先确认实际挂载与 Docker 网关地址。只合并 `deploy/Caddyfile.empact.snippet` 的官网域名规则，备份、`caddy validate` 通过后 reload，不能执行 ChatCircle 整栈 down。
+
+容器内 `127.0.0.1` 不指向宿主机。现有方案用 `empact-gateway@.socket` / `.service` 在核实的 Docker 网关地址接收流量，再通过 `systemd-socket-proxyd` 转发到宿主机回环端口。首次部署核对值为 `172.18.0.1`，重装或网络变化后必须重新查询，不能直接照抄：
+
+```ini
+# /etc/systemd/system/empact-gateway@4322.socket.d/listen.conf
+[Socket]
+ListenStream=172.18.0.1:4322
+# 3000 实例另建对应 drop-in，ListenStream 改为核实地址的 3000 端口。
+```
+
+模板故意不提供默认 `ListenStream`。安装模板和两个 drop-in 后，先 `systemctl daemon-reload` 与 `systemd-analyze verify empact-gateway@4322.socket empact-gateway@3000.socket`，再启用两个 socket。核实 `systemd-socket-proxyd` 的本机路径；不监听全部公网接口。同步调整 Caddy 上游为核实的网关地址，`/api/contact` 优先转 public，其余管理 API、`/admin`、`/preview`、`/_next` 转 CMS。
+
+完成后检查 HTTPS、HTTP/www 跳转、404、管理鉴权、两端端口及 ChatCircle 健康和受影响业务流程。本地开发仍统一使用 4321，与这些生产内部端口无关。
 
 每次交付核对 `main` CI、`Deploy production`、公开 `release.json` 的精确 SHA 及受影响页面。CMS 发布再分别核对内容回执和公开页面；不可把本机 200 或 CI 成功当作上线。未审核素材不向公开地址暴露。
 
@@ -58,11 +77,11 @@ systemctl is-active empact-cms empact-public empact-expiry.timer
 
 成功的月度任务写入本次目录的 `completed.json`，包含归档大小、SHA-256、数据库完整性、媒体文件数和代码版本。必须等待 service 完成并核对回执与服务健康，不能把 timer 已启用当作备份成功。测试不覆盖生产数据；整站恢复并启动的隔离演练仍需另行完成。
 
-待办：确定异地目的地、加密和访问权限，再配置传输与恢复演练。当前只有本机备份；同一服务器新增目录、分区或挂载同地域云盘都不等于异地备份。可另选异地域 OSS、跨地域快照或独立备份服务，目的地确认前不创建云资源或传输私有备份。
+异地备份需要另行确定目的地、加密和访问权限，再配置传输与恢复演练。仓库现有备份流程只写本机；同一服务器新增目录、分区或挂载同地域云盘都不等于异地备份。可另选异地域 OSS、跨地域快照或独立备份服务，目的地确认前不创建云资源或传输私有备份。
 
 `sudo deploy/restore.sh /absolute/private/backups/empact-TIMESTAMP.tar.gz --confirm-restore` 是显式恢复操作，会保留旧数据目录；健康失败回退旧数据。恢复需要短暂停止官网服务，且不改 ChatCircle。仍需由维护人在隔离环境实际演练数据库、图片、草稿、后台账号及发布版本一致性；本机 macOS 没有 systemd，不能把 shell 语法检查当作服务器恢复演练。
 
-新代码由自动部署先在不可变版本目录安装依赖/构建，再切换 `/srv/empact/code/current`，重启 **官网 CMS/官网 public** 并验证；失败按[自动部署恢复流程](automatic-deployment.md#日常诊断与恢复)处理。数据库结构变化须提交受保护文件指纹对应的精确增量计划，部署会备份、在副本试跑并核对后再应用；不能对生产 `dev / -1` 库重放原生迁移，也不能用代码回退处理不兼容数据变更。
+新代码由自动部署在不可变版本目录解包 CI 已验证的应用和依赖，再重建已批准快照并切换 `/srv/empact/code/current`，重启 **官网 CMS/官网 public** 并验证；失败按[自动部署恢复流程](automatic-deployment.md#日常诊断与恢复)处理。数据库结构变化须提交受保护文件指纹对应的精确增量计划，部署会备份、在副本试跑并核对后再应用；不能对生产 `dev / -1` 库重放原生迁移，也不能用代码回退处理不兼容数据变更。
 
 图片替换须上传为新的素材，再更新内容关联；历史发布所用图片保留，以便准确恢复。失败任务只允许在官网基础版本未变化时重试，已有更新则重新选择内容并预览，避免覆盖后续发布。
 
@@ -78,12 +97,14 @@ CMS 与维护程序通过 `deploy/publication-lock.py` 使用同一把发布锁�
 
 ## 咨询接收
 
+公开邮箱 `company.email` 不决定收件人；咨询与招聘共同读取 `CONTACT_TO`，发信由 `CONTACT_FROM` 和 `SMTP_*` 配置控制。启用运行隔离时还须核对实际加载的 `/etc/empact/public.env`，不能仅修改 CMS 的环境文件。配置变更后按对应服务重启并做一次获授权的真实投递验证。
+
 受控 SMTP 邮箱是接收端，成功表示 SMTP 已接受投递，不代表工作人员已阅读。不开启分析 SDK，不将正文/联系方式写入请求日志或第三方统计。应用只暂存不可逆散列用于短期限流/幂等；实际邮件保存期限由公司审批的隐私说明和邮箱清理规则执行。
 
-2026-09-24 公开 `release.json` 为 `contactEnabled: true`，咨询表单可访问；这不证明真实邮件已到达收件箱。服务端要求正式快照启用咨询、公司/隐私已审批、实际 SMTP 和接收人配置齐全。连接超时或 SMTP 拒绝时不显示成功；维护人仍须做真实收件验收。公网代理必须覆盖 X-Forwarded-For，应用绑定回环地址。
+公开 `release.json.contactEnabled` 及表单可用性须现场核对；这不证明真实邮件已到达收件箱。服务端要求正式快照启用咨询、公司/隐私已审批、实际 SMTP 和接收人配置齐全。连接超时或 SMTP 拒绝时不显示成功；维护人仍须做真实收件验收。公网代理必须覆盖 X-Forwarded-For，应用绑定回环地址。
 
 ## 截止状态和告警
 
-安装并启用 `empact-expiry.timer`，每分钟检查当前已发布快照的截止状态。它不能把后台新草稿一起发布。失败应在发布记录和服务日志中可见；维护人须将 `systemctl --failed` / `journalctl -u empact-expiry.service` 接入现有告警渠道。当前没有已确认的告警接收人或外部监控配置，外部通知验收仍待完成。
+安装并启用 `empact-expiry.timer`，每分钟检查当前已发布快照的截止状态。它不能把后台新草稿一起发布。失败应在发布记录和服务日志中可见；维护人须将 `systemctl --failed` / `journalctl -u empact-expiry.service` 接入现有告警渠道。接手时核实告警接收人与外部监控配置并验证通知送达；本仓库的定时任务本身不能证明外部告警已配置。
 
 服务器权限整改与验收见[官网运行权限隔离](runtime-isolation.md)。
