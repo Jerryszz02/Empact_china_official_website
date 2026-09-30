@@ -1,5 +1,7 @@
 # 架构与代码地图
 
+中文 | [English](implementation.en.md)
+
 官网采用 Astro 静态输出，后台为 Payload CMS 3 / Next.js 16 / SQLite。依赖精确版本见各 workspace 的 `package.json` 和根 lockfile。开发入口与命令见[项目 README](../../README.md)。
 
 ## 从修改目标找代码

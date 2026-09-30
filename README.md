@@ -1,5 +1,7 @@
 # Empact China 官网
 
+中文 | [English](README.en.md)
+
 官网：[empact.cn](https://empact.cn/) · 后台：[内容管理](https://empact.cn/admin/)
 
 面向新接手的开发者和 agent。先读 [AGENTS.md](AGENTS.md) 的工作区、服务器及共享预览规则，再按下列任务进入文档。
