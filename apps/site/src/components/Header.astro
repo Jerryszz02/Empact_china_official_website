@@ -48,7 +48,15 @@ const groups = [
           {hasChildren && (
             <div id={`nav-${group.segment}`} class="nav-dropdown">
               {group.children.map((item) => (
-                <a href={pathFor(item)}>{item.title}</a>
+                <a
+                  href={pathFor(item)}
+                  class:list={{
+                    "nav-chatcircle":
+                      item.kind === "project" && item.slug === "chatcircle",
+                  }}
+                >
+                  {item.title}
+                </a>
               ))}
             </div>
           )}

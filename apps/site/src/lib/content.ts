@@ -48,7 +48,7 @@ export function servicesForSegment(segment: string) {
   const services = businessesForSegment(businesses, segment);
   const chatCircle = projects.find((entry) => entry.slug === "chatcircle");
   return segment === "community" && chatCircle
-    ? [...services, chatCircle]
+    ? [...services, { ...chatCircle, title: "Chat Circles 心理韧性项目" }]
     : services;
 }
 

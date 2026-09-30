@@ -1,4 +1,7 @@
-import { publishBusinessCategory } from "../apps/cms/src/business-category.js";
+import {
+  mergeBusinessCategoryIntro,
+  publishBusinessCategory,
+} from "../apps/cms/src/business-category.js";
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
@@ -744,4 +747,47 @@ test("category publication changes only the selected live title", async () => {
   } finally {
     await rm(f.root, { recursive: true, force: true });
   }
+});
+
+test("category intro publication preserves live names, metadata and unrelated drafts", () => {
+  const live = structuredClone(previewSnapshot);
+  const draft = structuredClone(live);
+  const page = draft.entries.find(
+    (entry) => entry.kind === "page" && entry.slug === "corporate",
+  )!;
+  const current = live.entries.find((entry) => entry.id === page.id)!;
+  page.title = "未发布的大类名称";
+  page.summary = "未发布的摘要";
+  page.bodyHtml = "<p>新介绍文字。</p>";
+  page.approved = false;
+  draft.company.email = "unpublished@example.com";
+  draft.entries.find((entry) => entry.kind === "business")!.title =
+    "未发布的业务名称";
+  const merged = mergeBusinessCategoryIntro(live, draft, page.id);
+  assert.deepEqual(
+    merged.entries.find((entry) => entry.id === page.id),
+    {
+      ...current,
+      bodyHtml: page.bodyHtml,
+      bodyMediaIds: page.bodyMediaIds,
+    },
+  );
+  assert.deepEqual(merged.company, live.company);
+  assert.deepEqual(
+    merged.entries.filter((entry) => entry.id !== page.id),
+    live.entries.filter((entry) => entry.id !== page.id),
+  );
+  assert.throws(
+    () => mergeBusinessCategoryIntro(undefined, draft, page.id),
+    /尚未发布/,
+  );
+  assert.throws(
+    () =>
+      mergeBusinessCategoryIntro(
+        live,
+        draft,
+        draft.entries.find((entry) => entry.kind === "business")!.id,
+      ),
+    /四个业务大类/,
+  );
 });

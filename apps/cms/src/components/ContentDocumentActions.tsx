@@ -69,6 +69,11 @@ export function ContentDocumentActions() {
         value: Number(params.get("parent")),
       });
   }, [id, dispatchFields, initializing, fields.kind]);
+  if (
+    kind === "page" &&
+    ["youth", "corporate", "school", "community"].includes(String(data?.slug))
+  )
+    return <PageIntroActions id={String(id)} slug={String(data?.slug)} />;
   if (kind !== "business" && kind !== "case") return null;
   if (isFixedYouthModel({ kind, slug: fields.slug?.value ?? data?.slug }))
     return (
@@ -217,6 +222,104 @@ export function ContentDocumentActions() {
           打开结果页面 ↗
         </a>
       )}
+    </section>
+  );
+}
+
+function PageIntroActions({ id, slug }: { id: string; slug: string }) {
+  const modified = useFormModified();
+  const [preview, setPreview] = useState<{ id: string; url: string }>();
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
+  const revision = useRef(0);
+  const modifiedRef = useRef(modified);
+  modifiedRef.current = modified;
+  useEffect(() => {
+    if (modified) {
+      revision.current += 1;
+      setPreview(undefined);
+    }
+  }, [modified]);
+
+  async function run(action: "preview" | "publish") {
+    if (busy || modified || (action === "publish" && !preview)) return;
+    if (
+      action === "publish" &&
+      !window.confirm("发布刚才预览的页面介绍到官网？")
+    )
+      return;
+    setBusy(true);
+    setMessage("");
+    setError("");
+    const requestedRevision = revision.current;
+    try {
+      const response = await fetch(`/api/publication/${action}`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          ids: [id],
+          pageIntroOnly: true,
+          ...(action === "publish"
+            ? { previewId: preview?.id, confirmed: true }
+            : {}),
+        }),
+      });
+      const result = await response.json();
+      if (!response.ok)
+        throw new Error(result.error || result.message || "操作失败，请重试。");
+      if (action === "preview") {
+        if (requestedRevision !== revision.current || modifiedRef.current)
+          throw new Error("介绍文字已修改，请保存后重新生成预览。");
+        const url = String(result.previewUrl || "");
+        const previewId = url.match(/^\/preview\/([a-zA-Z0-9_-]+)\/$/)?.[1];
+        if (!previewId) throw new Error("预览地址无效，请重试。");
+        setPreview({ id: previewId, url });
+      } else setPreview(undefined);
+      setMessage(result.message || "操作完成。");
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "操作失败，请重试。");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <section className="content-document-actions" aria-label="页面介绍操作">
+      <a className="text-link" href="/admin#page-intros">
+        ← 返回页面介绍
+      </a>
+      <p>
+        编辑下方“网页正文”中的介绍文字，先保存，再生成预览并发布。保存草稿不会改变官网；此处仅发布介绍正文，页面名称仍由“新增业务类型”中的“发布名称”管理。
+      </p>
+      <div className="content-document-actions__buttons">
+        <button
+          type="button"
+          className="button button--quiet"
+          disabled={busy || modified}
+          onClick={() => void run("preview")}
+        >
+          生成预览
+        </button>
+        <button
+          type="button"
+          className="button button--primary"
+          disabled={busy || modified || !preview}
+          onClick={() => void run("publish")}
+        >
+          发布预览版本
+        </button>
+      </div>
+      {preview && (
+        <p>
+          <a href={`${preview.url}${slug}/`} target="_blank" rel="noreferrer">
+            打开页面介绍预览 ↗
+          </a>
+        </p>
+      )}
+      {busy && <p role="status">正在处理，请稍候…</p>}
+      {message && <p role="status">{message}</p>}
+      {error && <p role="alert">{error}</p>}
     </section>
   );
 }

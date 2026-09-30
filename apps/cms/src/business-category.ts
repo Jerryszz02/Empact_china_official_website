@@ -3,6 +3,7 @@ import { beginTransaction as beginSqliteTransaction } from "@payloadcms/drizzle"
 import { randomUUID } from "node:crypto";
 import type { Snapshot } from "@empact/content/schema";
 import {
+  mergeSelectedLive,
   publishSnapshot,
   readLiveSnapshot,
   type PublisherOptions,
@@ -141,4 +142,28 @@ export async function publishBusinessCategory(
   if (result.state !== "published")
     throw new Error(result.error || "名称发布失败，请重试。");
   return { title, message: "大类名称已发布到官网。" };
+}
+
+/** Publish only a category introduction, preserving the live title and metadata. */
+export function mergeBusinessCategoryIntro(
+  live: Snapshot | undefined,
+  draft: Snapshot,
+  id: string,
+): Snapshot {
+  const page = draft.entries.find((entry) => entry.id === id);
+  assertCategory(page?.kind, page?.slug);
+  const current = live?.entries.find((entry) => entry.id === id);
+  if (
+    !live ||
+    !current ||
+    current.kind !== "page" ||
+    current.slug !== page!.slug
+  )
+    throw new Error("官网尚未发布该业务大类，请联系维护人初始化。");
+  const entry = {
+    ...current,
+    bodyHtml: page!.bodyHtml,
+    bodyMediaIds: page!.bodyMediaIds,
+  };
+  return mergeSelectedLive(live, { ...draft, entries: [entry] }, [id]);
 }
