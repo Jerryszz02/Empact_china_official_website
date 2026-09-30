@@ -79,7 +79,7 @@ npm run initialize:publication -w @empact/cms -- --snapshot /absolute/reviewed-b
 
 | 工具 | 作用及限制 |
 | --- | --- |
-| `npm run update:experience-content -w @empact/cms -- --dry-run` | 预检关于页奖项、业务边界、13→12 地点口径及隐私页咨询说明；`--apply` 在事务中更新草稿，旧记录备份到 `.data/backups/experience-<时间>/pages.json`。目标缺失、重复或并发变化时停止。 |
+| `npm run update:experience-content -w @empact/cms -- --dry-run` | 预检关于页奖项、业务边界、13→12 地点口径及隐私页咨询说明；`--apply` 在事务中更新草稿，旧记录备份到 `RUNTIME_DIR/backups/experience-<时间>/pages.json`（未配置运行目录时使用仓库 `.data/backups`）。目标缺失、重复或并发变化时停止。 |
 | `npm run update:experience-content -w @empact/cms -- --about-profiles --dry-run` | 仅预检关于页 Maggie 介绍与 ECI 图片；`--apply` 使用同样的备份、事务和并发检查更新草稿。只接受原介绍或新版介绍，保留其他正文；ECI 已有其他图片时停止。 |
 | `npm run update:geo-intro-content -w @empact/cms` | 默认预检四个总览页、16 个业务引言及关于页内链；`-- --apply` 更新草稿，备份位于 `.data/backups/geo-intro-<时间>/`。旧文案不匹配报冲突，不覆盖后续编辑。 |
 

@@ -113,8 +113,8 @@ try {
     );
   } else {
     const backup = resolve(
-      repository,
-      ".data/backups",
+      process.env.RUNTIME_DIR || resolve(repository, ".data"),
+      "backups",
       `experience-${Date.now()}`,
     );
     await mkdir(backup, { recursive: true, mode: 0o700 });
